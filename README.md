@@ -4,10 +4,19 @@ Minimal Android launcher. Kotlin + Jetpack Compose. No analytics, no Google Play
 
 ## Two builds
 
-| Build | Where | Network | Updates |
-|---|---|---|---|
-| `github` | GitHub Releases | Only when you tap *Check for updates* | In-app: Settings > Updates |
-| `fdroid` | F-Droid | None (no INTERNET permission) | Through F-Droid |
+| Build | Where | Updates |
+|---|---|---|
+| `github` | GitHub Releases | In-app: Settings > Updates |
+| `fdroid` | F-Droid | Through F-Droid |
+
+Both builds go online **only** for features you switch on (all off by default):
+
+| Feature | Source | What is sent |
+|---|---|---|
+| Weather | [Open-Meteo](https://open-meteo.com) (open source, CC BY 4.0) | The chosen city's location, rounded to ~10 km. No GPS permission |
+| Gold price | Swissquote public quotes (XAU/USD) | Nothing about you |
+| Currency rates | [Frankfurter](https://frankfurter.dev) (open source, ECB rates); AED and SAR use the official peg | Currency code |
+| Update check (`github` only) | GitHub Releases API | Nothing about you |
 
 The builds are signed with different keys, so switching from one to the other needs an uninstall.
 
@@ -58,9 +67,12 @@ Every gesture and both bottom shortcuts can be changed in Settings > Gestures an
 
 ## Home
 
+- Clock styles: Minimal, Bold, Classic serif, Retro flip, Retro LCD, Analog.
+- Optional: animated weather next to the clock, gold price (currency, karat, per gram / ounce), live network speed and RAM.
+- Tap the weather or gold price to refresh it.
 - Most-used or pinned apps, as a text list or icons only (Settings > Home screen).
 - *Home app size* sets the text size; icons scale with it. In icons-only mode, long-press an icon to see its name.
-- Tap a task to toggle done, long-press to delete.
+- Tasks live on the widget page (swipe right): tap to toggle done, long-press to delete.
 
 ## Permissions
 
@@ -69,7 +81,8 @@ Every gesture and both bottom shortcuts can be changed in Settings > Gestures an
 | PACKAGE_USAGE_STATS | Screen time, most-used apps |
 | READ_CALENDAR | Today's agenda (optional) |
 | REQUEST_DELETE_PACKAGES | Uninstall from the app list |
-| INTERNET, REQUEST_INSTALL_PACKAGES | `github` build only: update check and install |
+| INTERNET | Opt-in weather, gold price, and (`github` build) update check |
+| REQUEST_INSTALL_PACKAGES | `github` build only: installing an update you chose |
 | Accessibility service | Lock and notification shade only. Receives no events, cannot read screen content |
 | `<queries>` launcher and widget intents | Scoped package visibility instead of QUERY_ALL_PACKAGES |
 
@@ -79,6 +92,8 @@ Every gesture and both bottom shortcuts can be changed in Settings > Gestures an
 - Plain black background; wallpaper is not shown.
 - Widgets are stacked full-width at their minimum height; no drag-to-resize.
 - Most used is based on Android's daily usage buckets, so the 7-day window is approximate.
+- The gold price is the market spot price converted to your karat and unit; shop prices add making charges.
+- For F-Droid, the gold price uses a non-free network service (Swissquote), so expect the NonFreeNet anti-feature label.
 
 ## License
 

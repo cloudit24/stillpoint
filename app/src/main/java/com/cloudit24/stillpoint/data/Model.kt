@@ -25,6 +25,26 @@ enum class HomeMode { AUTO, PINNED }
 
 enum class HomeStyle { LIST, ICONS }
 
+enum class ClockStyle(val label: String) {
+    MINIMAL("Minimal"),
+    BOLD("Bold"),
+    SERIF("Classic serif"),
+    FLIP("Retro flip"),
+    LCD("Retro LCD"),
+    ANALOG("Analog"),
+}
+
+/** A place picked by name; coordinates are rounded before any request. */
+data class City(val name: String, val country: String, val lat: Double, val lon: Double)
+
+data class WeatherNow(val tempC: Double, val code: Int, val isDay: Boolean, val fetchedAt: Long)
+
+/** Spot gold in US dollars per troy ounce, plus the USD -> [currency] rate used to convert it. */
+data class GoldQuote(val usdPerOz: Double, val currency: String, val fxRate: Double, val fetchedAt: Long)
+
+/** Currencies offered for the gold price. AED and SAR are fixed USD pegs; the rest use ECB rates. */
+val GOLD_CURRENCIES = listOf("AED", "USD", "EUR", "GBP", "INR", "SAR", "PHP", "CHF", "JPY", "CNY", "CAD", "AUD")
+
 /** Built-in things a gesture or bottom shortcut can do. */
 enum class HomeAction(val label: String, val needsGestureService: Boolean = false) {
     NONE("Nothing"),
@@ -81,6 +101,18 @@ data class LauncherSettings(
     val showAgenda: Boolean = false,
     val showTasks: Boolean = true,
     val showIcons: Boolean = false,
+    val clockStyle: ClockStyle = ClockStyle.MINIMAL,
+    /** Live network speed and RAM line under the date. */
+    val showStats: Boolean = false,
+    // Live data: all off by default. Nothing goes online unless one of these is on.
+    val weatherOn: Boolean = false,
+    val city: City? = null,
+    val fahrenheit: Boolean = false,
+    val animateWeather: Boolean = true,
+    val goldOn: Boolean = false,
+    val goldCurrency: String = "AED",
+    val goldKarat: Int = 24,
+    val goldPerGram: Boolean = true,
     /** GestureSlot -> GestureTarget string. Missing slots fall back to [DEFAULT_GESTURES]. */
     val gestures: Map<GestureSlot, String> = DEFAULT_GESTURES,
     val hidden: Set<String> = emptySet(),

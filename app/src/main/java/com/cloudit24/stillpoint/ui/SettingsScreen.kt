@@ -17,7 +17,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -31,10 +34,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cloudit24.stillpoint.BuildConfig
 import com.cloudit24.stillpoint.LauncherViewModel
+import com.cloudit24.stillpoint.data.City
+import com.cloudit24.stillpoint.data.ClockStyle
+import com.cloudit24.stillpoint.data.GOLD_CURRENCIES
 import com.cloudit24.stillpoint.data.GestureSlot
 import com.cloudit24.stillpoint.data.GestureTarget
 import com.cloudit24.stillpoint.data.HomeAction
@@ -51,6 +58,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
     val s = vm.settings
     val a11yOn = remember(vm.resumeTick) { LockAccessibilityService.isEnabled(ctx) }
     var picking by remember { mutableStateOf<GestureSlot?>(null) }
+    var dialog by remember { mutableStateOf<SettingsDialog?>(null) }
 
     val calendarPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         vm.updateSettings { it.copy(showAgenda = granted) }
@@ -96,12 +104,39 @@ fun SettingsScreen(vm: LauncherViewModel) {
             vm.updateSettings { it.copy(homeStyle = if (on) HomeStyle.ICONS else HomeStyle.LIST) }
         }
         ToggleRow("Show screen time", s.showUsage) { on -> vm.updateSettings { it.copy(showUsage = on) } }
-        ToggleRow("Show tasks", s.showTasks) { on -> vm.updateSettings { it.copy(showTasks = on) } }
+        ToggleRow("Show tasks on the widget page", s.showTasks) { on -> vm.updateSettings { it.copy(showTasks = on) } }
+        ActionRow("Clock style", s.clockStyle.label) { dialog = SettingsDialog.CLOCK }
+        ToggleRow("Show network speed and RAM", s.showStats) { on -> vm.updateSettings { it.copy(showStats = on) } }
         ToggleRow("Show today's calendar", s.showAgenda) { on ->
             val granted = ctx.checkSelfPermission(Manifest.permission.READ_CALENDAR) == PackageManager.PERMISSION_GRANTED
             if (on && !granted) calendarPermission.launch(Manifest.permission.READ_CALENDAR)
             else { vm.updateSettings { it.copy(showAgenda = on) }; vm.refresh() }
         }
+
+        SectionHeader("Weather")
+        ToggleRow("Show weather next to the clock", s.weatherOn) { on ->
+            if (on && s.city == null) dialog = SettingsDialog.CITY
+            else { vm.updateSettings { it.copy(weatherOn = on) }; if (on) vm.refreshLive(force = true) }
+        }
+        ActionRow("City", s.city?.let { "${it.name}, ${it.country}" } ?: "Not set") { dialog = SettingsDialog.CITY }
+        ToggleRow("Fahrenheit", s.fahrenheit) { on -> vm.updateSettings { it.copy(fahrenheit = on) } }
+        ToggleRow("Animate weather", s.animateWeather) { on -> vm.updateSettings { it.copy(animateWeather = on) } }
+        Text("Weather data by Open-Meteo.com (CC BY 4.0). Only the city's approximate location is sent. No GPS.",
+            color = Muted, fontSize = 12.sp)
+
+        SectionHeader("Gold price")
+        ToggleRow("Show gold price", s.goldOn) { on ->
+            vm.updateSettings { it.copy(goldOn = on) }
+            if (on) vm.refreshLive(force = true)
+        }
+        ActionRow("Currency", s.goldCurrency) { dialog = SettingsDialog.CURRENCY }
+        ActionRow("Karat", "${s.goldKarat}K") { dialog = SettingsDialog.KARAT }
+        ActionRow("Unit", if (s.goldPerGram) "Per gram" else "Per troy ounce") {
+            vm.updateSettings { it.copy(goldPerGram = !it.goldPerGram) }
+        }
+        Text("Spot price from Swissquote. Currency rates from the European Central Bank via Frankfurter; " +
+            "AED and SAR use the official fixed rate. Shop prices add making charges.",
+            color = Muted, fontSize = 12.sp)
 
         SectionHeader("App list")
         ToggleRow("Show app icons", s.showIcons) { on -> vm.updateSettings { it.copy(showIcons = on) } }
@@ -139,14 +174,105 @@ fun SettingsScreen(vm: LauncherViewModel) {
 
         Text(
             "Stillpoint ${BuildConfig.VERSION_NAME}. No analytics. " +
-                if (Updater.AVAILABLE) "Network is used only when you check for updates." else "No network access.",
+                "Network is used only for features you switch on (weather, gold price" +
+                if (Updater.AVAILABLE) ", update check)." else ").",
             color = Muted, fontSize = 12.sp, modifier = Modifier.padding(top = 32.dp),
         )
+    }
+
+    when (dialog) {
+        SettingsDialog.CLOCK -> ChoiceDialog("Clock style", ClockStyle.entries, { it.label }, onDismiss = { dialog = null }) { c ->
+            vm.updateSettings { it.copy(clockStyle = c) }
+        }
+        SettingsDialog.CURRENCY -> ChoiceDialog("Currency", GOLD_CURRENCIES, { it }, onDismiss = { dialog = null }) { c ->
+            vm.updateSettings { it.copy(goldCurrency = c) }
+            vm.refreshLive(force = true)
+        }
+        SettingsDialog.KARAT -> ChoiceDialog("Karat", listOf(24, 22, 21, 18), { "${it}K" }, onDismiss = { dialog = null }) { k ->
+            vm.updateSettings { it.copy(goldKarat = k) }
+        }
+        SettingsDialog.CITY -> CitySearchDialog(vm, onDismiss = { dialog = null })
+        null -> Unit
     }
 
     picking?.let { slot ->
         TargetPicker(vm, title = slot.label, onPick = { vm.setGesture(slot, it); picking = null }, onDismiss = { picking = null })
     }
+}
+
+private enum class SettingsDialog { CLOCK, CURRENCY, KARAT, CITY }
+
+@Composable
+private fun <T> ChoiceDialog(
+    title: String,
+    options: List<T>,
+    label: (T) -> String,
+    onDismiss: () -> Unit,
+    onPick: (T) -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        title = { Text(title) },
+        text = {
+            LazyColumn(Modifier.heightIn(max = 420.dp)) {
+                items(options) { o ->
+                    Text(label(o), fontSize = 17.sp,
+                        modifier = Modifier.fillMaxWidth().clickable { onPick(o); onDismiss() }.padding(vertical = 10.dp))
+                }
+            }
+        },
+    )
+}
+
+/** Search Open-Meteo's place names; picking one also switches weather on. */
+@Composable
+private fun CitySearchDialog(vm: LauncherViewModel, onDismiss: () -> Unit) {
+    val scope = rememberCoroutineScope()
+    var query by remember { mutableStateOf("") }
+    var results by remember { mutableStateOf<List<City>>(emptyList()) }
+    var searching by remember { mutableStateOf(false) }
+    var searched by remember { mutableStateOf(false) }
+    val search = {
+        if (query.trim().length >= 2 && !searching) {
+            searching = true
+            scope.launch {
+                results = vm.searchCities(query)
+                searching = false
+                searched = true
+            }
+        }
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = { TextButton(onClick = { search() }) { Text("Search") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        title = { Text("Choose city") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    singleLine = true,
+                    placeholder = { Text("City name, e.g. Dubai") },
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = { search() }),
+                )
+                if (searching) Text("Searching…", color = Muted, modifier = Modifier.padding(top = 8.dp))
+                if (searched && !searching && results.isEmpty()) {
+                    Text("No match. Check the spelling or your connection.", color = Muted, modifier = Modifier.padding(top = 8.dp))
+                }
+                LazyColumn(Modifier.heightIn(max = 300.dp)) {
+                    items(results) { c ->
+                        Column(Modifier.fillMaxWidth().clickable { vm.setCity(c); onDismiss() }.padding(vertical = 8.dp)) {
+                            Text(c.name, fontSize = 17.sp)
+                            Text(c.country, color = Muted, fontSize = 13.sp)
+                        }
+                    }
+                }
+            }
+        },
+    )
 }
 
 /** Built-in actions first, then every app. */

@@ -16,6 +16,10 @@ import com.cloudit24.stillpoint.data.AgendaItem
 import com.cloudit24.stillpoint.data.AppEntry
 import com.cloudit24.stillpoint.data.AppRepository
 import com.cloudit24.stillpoint.data.CalendarRepository
+import com.cloudit24.stillpoint.data.City
+import com.cloudit24.stillpoint.data.GoldQuote
+import com.cloudit24.stillpoint.data.LiveRepository
+import com.cloudit24.stillpoint.data.WeatherNow
 import com.cloudit24.stillpoint.data.FavFolder
 import com.cloudit24.stillpoint.data.GestureSlot
 import com.cloudit24.stillpoint.data.HomeAction
@@ -37,6 +41,7 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     private val usageRepo = UsageRepository(app)
     private val calendarRepo = CalendarRepository(app)
     private val prefs = Prefs(app)
+    private val live = LiveRepository()
 
     var screen by mutableStateOf(Screen.HOME)
     var blockedMessage by mutableStateOf<String?>(null)
@@ -61,6 +66,44 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         private set
 
     val totalUsage: Long get() = usage.values.sum()
+
+    // ---- Weather and gold (opt-in) ----
+
+    var weather by mutableStateOf(prefs.loadWeather())
+        private set
+    var gold by mutableStateOf(prefs.loadGold())
+        private set
+    private var liveBusy = false
+
+    /** Fetches only what is switched on and stale. [force] ignores the age check (tap to refresh, settings change). */
+    fun refreshLive(force: Boolean = false) {
+        if (liveBusy) return
+        val s = settings
+        val now = System.currentTimeMillis()
+        val city = s.city
+        val wantWeather = s.weatherOn && city != null &&
+            (force || weather.let { it == null || now - it.fetchedAt > WEATHER_MAX_AGE })
+        val wantGold = s.goldOn &&
+            (force || gold.let { it == null || it.currency != s.goldCurrency || now - it.fetchedAt > GOLD_MAX_AGE })
+        if (!wantWeather && !wantGold) return
+        liveBusy = true
+        viewModelScope.launch {
+            val w = if (wantWeather && city != null) withContext(Dispatchers.IO) { live.weather(city) } else null
+            val g = if (wantGold) withContext(Dispatchers.IO) { live.gold(s.goldCurrency) } else null
+            if (w != null) { weather = w; prefs.saveWeather(w) }
+            if (g != null) { gold = g; prefs.saveGold(g) }
+            liveBusy = false
+        }
+    }
+
+    suspend fun searchCities(query: String): List<City> = withContext(Dispatchers.IO) { live.searchCity(query) }
+
+    fun setCity(city: City) {
+        updateSettings { it.copy(city = city, weatherOn = true) }
+        weather = null
+        prefs.saveWeather(null)
+        refreshLive(force = true)
+    }
 
     // ---- Widgets ----
 
@@ -130,6 +173,7 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
             usage = loaded.usage
             weekUsage = loaded.weekUsage
             agenda = loaded.agenda
+            refreshLive()
             if (settings.focusEndsAt in 1..System.currentTimeMillis()) {
                 updateSettings { it.copy(focusEndsAt = 0L) }
             }
@@ -147,6 +191,8 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     private companion object {
         const val WIDGET_HOST_ID = 1024
         const val LIST_LIMIT = 30
+        const val WEATHER_MAX_AGE = 30 * 60_000L
+        const val GOLD_MAX_AGE = 10 * 60_000L
     }
 
     fun updateSettings(transform: (LauncherSettings) -> LauncherSettings) {

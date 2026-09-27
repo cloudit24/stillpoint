@@ -1,0 +1,1 @@
+Clock styles (retro flip, LCD, analog and more), animated weather next to the clock, gold price in AED and other currencies, live network speed and RAM, tasks moved to the widget page.

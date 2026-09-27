@@ -74,6 +74,9 @@ fun WidgetsScreen(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderInfo) ->
         }
 
         Column(Modifier.weight(1f).padding(top = 16.dp).verticalScroll(rememberScrollState())) {
+            if (vm.settings.showTasks) {
+                Column(Modifier.padding(horizontal = 12.dp).padding(bottom = 20.dp)) { TasksBlock(vm) }
+            }
             if (vm.widgetIds.isEmpty()) {
                 Text("No widgets yet. Tap Add widget below.", color = Muted, fontSize = 14.sp,
                     modifier = Modifier.padding(horizontal = 12.dp))

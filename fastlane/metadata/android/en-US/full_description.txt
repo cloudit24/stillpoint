@@ -2,7 +2,9 @@ Stillpoint is a calm, minimal home screen. Black background, text first, no clut
 
 <b>Home</b>
 <ul>
-<li>Clock, date, today's screen time, tasks and (optionally) today's calendar</li>
+<li>Clock in six styles, including retro flip and LCD</li>
+<li>Optional animated weather, gold price in your currency, live network speed and RAM</li>
+<li>Today's screen time and (optionally) today's calendar</li>
 <li>Your most used or pinned apps, as text or icons only, in the size you like</li>
 <li>Customizable gestures: swipe left, right, up, down and double-tap, plus two bottom shortcuts</li>
 </ul>
@@ -17,10 +19,10 @@ Stillpoint is a calm, minimal home screen. Black background, text first, no clut
 
 <b>Also</b>
 <ul>
-<li>Widget page</li>
+<li>Widget page with your task list</li>
 <li>Focus mode that blocks chosen apps for a set time</li>
 <li>Hide apps, work profile support</li>
 </ul>
 
 <b>Privacy</b>
-No internet permission, no analytics, no Google Play Services. Everything stays on the phone.
+No analytics, no ads, no Google Play Services. The app goes online only for features you switch on (weather from Open-Meteo, gold price, currency rates), and never sends anything about you.

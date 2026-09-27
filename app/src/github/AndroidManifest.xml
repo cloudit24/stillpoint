@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- GitHub build only. The F-Droid build has no network or install permissions. -->
+<!-- GitHub build only. The F-Droid build cannot install updates itself. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Used only when the user taps "Check for updates" / "Install" in Settings. -->
-    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Installing the update the user chose in Settings. INTERNET comes from the main manifest. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <application>

@@ -29,12 +29,14 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
@@ -56,6 +58,7 @@ import com.cloudit24.stillpoint.data.GestureSlot
 import com.cloudit24.stillpoint.data.HomeAction
 import com.cloudit24.stillpoint.data.HomeStyle
 import com.cloudit24.stillpoint.data.GestureTarget
+import kotlinx.coroutines.delay
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -71,6 +74,14 @@ fun HomeScreen(vm: LauncherViewModel) {
     // Gesture handlers are installed once; read the newest settings through this.
     val latest by rememberUpdatedState(s)
     val doubleTap = s.gesture(GestureSlot.DOUBLE_TAP)
+
+    // Weather / gold: re-check every 5 minutes while home is shown; the view model skips fresh data.
+    LaunchedEffect(s.weatherOn, s.goldOn, s.goldCurrency, s.city) {
+        while (true) {
+            vm.refreshLive()
+            delay(5 * 60_000L)
+        }
+    }
 
     Column(
         Modifier
@@ -114,8 +125,13 @@ fun HomeScreen(vm: LauncherViewModel) {
             }
             .padding(horizontal = 28.dp, vertical = 24.dp),
     ) {
-        Text(formatClock(context, now), fontSize = 68.sp, fontWeight = FontWeight.ExtraLight, letterSpacing = (-2).sp)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.weight(1f)) { Clock(s.clockStyle, now) }
+            if (s.weatherOn) WeatherBadge(vm, s, onSetup = { vm.screen = Screen.SETTINGS })
+        }
         Text(dateFmt.format(LocalDate.now()), color = Muted, fontSize = 16.sp)
+        if (s.goldOn) GoldLine(vm, s)
+        if (s.showStats) SystemStatsLine()
 
         if (s.showUsage) {
             if (vm.hasUsageAccess) {
@@ -143,7 +159,6 @@ fun HomeScreen(vm: LauncherViewModel) {
 
         Column(Modifier.weight(1f).padding(top = 28.dp).verticalScroll(rememberScrollState())) {
             if (s.showAgenda) AgendaBlock(context, vm.agenda)
-            if (s.showTasks) TasksBlock(vm)
         }
 
         if (homeApps.isEmpty()) {
@@ -216,9 +231,10 @@ private fun AgendaBlock(context: Context, items: List<AgendaItem>) {
     Spacer(Modifier.height(20.dp))
 }
 
+/** Shown on the widget page. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun TasksBlock(vm: LauncherViewModel) {
+fun TasksBlock(vm: LauncherViewModel) {
     var input by rememberSaveable { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
 
