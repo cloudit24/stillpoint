@@ -84,12 +84,14 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         val wantWeather = s.weatherOn && city != null &&
             (force || weather.let { it == null || now - it.fetchedAt > WEATHER_MAX_AGE })
         val wantGold = s.goldOn &&
-            (force || gold.let { it == null || it.currency != s.goldCurrency || now - it.fetchedAt > GOLD_MAX_AGE })
+            (force || gold.let {
+                it == null || it.currency != s.goldCurrency || it.source != s.goldSource || now - it.fetchedAt > GOLD_MAX_AGE
+            })
         if (!wantWeather && !wantGold) return
         liveBusy = true
         viewModelScope.launch {
             val w = if (wantWeather && city != null) withContext(Dispatchers.IO) { live.weather(city) } else null
-            val g = if (wantGold) withContext(Dispatchers.IO) { live.gold(s.goldCurrency) } else null
+            val g = if (wantGold) withContext(Dispatchers.IO) { live.gold(s.goldSource, s.goldCurrency) } else null
             if (w != null) { weather = w; prefs.saveWeather(w) }
             if (g != null) { gold = g; prefs.saveGold(g) }
             liveBusy = false
@@ -192,7 +194,7 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         const val WIDGET_HOST_ID = 1024
         const val LIST_LIMIT = 30
         const val WEATHER_MAX_AGE = 30 * 60_000L
-        const val GOLD_MAX_AGE = 10 * 60_000L
+        const val GOLD_MAX_AGE = 15 * 60_000L
     }
 
     fun updateSettings(transform: (LauncherSettings) -> LauncherSettings) {

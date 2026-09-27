@@ -43,6 +43,7 @@ import com.cloudit24.stillpoint.data.City
 import com.cloudit24.stillpoint.data.ClockStyle
 import com.cloudit24.stillpoint.data.GOLD_CURRENCIES
 import com.cloudit24.stillpoint.data.GestureSlot
+import com.cloudit24.stillpoint.data.GoldSource
 import com.cloudit24.stillpoint.data.GestureTarget
 import com.cloudit24.stillpoint.data.HomeAction
 import com.cloudit24.stillpoint.data.HomeStyle
@@ -129,13 +130,14 @@ fun SettingsScreen(vm: LauncherViewModel) {
             vm.updateSettings { it.copy(goldOn = on) }
             if (on) vm.refreshLive(force = true)
         }
+        ActionRow("Price", s.goldSource.label) { dialog = SettingsDialog.GOLD_SOURCE }
         ActionRow("Currency", s.goldCurrency) { dialog = SettingsDialog.CURRENCY }
         ActionRow("Karat", "${s.goldKarat}K") { dialog = SettingsDialog.KARAT }
         ActionRow("Unit", if (s.goldPerGram) "Per gram" else "Per troy ounce") {
             vm.updateSettings { it.copy(goldPerGram = !it.goldPerGram) }
         }
-        Text("Spot price from Swissquote. Currency rates from the European Central Bank via Frankfurter; " +
-            "AED and SAR use the official fixed rate. Shop prices add making charges.",
+        Text(s.goldSource.detail + ". Other currencies use European Central Bank rates via Frankfurter; " +
+            "AED and SAR use the official fixed rate. Jewellery adds making charges on top.",
             color = Muted, fontSize = 12.sp)
 
         SectionHeader("App list")
@@ -184,6 +186,10 @@ fun SettingsScreen(vm: LauncherViewModel) {
         SettingsDialog.CLOCK -> ChoiceDialog("Clock style", ClockStyle.entries, { it.label }, onDismiss = { dialog = null }) { c ->
             vm.updateSettings { it.copy(clockStyle = c) }
         }
+        SettingsDialog.GOLD_SOURCE -> ChoiceDialog("Gold price", GoldSource.entries, { it.label }, onDismiss = { dialog = null }) { g ->
+            vm.updateSettings { it.copy(goldSource = g) }
+            vm.refreshLive(force = true)
+        }
         SettingsDialog.CURRENCY -> ChoiceDialog("Currency", GOLD_CURRENCIES, { it }, onDismiss = { dialog = null }) { c ->
             vm.updateSettings { it.copy(goldCurrency = c) }
             vm.refreshLive(force = true)
@@ -200,7 +206,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
     }
 }
 
-private enum class SettingsDialog { CLOCK, CURRENCY, KARAT, CITY }
+private enum class SettingsDialog { CLOCK, GOLD_SOURCE, CURRENCY, KARAT, CITY }
 
 @Composable
 private fun <T> ChoiceDialog(

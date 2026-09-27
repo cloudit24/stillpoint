@@ -11,7 +11,8 @@ import kotlin.math.roundToInt
 /**
  * Opt-in live data. No keys, no accounts, no cookies.
  *  - Weather and city search: Open-Meteo (open source, CC BY 4.0), coordinates rounded to ~10 km.
- *  - Gold: Swissquote public quotes (XAU/USD mid price).
+ *  - Gold: Dubai shop rates from dubaicityofgold.com (HTML, AED/g per karat), or
+ *    Swissquote public quotes (XAU/USD mid price) for the world spot price and as a fallback.
  *  - Currency: fixed pegs for AED/SAR, otherwise Frankfurter (open source, European Central Bank rates).
  * Call from a background thread.
  */
@@ -53,10 +54,23 @@ class LiveRepository {
         }.getOrNull()
     }
 
-    fun gold(currency: String): GoldQuote? {
-        val usd = goldUsdPerOz() ?: return null
+    fun gold(source: GoldSource, currency: String): GoldQuote? {
+        val dubai = if (source == GoldSource.DUBAI) dubaiRates() else emptyMap()
+        // Spot is needed for SPOT, and as the fallback when the Dubai page can't be read.
+        val usd = if (source == GoldSource.SPOT || dubai.isEmpty()) goldUsdPerOz() else null
+        if (dubai.isEmpty() && usd == null) return null
         val fx = usdTo(currency) ?: return null
-        return GoldQuote(usd, currency, fx, System.currentTimeMillis())
+        return GoldQuote(source, dubai, usd, currency, fx, System.currentTimeMillis())
+    }
+
+    /** karat -> AED per gram from the Dubai City of Gold rate board. Empty if the page changed or failed. */
+    private fun dubaiRates(): Map<Int, Double> {
+        val html = get("https://dubaicityofgold.com/", accept = "text/html") ?: return emptyMap()
+        return DUBAI_RATE.findAll(html).mapNotNull { m ->
+            val karat = m.groupValues[1].toIntOrNull()
+            val aed = m.groupValues[2].replace(",", "").toDoubleOrNull()
+            if (karat == null || aed == null || aed <= 0) null else karat to aed
+        }.toMap()
     }
 
     /** Mid of bid/ask from the first platform that reports a price. */
@@ -84,12 +98,12 @@ class LiveRepository {
         return runCatching { JSONObject(body).getJSONObject("rates").getDouble(currency) }.getOrNull()
     }
 
-    private fun get(url: String): String? = runCatching {
+    private fun get(url: String, accept: String = "application/json"): String? = runCatching {
         val conn = (URL(url).openConnection() as HttpURLConnection).apply {
             connectTimeout = 10_000
             readTimeout = 15_000
             setRequestProperty("User-Agent", "Stillpoint/${BuildConfig.VERSION_NAME} (github.com/cloudit24/stillpoint)")
-            setRequestProperty("Accept", "application/json")
+            setRequestProperty("Accept", accept)
         }
         try {
             if (conn.responseCode != 200) null else conn.inputStream.bufferedReader().use { it.readText() }
@@ -104,13 +118,25 @@ class LiveRepository {
     private companion object {
         /** Official fixed exchange rates to the US dollar. */
         val PEGS = mapOf("USD" to 1.0, "AED" to 3.6725, "SAR" to 3.75)
+
+        /** <span class="sortd-gold-type">24K Gold</span> <span class="sortd-gold-value">AED 516.50</span> */
+        val DUBAI_RATE = Regex(
+            """sortd-gold-type">\s*(\d+)K[^<]*</span>\s*<span class="sortd-gold-value">\s*AED\s*([\d,.]+)""",
+        )
     }
 }
 
 const val GRAMS_PER_TROY_OUNCE = 31.1034768
 
-/** Price for the chosen karat and unit, in the quote's currency. */
-fun GoldQuote.priceFor(karat: Int, perGram: Boolean): Double {
-    val perOz = usdPerOz * fxRate * (karat / 24.0)
-    return if (perGram) perOz / GRAMS_PER_TROY_OUNCE else perOz
+const val AED_PER_USD = 3.6725
+
+/** A price and whether it is the Dubai shop rate (false = world spot, also used as the fallback). */
+data class GoldPrice(val value: Double, val dubai: Boolean)
+
+/** Price for the chosen karat and unit, in the quote's currency. Null if nothing usable was fetched. */
+fun GoldQuote.priceFor(karat: Int, perGram: Boolean): GoldPrice? {
+    val perGramValue = dubaiAedPerGram[karat]?.let { aed -> GoldPrice(aed / AED_PER_USD * fxRate, dubai = true) }
+        ?: usdPerOz?.let { GoldPrice(it * fxRate * (karat / 24.0) / GRAMS_PER_TROY_OUNCE, dubai = false) }
+        ?: return null
+    return if (perGram) perGramValue else perGramValue.copy(value = perGramValue.value * GRAMS_PER_TROY_OUNCE)
 }

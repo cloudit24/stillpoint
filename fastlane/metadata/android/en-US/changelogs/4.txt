@@ -1,0 +1,1 @@
+Gold price now shows the Dubai shop rate by default (Dubai Gold & Jewellery Group board). The world spot price is still available in Settings.

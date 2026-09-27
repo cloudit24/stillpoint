@@ -39,8 +39,23 @@ data class City(val name: String, val country: String, val lat: Double, val lon:
 
 data class WeatherNow(val tempC: Double, val code: Int, val isDay: Boolean, val fetchedAt: Long)
 
-/** Spot gold in US dollars per troy ounce, plus the USD -> [currency] rate used to convert it. */
-data class GoldQuote(val usdPerOz: Double, val currency: String, val fxRate: Double, val fetchedAt: Long)
+enum class GoldSource(val label: String, val detail: String) {
+    DUBAI("Dubai shop rate", "Dubai Gold & Jewellery Group board rate, as published by Dubai City of Gold"),
+    SPOT("World market (spot)", "International spot price from Swissquote, converted to your karat"),
+}
+
+/**
+ * Gold prices as fetched. [dubaiAedPerGram] is karat -> AED per gram (empty if not fetched or unavailable);
+ * [usdPerOz] is the spot price (null if not fetched). [fxRate] converts USD to [currency].
+ */
+data class GoldQuote(
+    val source: GoldSource,
+    val dubaiAedPerGram: Map<Int, Double>,
+    val usdPerOz: Double?,
+    val currency: String,
+    val fxRate: Double,
+    val fetchedAt: Long,
+)
 
 /** Currencies offered for the gold price. AED and SAR are fixed USD pegs; the rest use ECB rates. */
 val GOLD_CURRENCIES = listOf("AED", "USD", "EUR", "GBP", "INR", "SAR", "PHP", "CHF", "JPY", "CNY", "CAD", "AUD")
@@ -113,6 +128,7 @@ data class LauncherSettings(
     val goldCurrency: String = "AED",
     val goldKarat: Int = 24,
     val goldPerGram: Boolean = true,
+    val goldSource: GoldSource = GoldSource.DUBAI,
     /** GestureSlot -> GestureTarget string. Missing slots fall back to [DEFAULT_GESTURES]. */
     val gestures: Map<GestureSlot, String> = DEFAULT_GESTURES,
     val hidden: Set<String> = emptySet(),

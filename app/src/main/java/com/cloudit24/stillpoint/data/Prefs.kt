@@ -37,6 +37,8 @@ class Prefs(context: Context) {
             goldCurrency = sp.getString(K_GOLD_CURRENCY, d.goldCurrency) ?: d.goldCurrency,
             goldKarat = sp.getInt(K_GOLD_KARAT, d.goldKarat),
             goldPerGram = sp.getBoolean(K_GOLD_PER_GRAM, d.goldPerGram),
+            goldSource = runCatching { GoldSource.valueOf(sp.getString(K_GOLD_SOURCE, d.goldSource.name)!!) }
+                .getOrDefault(d.goldSource),
             gestures = loadGestures(),
             hidden = sp.getStringSet(K_HIDDEN, null)?.toSet() ?: emptySet(),
             pinned = readStringList(sp.getString(K_PINNED, null)),
@@ -69,6 +71,7 @@ class Prefs(context: Context) {
             .putString(K_GOLD_CURRENCY, s.goldCurrency)
             .putInt(K_GOLD_KARAT, s.goldKarat)
             .putBoolean(K_GOLD_PER_GRAM, s.goldPerGram)
+            .putString(K_GOLD_SOURCE, s.goldSource.name)
             .apply { GestureSlot.entries.forEach { putString(K_GESTURE + it.name, s.gesture(it)) } }
             .putStringSet(K_HIDDEN, HashSet(s.hidden))
             .putString(K_PINNED, JSONArray(s.pinned).toString())
@@ -121,13 +124,23 @@ class Prefs(context: Context) {
     fun loadGold(): GoldQuote? = sp.getString(K_GOLD_CACHE, null)?.let { raw ->
         runCatching {
             val o = JSONObject(raw)
-            GoldQuote(o.getDouble("usd"), o.getString("cur"), o.getDouble("fx"), o.getLong("at"))
-        }.getOrNull()
+            val dubai = o.getJSONObject("dubai")
+            GoldQuote(
+                source = GoldSource.valueOf(o.getString("src")),
+                dubaiAedPerGram = dubai.keys().asSequence().associate { it.toInt() to dubai.getDouble(it) },
+                usdPerOz = if (o.has("usd")) o.getDouble("usd") else null,
+                currency = o.getString("cur"),
+                fxRate = o.getDouble("fx"),
+                fetchedAt = o.getLong("at"),
+            )
+        }.getOrNull() // 0.3.0 cache has another shape: ignored, refetched.
     }
 
     fun saveGold(g: GoldQuote?) {
         sp.edit().putString(K_GOLD_CACHE, g?.let {
-            JSONObject().put("usd", it.usdPerOz).put("cur", it.currency).put("fx", it.fxRate).put("at", it.fetchedAt).toString()
+            val dubai = JSONObject().apply { it.dubaiAedPerGram.forEach { (k, v) -> put(k.toString(), v) } }
+            JSONObject().put("src", it.source.name).put("dubai", dubai).put("usd", it.usdPerOz)
+                .put("cur", it.currency).put("fx", it.fxRate).put("at", it.fetchedAt).toString()
         }).apply()
     }
 
@@ -188,6 +201,7 @@ class Prefs(context: Context) {
         const val K_GOLD_CURRENCY = "gold_currency"
         const val K_GOLD_KARAT = "gold_karat"
         const val K_GOLD_PER_GRAM = "gold_per_gram"
+        const val K_GOLD_SOURCE = "gold_source"
         const val K_GOLD_CACHE = "gold_cache"
         const val K_DOUBLE_TAP = "double_tap_lock"
         const val K_SWIPE_DOWN = "swipe_down_notifications"

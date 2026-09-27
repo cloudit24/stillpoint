@@ -27,6 +27,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import com.cloudit24.stillpoint.LauncherViewModel
+import com.cloudit24.stillpoint.data.GoldSource
 import com.cloudit24.stillpoint.data.LauncherSettings
 import com.cloudit24.stillpoint.data.priceFor
 import kotlinx.coroutines.delay
@@ -59,14 +60,19 @@ fun WeatherBadge(vm: LauncherViewModel, s: LauncherSettings, onSetup: () -> Unit
     }
 }
 
-/** "Gold 24K  502.71 AED/g". Tap to refresh. */
+/** "Gold 24K  516.50 AED/g · Dubai". Tap to refresh. */
 @Composable
 fun GoldLine(vm: LauncherViewModel, s: LauncherSettings) {
-    val g = vm.gold?.takeIf { it.currency == s.goldCurrency }
-    val text = if (g == null) "Gold price loading…" else {
-        val price = g.priceFor(s.goldKarat, s.goldPerGram)
-        "Gold ${s.goldKarat}K  " + String.format(Locale.US, "%,.2f", price) +
-            " ${g.currency}/${if (s.goldPerGram) "g" else "oz"}"
+    val g = vm.gold?.takeIf { it.currency == s.goldCurrency && it.source == s.goldSource }
+    val price = g?.priceFor(s.goldKarat, s.goldPerGram)
+    val text = if (g == null || price == null) "Gold price loading…" else {
+        val tag = when {
+            price.dubai -> "Dubai"
+            s.goldSource == GoldSource.DUBAI -> "spot (Dubai rate unavailable)"
+            else -> "spot"
+        }
+        "Gold ${s.goldKarat}K  " + String.format(Locale.US, "%,.2f", price.value) +
+            " ${g.currency}/${if (s.goldPerGram) "g" else "oz"}  · $tag"
     }
     Text(
         text, color = GoldText, fontSize = 14.sp,

@@ -14,7 +14,7 @@ Both builds go online **only** for features you switch on (all off by default):
 | Feature | Source | What is sent |
 |---|---|---|
 | Weather | [Open-Meteo](https://open-meteo.com) (open source, CC BY 4.0) | The chosen city's location, rounded to ~10 km. No GPS permission |
-| Gold price | Swissquote public quotes (XAU/USD) | Nothing about you |
+| Gold price | Dubai shop rate: [Dubai City of Gold](https://dubaicityofgold.com) board (default). World spot: Swissquote public quotes (XAU/USD), also the fallback | Nothing about you |
 | Currency rates | [Frankfurter](https://frankfurter.dev) (open source, ECB rates); AED and SAR use the official peg | Currency code |
 | Update check (`github` only) | GitHub Releases API | Nothing about you |
 
@@ -92,8 +92,9 @@ Every gesture and both bottom shortcuts can be changed in Settings > Gestures an
 - Plain black background; wallpaper is not shown.
 - Widgets are stacked full-width at their minimum height; no drag-to-resize.
 - Most used is based on Android's daily usage buckets, so the 7-day window is approximate.
-- The gold price is the market spot price converted to your karat and unit; shop prices add making charges.
-- For F-Droid, the gold price uses a non-free network service (Swissquote), so expect the NonFreeNet anti-feature label.
+- *Dubai shop rate* is read from the Dubai City of Gold web page. If the page changes, the app falls back to the world spot price and says so on the home screen.
+- Gold prices exclude making charges.
+- For F-Droid, the gold price uses non-free network services, so expect the NonFreeNet anti-feature label.
 
 ## License
 
