@@ -69,6 +69,7 @@ enum class HomeAction(val label: String, val needsGestureService: Boolean = fals
     CAMERA("Camera"),
     FOCUS("Focus"),
     SETTINGS("Settings"),
+    DATA_USAGE("Data usage"),
     NOTIFICATIONS("Notifications", needsGestureService = true),
     LOCK("Lock screen", needsGestureService = true),
 }

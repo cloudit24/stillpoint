@@ -23,6 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.cloudit24.stillpoint.ui.DataUsageScreen
 import com.cloudit24.stillpoint.ui.DrawerScreen
 import com.cloudit24.stillpoint.ui.FocusScreen
 import com.cloudit24.stillpoint.ui.HomeScreen
@@ -125,6 +126,7 @@ private fun LauncherRoot(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderI
             Screen.FOCUS -> FocusScreen(vm)
             Screen.SETTINGS -> SettingsScreen(vm)
             Screen.WIDGETS -> WidgetsScreen(vm, onAddWidget)
+            Screen.DATA -> DataUsageScreen(vm)
         }
     }
 

@@ -1,0 +1,1 @@
+Data usage screen: per-app Wi-Fi and mobile data for today, 7 or 30 days, from Android's own records. Open it by tapping the network line on home, from Settings, or as a gesture.

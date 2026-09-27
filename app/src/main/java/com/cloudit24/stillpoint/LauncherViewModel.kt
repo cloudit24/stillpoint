@@ -15,7 +15,9 @@ import androidx.lifecycle.viewModelScope
 import com.cloudit24.stillpoint.data.AgendaItem
 import com.cloudit24.stillpoint.data.AppEntry
 import com.cloudit24.stillpoint.data.AppRepository
+import com.cloudit24.stillpoint.data.AppDataUsage
 import com.cloudit24.stillpoint.data.CalendarRepository
+import com.cloudit24.stillpoint.data.DataUsageRepository
 import com.cloudit24.stillpoint.data.City
 import com.cloudit24.stillpoint.data.GoldQuote
 import com.cloudit24.stillpoint.data.LiveRepository
@@ -34,7 +36,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-enum class Screen { HOME, DRAWER, FOCUS, SETTINGS, WIDGETS }
+enum class Screen { HOME, DRAWER, FOCUS, SETTINGS, WIDGETS, DATA }
 
 class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     private val appsRepo = AppRepository(app)
@@ -42,6 +44,7 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     private val calendarRepo = CalendarRepository(app)
     private val prefs = Prefs(app)
     private val live = LiveRepository()
+    private val dataRepo = DataUsageRepository(app)
 
     var screen by mutableStateOf(Screen.HOME)
     var blockedMessage by mutableStateOf<String?>(null)
@@ -96,6 +99,11 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
             if (g != null) { gold = g; prefs.saveGold(g) }
             liveBusy = false
         }
+    }
+
+    suspend fun dataUsage(start: Long, end: Long): List<AppDataUsage> {
+        val labels = apps.associate { it.packageName to it.label }
+        return withContext(Dispatchers.IO) { dataRepo.query(start, end) { labels[it] } }
     }
 
     suspend fun searchCities(query: String): List<City> = withContext(Dispatchers.IO) { live.searchCity(query) }

@@ -131,7 +131,7 @@ fun HomeScreen(vm: LauncherViewModel) {
         }
         Text(dateFmt.format(LocalDate.now()), color = Muted, fontSize = 16.sp)
         if (s.goldOn) GoldLine(vm, s)
-        if (s.showStats) SystemStatsLine()
+        if (s.showStats) SystemStatsLine(onClick = { vm.screen = Screen.DATA })
 
         if (s.showUsage) {
             if (vm.hasUsageAccess) {

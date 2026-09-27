@@ -82,7 +82,7 @@ fun GoldLine(vm: LauncherViewModel, s: LauncherSettings) {
 
 /** Download/upload speed and memory use, sampled every second while the home screen is on top. */
 @Composable
-fun SystemStatsLine() {
+fun SystemStatsLine(onClick: () -> Unit) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     var text by remember { mutableStateOf("↓ …") }
@@ -113,7 +113,8 @@ fun SystemStatsLine() {
         }
     }
     // Monospace so the line doesn't jitter as numbers change every second.
-    Text(text, color = Muted, fontSize = 12.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.padding(top = 6.dp))
+    Text(text, color = Muted, fontSize = 12.sp, fontFamily = FontFamily.Monospace,
+        modifier = Modifier.padding(top = 6.dp).clickable(onClick = onClick))
 }
 
 private fun rate(bytesPerSec: Double): String {

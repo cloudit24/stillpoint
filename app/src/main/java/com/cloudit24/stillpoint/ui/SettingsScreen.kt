@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cloudit24.stillpoint.BuildConfig
 import com.cloudit24.stillpoint.LauncherViewModel
+import com.cloudit24.stillpoint.Screen
 import com.cloudit24.stillpoint.data.City
 import com.cloudit24.stillpoint.data.ClockStyle
 import com.cloudit24.stillpoint.data.GOLD_CURRENCIES
@@ -157,6 +158,8 @@ fun SettingsScreen(vm: LauncherViewModel) {
             SectionHeader("Updates")
             UpdateSection()
         }
+
+        ActionRow("Data usage", "Per-app Wi-Fi and mobile data, from Android's own records") { vm.screen = Screen.DATA }
 
         SectionHeader("Permissions")
         ActionRow(
