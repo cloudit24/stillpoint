@@ -4,7 +4,7 @@ import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** All state is local SharedPreferences. No network, no analytics. */
+/** All state is local SharedPreferences. No analytics. */
 class Prefs(context: Context) {
     private val sp = context.getSharedPreferences("stillpoint", Context.MODE_PRIVATE)
 
@@ -14,16 +14,18 @@ class Prefs(context: Context) {
             homeMode = runCatching { HomeMode.valueOf(sp.getString(K_HOME_MODE, d.homeMode.name)!!) }
                 .getOrDefault(d.homeMode),
             homeCount = sp.getInt(K_HOME_COUNT, d.homeCount),
+            homeSize = sp.getInt(K_HOME_SIZE, d.homeSize),
+            homeStyle = runCatching { HomeStyle.valueOf(sp.getString(K_HOME_STYLE, d.homeStyle.name)!!) }
+                .getOrDefault(d.homeStyle),
             showUsage = sp.getBoolean(K_SHOW_USAGE, d.showUsage),
             showAgenda = sp.getBoolean(K_SHOW_AGENDA, d.showAgenda),
             showTasks = sp.getBoolean(K_SHOW_TASKS, d.showTasks),
-            groupDrawer = sp.getBoolean(K_GROUP_DRAWER, d.groupDrawer),
             showIcons = sp.getBoolean(K_SHOW_ICONS, d.showIcons),
-            doubleTapLock = sp.getBoolean(K_DOUBLE_TAP, d.doubleTapLock),
-            swipeDownNotifications = sp.getBoolean(K_SWIPE_DOWN, d.swipeDownNotifications),
+            gestures = loadGestures(),
             hidden = sp.getStringSet(K_HIDDEN, null)?.toSet() ?: emptySet(),
             pinned = readStringList(sp.getString(K_PINNED, null)),
             favorites = readStringList(sp.getString(K_FAVORITES, null)),
+            folders = readFolders(sp.getString(K_FOLDERS, null)),
             focusAllowed = sp.getStringSet(K_FOCUS_ALLOWED, null)?.toSet() ?: emptySet(),
             focusEndsAt = sp.getLong(K_FOCUS_ENDS, 0L),
         )
@@ -33,16 +35,17 @@ class Prefs(context: Context) {
         sp.edit()
             .putString(K_HOME_MODE, s.homeMode.name)
             .putInt(K_HOME_COUNT, s.homeCount)
+            .putInt(K_HOME_SIZE, s.homeSize)
+            .putString(K_HOME_STYLE, s.homeStyle.name)
             .putBoolean(K_SHOW_USAGE, s.showUsage)
             .putBoolean(K_SHOW_AGENDA, s.showAgenda)
             .putBoolean(K_SHOW_TASKS, s.showTasks)
-            .putBoolean(K_GROUP_DRAWER, s.groupDrawer)
             .putBoolean(K_SHOW_ICONS, s.showIcons)
-            .putBoolean(K_DOUBLE_TAP, s.doubleTapLock)
-            .putBoolean(K_SWIPE_DOWN, s.swipeDownNotifications)
+            .apply { GestureSlot.entries.forEach { putString(K_GESTURE + it.name, s.gesture(it)) } }
             .putStringSet(K_HIDDEN, HashSet(s.hidden))
             .putString(K_PINNED, JSONArray(s.pinned).toString())
             .putString(K_FAVORITES, JSONArray(s.favorites).toString())
+            .putString(K_FOLDERS, writeFolders(s.folders))
             .putStringSet(K_FOCUS_ALLOWED, HashSet(s.focusAllowed))
             .putLong(K_FOCUS_ENDS, s.focusEndsAt)
             .apply()
@@ -73,24 +76,58 @@ class Prefs(context: Context) {
         sp.edit().putString(K_WIDGET_IDS, JSONArray(ids.map { it.toString() }).toString()).apply()
     }
 
+    private fun loadGestures(): Map<GestureSlot, String> {
+        // 0.1.x had two on/off switches; carry them over the first time.
+        val legacy = mapOf(
+            GestureSlot.DOUBLE_TAP to sp.getBoolean(K_DOUBLE_TAP, false).let {
+                GestureTarget.action(if (it) HomeAction.LOCK else HomeAction.NONE)
+            },
+            GestureSlot.SWIPE_DOWN to sp.getBoolean(K_SWIPE_DOWN, false).let {
+                GestureTarget.action(if (it) HomeAction.NOTIFICATIONS else HomeAction.NONE)
+            },
+        )
+        return GestureSlot.entries.associateWith { slot ->
+            sp.getString(K_GESTURE + slot.name, null) ?: legacy[slot] ?: DEFAULT_GESTURES.getValue(slot)
+        }
+    }
+
     private fun readStringList(raw: String?): List<String> =
         if (raw == null) emptyList()
         else runCatching { val a = JSONArray(raw); List(a.length()) { a.getString(it) } }.getOrDefault(emptyList())
 
+    private fun readFolders(raw: String?): List<FavFolder> =
+        if (raw == null) emptyList()
+        else runCatching {
+            val a = JSONArray(raw)
+            List(a.length()) { i ->
+                val o = a.getJSONObject(i)
+                FavFolder(o.getLong("id"), o.getString("name"), readStringList(o.getJSONArray("apps").toString()))
+            }
+        }.getOrDefault(emptyList())
+
+    private fun writeFolders(folders: List<FavFolder>): String {
+        val arr = JSONArray()
+        folders.forEach { arr.put(JSONObject().put("id", it.id).put("name", it.name).put("apps", JSONArray(it.apps))) }
+        return arr.toString()
+    }
+
     private companion object {
         const val K_HOME_MODE = "home_mode"
         const val K_HOME_COUNT = "home_count"
+        const val K_HOME_SIZE = "home_size"
+        const val K_HOME_STYLE = "home_style"
         const val K_SHOW_USAGE = "show_usage"
         const val K_SHOW_AGENDA = "show_agenda"
         const val K_SHOW_TASKS = "show_tasks"
-        const val K_GROUP_DRAWER = "group_drawer"
         const val K_SHOW_ICONS = "show_icons"
         const val K_WIDGET_IDS = "widget_ids"
+        const val K_GESTURE = "gesture_"
         const val K_DOUBLE_TAP = "double_tap_lock"
         const val K_SWIPE_DOWN = "swipe_down_notifications"
         const val K_HIDDEN = "hidden"
         const val K_PINNED = "pinned"
         const val K_FAVORITES = "favorites"
+        const val K_FOLDERS = "favorite_folders"
         const val K_FOCUS_ALLOWED = "focus_allowed"
         const val K_FOCUS_ENDS = "focus_ends_at"
         const val K_TASKS = "tasks"

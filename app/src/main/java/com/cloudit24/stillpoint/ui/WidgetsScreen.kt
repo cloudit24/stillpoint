@@ -56,7 +56,7 @@ fun WidgetsScreen(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderInfo) ->
                 var total = 0f
                 detectHorizontalDragGestures(
                     onDragStart = { total = 0f },
-                    onDragEnd = { if (total > threshold) vm.screen = Screen.HOME },
+                    onDragEnd = { if (kotlin.math.abs(total) > threshold) vm.screen = Screen.HOME },
                     onHorizontalDrag = { change, dx ->
                         total += dx
                         change.consume()

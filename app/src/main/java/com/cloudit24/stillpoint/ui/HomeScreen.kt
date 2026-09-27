@@ -3,19 +3,23 @@ package com.cloudit24.stillpoint.ui
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings
+import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -28,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -40,13 +45,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cloudit24.stillpoint.LauncherViewModel
 import com.cloudit24.stillpoint.Screen
 import com.cloudit24.stillpoint.data.AgendaItem
 import com.cloudit24.stillpoint.data.AppEntry
-import com.cloudit24.stillpoint.service.LockAccessibilityService
+import com.cloudit24.stillpoint.data.GestureSlot
+import com.cloudit24.stillpoint.data.HomeAction
+import com.cloudit24.stillpoint.data.HomeStyle
+import com.cloudit24.stillpoint.data.GestureTarget
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -59,14 +68,17 @@ fun HomeScreen(vm: LauncherViewModel) {
     val focusActive = s.focusEndsAt > now
     val dateFmt = remember { DateTimeFormatter.ofPattern("EEEE, d MMMM", Locale.getDefault()) }
     val homeApps = vm.homeApps()
-    val favorites = vm.favoriteApps()
+    // Gesture handlers are installed once; read the newest settings through this.
+    val latest by rememberUpdatedState(s)
+    val doubleTap = s.gesture(GestureSlot.DOUBLE_TAP)
 
     Column(
         Modifier
             .fillMaxSize()
-            .pointerInput(s.doubleTapLock) {
+            .pointerInput(doubleTap) {
                 detectTapGestures(
-                    onDoubleTap = { if (s.doubleTapLock) LockAccessibilityService.lockScreen() },
+                    onDoubleTap = if (doubleTap == GestureTarget.action(HomeAction.NONE)) null
+                    else { _ -> runTarget(vm, context, doubleTap) },
                     onLongPress = { vm.screen = Screen.SETTINGS },
                 )
             }
@@ -75,21 +87,24 @@ fun HomeScreen(vm: LauncherViewModel) {
                 var total = 0f
                 detectHorizontalDragGestures(
                     onDragStart = { total = 0f },
-                    onDragEnd = { if (total < -threshold) vm.screen = Screen.WIDGETS },
+                    onDragEnd = {
+                        if (total < -threshold) runTarget(vm, context, latest.gesture(GestureSlot.SWIPE_LEFT))
+                        else if (total > threshold) runTarget(vm, context, latest.gesture(GestureSlot.SWIPE_RIGHT))
+                    },
                     onHorizontalDrag = { change, dx ->
                         total += dx
                         change.consume()
                     },
                 )
             }
-            .pointerInput(s.swipeDownNotifications) {
+            .pointerInput(Unit) {
                 val threshold = 64.dp.toPx()
                 var total = 0f
                 detectVerticalDragGestures(
                     onDragStart = { total = 0f },
                     onDragEnd = {
-                        if (total < -threshold) vm.screen = Screen.DRAWER
-                        else if (total > threshold && s.swipeDownNotifications) LockAccessibilityService.openNotifications()
+                        if (total < -threshold) runTarget(vm, context, latest.gesture(GestureSlot.SWIPE_UP))
+                        else if (total > threshold) runTarget(vm, context, latest.gesture(GestureSlot.SWIPE_DOWN))
                     },
                     onVerticalDrag = { change, dy ->
                         total += dy
@@ -131,52 +146,54 @@ fun HomeScreen(vm: LauncherViewModel) {
             if (s.showTasks) TasksBlock(vm)
         }
 
-        if (favorites.isNotEmpty()) FavoritesFolder(vm, favorites)
-
-        if (homeApps.isEmpty() && favorites.isEmpty()) {
-            Text("Swipe up for apps, left for widgets. Long-press for settings.", color = Muted, fontSize = 14.sp)
+        if (homeApps.isEmpty()) {
+            Text("Swipe left for apps, right for widgets. Long-press for settings.", color = Muted, fontSize = 14.sp)
         }
-        homeApps.forEach { app ->
-            AppRow(
-                label = app.label,
-                usageMs = if (s.showUsage) vm.usage[app.packageName] else null,
-                fontSize = 24.sp,
-                onClick = { vm.launch(app) },
-                icon = appIcon(vm, app, 34.dp),
-            )
+        if (s.homeStyle == HomeStyle.ICONS) {
+            HomeIcons(vm, homeApps, (s.homeSize * 2).dp)
+        } else {
+            homeApps.forEach { app ->
+                AppRow(
+                    label = app.label,
+                    usageMs = if (s.showUsage) vm.usage[app.packageName] else null,
+                    fontSize = s.homeSize.sp,
+                    onClick = { vm.launch(app) },
+                    icon = appIcon(vm, app, (s.homeSize * 1.4f).dp),
+                )
+            }
         }
 
         Row(Modifier.fillMaxWidth().padding(top = 16.dp)) {
-            Text("Focus", color = Muted, modifier = Modifier.clickable { vm.screen = Screen.FOCUS }.padding(8.dp))
+            val left = s.gesture(GestureSlot.SHORTCUT_LEFT)
+            val right = s.gesture(GestureSlot.SHORTCUT_RIGHT)
+            vm.targetLabel(left)?.let { label ->
+                Text(label, color = Muted, modifier = Modifier.clickable { runTarget(vm, context, left) }.padding(8.dp))
+            }
             Spacer(Modifier.weight(1f))
-            Text("All apps", color = Muted, modifier = Modifier.clickable { vm.screen = Screen.DRAWER }.padding(8.dp))
+            vm.targetLabel(right)?.let { label ->
+                Text(label, color = Muted, modifier = Modifier.clickable { runTarget(vm, context, right) }.padding(8.dp))
+            }
         }
     }
 }
 
-/** Collapsible folder. Tap the title to open; long-press an app inside to remove it. */
+/** Icons-only home row. Long-press shows the app name. */
+@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
-private fun FavoritesFolder(vm: LauncherViewModel, apps: List<AppEntry>) {
-    var open by rememberSaveable { mutableStateOf(false) }
-
-    Text(
-        if (open) "Favorites  ▾" else "Favorites  ▸",
-        fontSize = 24.sp,
-        color = Slate,
-        modifier = Modifier.fillMaxWidth().clickable { open = !open }.padding(vertical = 10.dp),
-    )
-    if (open) {
-        Column(Modifier.heightIn(max = 280.dp).verticalScroll(rememberScrollState()).padding(start = 20.dp)) {
-            apps.forEach { app ->
-                AppRow(
-                    label = app.label,
-                    usageMs = null,
-                    fontSize = 20.sp,
-                    onClick = { open = false; vm.launch(app) },
-                    onLongClick = { vm.toggleFavorite(app) },
-                    icon = appIcon(vm, app, 30.dp),
-                )
-            }
+private fun HomeIcons(vm: LauncherViewModel, apps: List<AppEntry>, size: Dp) {
+    val context = LocalContext.current
+    FlowRow(
+        Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(size / 2),
+        verticalArrangement = Arrangement.spacedBy(size / 3),
+    ) {
+        apps.forEach { app ->
+            Box(
+                Modifier.combinedClickable(
+                    onClick = { vm.launch(app) },
+                    onLongClick = { Toast.makeText(context, app.label, Toast.LENGTH_SHORT).show() },
+                ),
+            ) { AppIcon(vm, app, size) }
         }
     }
 }

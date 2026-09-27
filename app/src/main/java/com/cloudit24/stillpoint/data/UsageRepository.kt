@@ -27,6 +27,16 @@ class UsageRepository(private val context: Context) {
         return mode == AppOpsManager.MODE_ALLOWED
     }
 
+    /** packageName -> foreground milliseconds over the last 7 days (daily buckets; approximate). */
+    fun weekUsage(): Map<String, Long> {
+        if (!hasPermission()) return emptyMap()
+        val end = System.currentTimeMillis()
+        val stats = runCatching { usm.queryAndAggregateUsageStats(end - 7 * 24 * 3_600_000L, end) }
+            .getOrNull() ?: return emptyMap()
+        return stats.mapValues { it.value.totalTimeInForeground }
+            .filter { it.key != context.packageName && it.value > 0 }
+    }
+
     /** packageName -> foreground milliseconds today. Excludes this launcher. */
     @Suppress("DEPRECATION")
     fun todayUsage(): Map<String, Long> {

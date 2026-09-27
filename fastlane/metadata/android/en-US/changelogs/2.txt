@@ -1,0 +1,1 @@
+Tabs in the app list (Most used, Recent, All, Favorites), alphabet scroll bar, favorite folders, icons-only home, home app size, customizable gestures and shortcuts, widget page.

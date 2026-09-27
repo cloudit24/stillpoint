@@ -4,6 +4,10 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+// Release signing comes from environment variables (set by CI from repository secrets).
+// Without them, release builds are unsigned and debug builds use the local debug key.
+val releaseKeystore: String? = System.getenv("STILLPOINT_KEYSTORE")
+
 android {
     namespace = "com.cloudit24.stillpoint"
     compileSdk = 35
@@ -12,8 +16,28 @@ android {
         applicationId = "com.cloudit24.stillpoint"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        // Bump both for every release. The GitHub tag must be "v" + versionName.
+        versionCode = 2
+        versionName = "0.2.0"
+    }
+
+    // github: in-app updates from GitHub Releases (INTERNET permission).
+    // fdroid: no network code at all; F-Droid delivers updates.
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("github") { dimension = "distribution" }
+        create("fdroid") { dimension = "distribution" }
+    }
+
+    signingConfigs {
+        if (releaseKeystore != null) {
+            create("release") {
+                storeFile = file(releaseKeystore)
+                storePassword = System.getenv("STILLPOINT_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("STILLPOINT_KEY_ALIAS")
+                keyPassword = System.getenv("STILLPOINT_KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
@@ -21,6 +45,7 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            if (releaseKeystore != null) signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {
@@ -28,7 +53,10 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
 }
 
 dependencies {

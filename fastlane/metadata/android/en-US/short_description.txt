@@ -1,0 +1,1 @@
+Minimal, private launcher: text-first home, favorites, focus mode, widgets

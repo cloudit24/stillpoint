@@ -1,0 +1,26 @@
+Stillpoint is a calm, minimal home screen. Black background, text first, no clutter.
+
+<b>Home</b>
+<ul>
+<li>Clock, date, today's screen time, tasks and (optionally) today's calendar</li>
+<li>Your most used or pinned apps, as text or icons only, in the size you like</li>
+<li>Customizable gestures: swipe left, right, up, down and double-tap, plus two bottom shortcuts</li>
+</ul>
+
+<b>App list</b>
+<ul>
+<li>Tabs: Most used, Recent, All, Favorites</li>
+<li>Alphabet bar for fast scrolling</li>
+<li>Favorites with your own folders</li>
+<li>Search that opens the first match on Enter</li>
+</ul>
+
+<b>Also</b>
+<ul>
+<li>Widget page</li>
+<li>Focus mode that blocks chosen apps for a set time</li>
+<li>Hide apps, work profile support</li>
+</ul>
+
+<b>Privacy</b>
+No internet permission, no analytics, no Google Play Services. Everything stays on the phone.

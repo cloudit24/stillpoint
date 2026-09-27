@@ -1,7 +1,12 @@
 name: build-apk
 on:
   push:
+    branches: [main]
+    tags: ["v*"]
   workflow_dispatch:
+
+permissions:
+  contents: write # needed to publish a GitHub Release on tags
 
 jobs:
   build:
@@ -12,12 +17,53 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+      # The runner image already ships the Android SDK.
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.11.1"
-      - name: Build debug APK
-        run: gradle :app:assembleDebug --stacktrace
+
+      - name: Restore signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            echo "STILLPOINT_KEYSTORE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+          elif [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            echo "Releases must be signed: KEYSTORE_BASE64 secret is missing." && exit 1
+          fi
+
+      - name: Check tag matches versionName
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          grep -q "versionName = \"${GITHUB_REF_NAME#v}\"" app/build.gradle.kts \
+            || { echo "Tag $GITHUB_REF_NAME does not match versionName in app/build.gradle.kts"; exit 1; }
+
+      - name: Build APKs
+        env:
+          STILLPOINT_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          STILLPOINT_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          STILLPOINT_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: gradle :app:assembleGithubRelease :app:assembleFdroidRelease --stacktrace
+
+      - name: Collect APKs
+        run: |
+          mkdir -p out
+          cp "$(find app/build/outputs/apk/github/release -name '*.apk' | head -1)" out/stillpoint-github.apk
+          cp "$(find app/build/outputs/apk/fdroid/release -name '*.apk' | head -1)" out/stillpoint-fdroid.apk
+          ls -l out
+
       - uses: actions/upload-artifact@v4
         with:
-          name: stillpoint-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          name: stillpoint-apks
+          path: out/*.apk
+
+      # Only the GitHub build is attached: the in-app updater installs the first .apk it finds.
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp out/stillpoint-github.apk "out/stillpoint-${GITHUB_REF_NAME}.apk"
+          gh release create "$GITHUB_REF_NAME" "out/stillpoint-${GITHUB_REF_NAME}.apk" \
+            --title "Stillpoint ${GITHUB_REF_NAME}" --generate-notes

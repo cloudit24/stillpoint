@@ -11,27 +11,46 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.cloudit24.stillpoint.BuildConfig
 import com.cloudit24.stillpoint.LauncherViewModel
+import com.cloudit24.stillpoint.data.GestureSlot
+import com.cloudit24.stillpoint.data.GestureTarget
+import com.cloudit24.stillpoint.data.HomeAction
+import com.cloudit24.stillpoint.data.HomeStyle
+import com.cloudit24.stillpoint.update.UpdateCheck
+import com.cloudit24.stillpoint.update.Updater
 import com.cloudit24.stillpoint.data.HomeMode
 import com.cloudit24.stillpoint.service.LockAccessibilityService
+import kotlinx.coroutines.launch
 
 @Composable
 fun SettingsScreen(vm: LauncherViewModel) {
     val ctx = LocalContext.current
     val s = vm.settings
     val a11yOn = remember(vm.resumeTick) { LockAccessibilityService.isEnabled(ctx) }
+    var picking by remember { mutableStateOf<GestureSlot?>(null) }
 
     val calendarPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         vm.updateSettings { it.copy(showAgenda = granted) }
@@ -63,6 +82,19 @@ fun SettingsScreen(vm: LauncherViewModel) {
         }
         Text("Pinned apps are shown when most-used is off, or before usage data exists. Pin from the app list by long-pressing.",
             color = Muted, fontSize = 13.sp)
+        Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("Home app size", fontSize = 16.sp, modifier = Modifier.weight(1f))
+            Text("−", fontSize = 22.sp, modifier = Modifier
+                .clickable { vm.updateSettings { it.copy(homeSize = (it.homeSize - 2).coerceAtLeast(16)) } }
+                .padding(horizontal = 14.dp))
+            Text("${s.homeSize}", fontSize = 18.sp)
+            Text("+", fontSize = 22.sp, modifier = Modifier
+                .clickable { vm.updateSettings { it.copy(homeSize = (it.homeSize + 2).coerceAtMost(40)) } }
+                .padding(horizontal = 14.dp))
+        }
+        ToggleRow("Icons only on home", s.homeStyle == HomeStyle.ICONS) { on ->
+            vm.updateSettings { it.copy(homeStyle = if (on) HomeStyle.ICONS else HomeStyle.LIST) }
+        }
         ToggleRow("Show screen time", s.showUsage) { on -> vm.updateSettings { it.copy(showUsage = on) } }
         ToggleRow("Show tasks", s.showTasks) { on -> vm.updateSettings { it.copy(showTasks = on) } }
         ToggleRow("Show today's calendar", s.showAgenda) { on ->
@@ -72,20 +104,21 @@ fun SettingsScreen(vm: LauncherViewModel) {
         }
 
         SectionHeader("App list")
-        ToggleRow("Group by category", s.groupDrawer) { on -> vm.updateSettings { it.copy(groupDrawer = on) } }
         ToggleRow("Show app icons", s.showIcons) { on -> vm.updateSettings { it.copy(showIcons = on) } }
 
-        SectionHeader("Gestures")
+        SectionHeader("Gestures and shortcuts")
+        GestureSlot.entries.forEach { slot ->
+            ActionRow(slot.label, vm.targetLabel(s.gesture(slot)) ?: "Nothing") { picking = slot }
+        }
         ActionRow(
             "Gesture service: ${if (a11yOn) "on" else "off"}",
-            "Needed only for double-tap lock and swipe-down notifications. " +
+            "Needed only for Lock screen and Notifications. " +
                 "If the switch is greyed out on a sideloaded install: App info, menu, Allow restricted settings.",
         ) { ctx.safeStart(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
-        ToggleRow("Double-tap to lock", s.doubleTapLock && a11yOn, enabled = a11yOn) { on ->
-            vm.updateSettings { it.copy(doubleTapLock = on) }
-        }
-        ToggleRow("Swipe down for notifications", s.swipeDownNotifications && a11yOn, enabled = a11yOn) { on ->
-            vm.updateSettings { it.copy(swipeDownNotifications = on) }
+
+        if (Updater.AVAILABLE) {
+            SectionHeader("Updates")
+            UpdateSection()
         }
 
         SectionHeader("Permissions")
@@ -104,7 +137,90 @@ fun SettingsScreen(vm: LauncherViewModel) {
             }
         }
 
-        Text("Stillpoint 0.1.0. No network access, no analytics.", color = Muted, fontSize = 12.sp,
-            modifier = Modifier.padding(top = 32.dp))
+        Text(
+            "Stillpoint ${BuildConfig.VERSION_NAME}. No analytics. " +
+                if (Updater.AVAILABLE) "Network is used only when you check for updates." else "No network access.",
+            color = Muted, fontSize = 12.sp, modifier = Modifier.padding(top = 32.dp),
+        )
     }
+
+    picking?.let { slot ->
+        TargetPicker(vm, title = slot.label, onPick = { vm.setGesture(slot, it); picking = null }, onDismiss = { picking = null })
+    }
+}
+
+/** Built-in actions first, then every app. */
+@Composable
+private fun TargetPicker(vm: LauncherViewModel, title: String, onPick: (String) -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        title = { Text(title) },
+        text = {
+            LazyColumn(Modifier.heightIn(max = 460.dp)) {
+                items(HomeAction.entries) { a ->
+                    Text(
+                        a.label + if (a.needsGestureService) "  (gesture service)" else "",
+                        fontSize = 17.sp,
+                        modifier = Modifier.fillMaxWidth().clickable { onPick(GestureTarget.action(a)) }.padding(vertical = 10.dp),
+                    )
+                }
+                item { Text("Open an app", color = Muted, fontSize = 13.sp, modifier = Modifier.padding(top = 16.dp, bottom = 4.dp)) }
+                items(vm.visibleApps(), key = { it.key }) { app ->
+                    Text(
+                        app.label,
+                        fontSize = 17.sp,
+                        modifier = Modifier.fillMaxWidth().clickable { onPick(GestureTarget.app(app.key)) }.padding(vertical = 10.dp),
+                    )
+                }
+            }
+        },
+    )
+}
+
+/** Check GitHub, then download and hand the APK to the system installer. */
+@Composable
+private fun UpdateSection() {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val current = BuildConfig.VERSION_NAME
+    var result by remember { mutableStateOf<UpdateCheck?>(null) }
+    var busy by remember { mutableStateOf(false) }
+    var progress by remember { mutableIntStateOf(-1) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    when (val r = result) {
+        is UpdateCheck.Available -> ActionRow(
+            "Install version ${r.version}",
+            if (progress >= 0) "Downloading $progress%" else "You have $current. Tap to download from GitHub and install.",
+        ) {
+            if (!busy) {
+                busy = true
+                progress = 0
+                error = null
+                scope.launch {
+                    error = Updater.downloadAndInstall(ctx, r.apkUrl) { progress = it }
+                    if (error != null) progress = -1
+                    busy = false
+                }
+            }
+        }
+        else -> ActionRow(
+            if (busy) "Checking…" else "Check for updates",
+            when (r) {
+                is UpdateCheck.UpToDate -> "You have the latest version ($current)."
+                is UpdateCheck.Failed -> r.reason
+                else -> "Version $current. Downloads come from github.com/cloudit24/stillpoint."
+            },
+        ) {
+            if (!busy) {
+                busy = true
+                scope.launch {
+                    result = Updater.check(current)
+                    busy = false
+                }
+            }
+        }
+    }
+    error?.let { Text(it, color = Slate, fontSize = 13.sp) }
 }

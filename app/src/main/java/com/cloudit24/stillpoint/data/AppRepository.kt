@@ -30,6 +30,7 @@ class AppRepository(private val context: Context) {
                         user = user,
                         userSerial = serial,
                         category = info.applicationInfo.category,
+                        installedAt = info.firstInstallTime,
                     )
                 }
             }.getOrDefault(emptyList())

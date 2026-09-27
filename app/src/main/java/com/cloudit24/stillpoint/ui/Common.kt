@@ -63,6 +63,19 @@ fun formatRemaining(ms: Long): String {
     return if (h > 0) "%d:%02d:%02d".format(h, m, sec) else "%02d:%02d".format(m, sec)
 }
 
+/** "today", "yesterday", "5d ago", "3w ago", "2mo ago", "1y ago". */
+fun formatAge(sinceMs: Long, now: Long = System.currentTimeMillis()): String {
+    val days = ((now - sinceMs) / 86_400_000L).coerceAtLeast(0)
+    return when {
+        days == 0L -> "today"
+        days == 1L -> "yesterday"
+        days < 14 -> "${days}d ago"
+        days < 60 -> "${days / 7}w ago"
+        days < 365 -> "${days / 30}mo ago"
+        else -> "${days / 365}y ago"
+    }
+}
+
 /** Respects the system 12/24-hour setting. */
 fun formatClock(context: Context, ms: Long): String = DateFormat.getTimeFormat(context).format(Date(ms))
 
@@ -83,6 +96,8 @@ fun AppRow(
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
     icon: (@Composable () -> Unit)? = null,
+    /** Replaces the usage figure on the right, e.g. "3d ago". */
+    trailing: String? = null,
 ) {
     Row(
         Modifier
@@ -102,8 +117,9 @@ fun AppRow(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
-        if (usageMs != null && usageMs >= 60_000L) {
-            Text(formatDuration(usageMs), color = Muted, fontSize = 13.sp, modifier = Modifier.padding(start = 12.dp))
+        val right = trailing ?: usageMs?.takeIf { it >= 60_000L }?.let { formatDuration(it) }
+        if (right != null) {
+            Text(right, color = Muted, fontSize = 13.sp, modifier = Modifier.padding(start = 12.dp))
         }
     }
 }

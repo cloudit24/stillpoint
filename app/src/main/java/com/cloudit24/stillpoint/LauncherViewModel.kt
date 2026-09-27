@@ -16,6 +16,10 @@ import com.cloudit24.stillpoint.data.AgendaItem
 import com.cloudit24.stillpoint.data.AppEntry
 import com.cloudit24.stillpoint.data.AppRepository
 import com.cloudit24.stillpoint.data.CalendarRepository
+import com.cloudit24.stillpoint.data.FavFolder
+import com.cloudit24.stillpoint.data.GestureSlot
+import com.cloudit24.stillpoint.data.HomeAction
+import com.cloudit24.stillpoint.data.GestureTarget
 import com.cloudit24.stillpoint.data.HomeMode
 import com.cloudit24.stillpoint.data.LauncherSettings
 import com.cloudit24.stillpoint.data.Prefs
@@ -40,6 +44,9 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     var apps by mutableStateOf<List<AppEntry>>(emptyList())
         private set
     var usage by mutableStateOf<Map<String, Long>>(emptyMap())
+        private set
+    /** packageName -> foreground ms over the last 7 days. Drives the "Most used" tab. */
+    var weekUsage by mutableStateOf<Map<String, Long>>(emptyMap())
         private set
     var agenda by mutableStateOf<List<AgendaItem>>(emptyList())
         private set
@@ -114,12 +121,14 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
                     apps = appsRepo.loadApps(),
                     usageAccess = usageRepo.hasPermission(),
                     usage = usageRepo.todayUsage(),
+                    weekUsage = usageRepo.weekUsage(),
                     agenda = if (wantAgenda) calendarRepo.today() else emptyList(),
                 )
             }
             apps = loaded.apps
             hasUsageAccess = loaded.usageAccess
             usage = loaded.usage
+            weekUsage = loaded.weekUsage
             agenda = loaded.agenda
             if (settings.focusEndsAt in 1..System.currentTimeMillis()) {
                 updateSettings { it.copy(focusEndsAt = 0L) }
@@ -131,11 +140,13 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         val apps: List<AppEntry>,
         val usageAccess: Boolean,
         val usage: Map<String, Long>,
+        val weekUsage: Map<String, Long>,
         val agenda: List<AgendaItem>,
     )
 
     private companion object {
         const val WIDGET_HOST_ID = 1024
+        const val LIST_LIMIT = 30
     }
 
     fun updateSettings(transform: (LauncherSettings) -> LauncherSettings) {
@@ -165,10 +176,70 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         return auto.ifEmpty { pinned }
     }
 
-    /** Favorites in the order they were added; respects hidden and focus. */
-    fun favoriteApps(): List<AppEntry> {
-        val visible = visibleApps()
-        return settings.favorites.mapNotNull { k -> visible.find { it.key == k } }
+    fun mostUsedApps(): List<AppEntry> = visibleApps()
+        .filter { (weekUsage[it.packageName] ?: 0L) > 0L }
+        .sortedByDescending { weekUsage[it.packageName] ?: 0L }
+        .distinctBy { it.packageName }
+        .take(LIST_LIMIT)
+
+    fun recentApps(): List<AppEntry> = visibleApps()
+        .sortedByDescending { it.installedAt }
+        .take(LIST_LIMIT)
+
+    // ---- Favorites and folders ----
+
+    private fun resolve(keys: List<String>): List<AppEntry> {
+        val visible = visibleApps().associateBy { it.key }
+        return keys.mapNotNull { visible[it] }
+    }
+
+    /** Favorites outside any folder, in the order they were added; respects hidden and focus. */
+    fun favoriteApps(): List<AppEntry> = resolve(settings.favorites)
+
+    fun folderApps(folder: FavFolder): List<AppEntry> = resolve(folder.apps)
+
+    fun isFavorite(app: AppEntry): Boolean =
+        app.key in settings.favorites || settings.folders.any { app.key in it.apps }
+
+    fun addFavorite(app: AppEntry) {
+        if (!isFavorite(app)) updateSettings { it.copy(favorites = it.favorites + app.key) }
+    }
+
+    fun removeFavorite(app: AppEntry) = updateSettings { s ->
+        s.copy(favorites = s.favorites - app.key, folders = s.folders.map { it.copy(apps = it.apps - app.key) })
+    }
+
+    /** Moves [app] into a folder, or back to loose favorites when [folderId] is null. */
+    fun moveToFolder(app: AppEntry, folderId: Long?) = updateSettings { s ->
+        val cleared = s.folders.map { it.copy(apps = it.apps - app.key) }
+        if (folderId == null) {
+            s.copy(favorites = (s.favorites - app.key) + app.key, folders = cleared)
+        } else {
+            s.copy(
+                favorites = s.favorites - app.key,
+                folders = cleared.map { if (it.id == folderId) it.copy(apps = it.apps + app.key) else it },
+            )
+        }
+    }
+
+    fun createFolder(name: String): Long? {
+        val n = name.trim()
+        if (n.isEmpty()) return null
+        val id = System.currentTimeMillis()
+        updateSettings { it.copy(folders = it.folders + FavFolder(id, n, emptyList())) }
+        return id
+    }
+
+    fun renameFolder(id: Long, name: String) {
+        val n = name.trim()
+        if (n.isEmpty()) return
+        updateSettings { s -> s.copy(folders = s.folders.map { if (it.id == id) it.copy(name = n) else it }) }
+    }
+
+    /** Apps inside go back to loose favorites rather than disappearing. */
+    fun deleteFolder(id: Long) = updateSettings { s ->
+        val folder = s.folders.find { it.id == id } ?: return@updateSettings s
+        s.copy(folders = s.folders - folder, favorites = s.favorites + folder.apps.filter { it !in s.favorites })
     }
 
     fun launch(app: AppEntry) {
@@ -179,6 +250,20 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         if (!appsRepo.launch(app)) blockedMessage = "${app.label} could not be opened."
     }
 
+    // ---- Gestures and shortcuts ----
+
+    fun setGesture(slot: GestureSlot, target: String) = updateSettings { it.copy(gestures = it.gestures + (slot to target)) }
+
+    /** Display name for a target, or null for "Nothing" / an app that is gone. */
+    fun targetLabel(target: String): String? {
+        GestureTarget.actionOf(target)?.let { return if (it == HomeAction.NONE) null else it.label }
+        val key = GestureTarget.appKeyOf(target) ?: return null
+        return apps.find { it.key == key }?.label
+    }
+
+    /** Screen changes happen here; intents and the gesture service are handled by the UI (needs a Context). */
+    fun appForTarget(target: String): AppEntry? = GestureTarget.appKeyOf(target)?.let { k -> apps.find { it.key == k } }
+
     fun openAppInfo(app: AppEntry) = appsRepo.openAppInfo(app)
     fun uninstall(app: AppEntry) = appsRepo.uninstall(app)
 
@@ -186,12 +271,13 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         s.copy(pinned = if (app.key in s.pinned) s.pinned - app.key else s.pinned + app.key)
     }
 
-    fun toggleFavorite(app: AppEntry) = updateSettings { s ->
-        s.copy(favorites = if (app.key in s.favorites) s.favorites - app.key else s.favorites + app.key)
-    }
-
     fun hide(app: AppEntry) = updateSettings { s ->
-        s.copy(hidden = s.hidden + app.key, pinned = s.pinned - app.key, favorites = s.favorites - app.key)
+        s.copy(
+            hidden = s.hidden + app.key,
+            pinned = s.pinned - app.key,
+            favorites = s.favorites - app.key,
+            folders = s.folders.map { it.copy(apps = it.apps - app.key) },
+        )
     }
 
     fun unhide(key: String) = updateSettings { it.copy(hidden = it.hidden - key) }
