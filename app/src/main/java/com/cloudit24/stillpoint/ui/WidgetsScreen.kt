@@ -1,5 +1,9 @@
 package com.cloudit24.stillpoint.ui
 
+import android.os.Build
+import android.os.Bundle
+import android.appwidget.AppWidgetHostView
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.material3.AlertDialog
@@ -122,11 +126,20 @@ private fun WidgetItem(vm: LauncherViewModel, id: Int, editing: Boolean) {
             }
         }
         if (info != null) {
-            // minHeight is already in pixels.
-            val minHeight = with(LocalDensity.current) { info.minHeight.toDp() }
+            // minHeight is already in pixels. Widgets that ask for more rows get about 76 dp per row.
+            val density = LocalDensity.current
+            val minHeight = with(density) { info.minHeight.toDp() }
+            val rows = if (Build.VERSION.SDK_INT >= 31) info.targetCellHeight else 0
+            var hostView by remember { mutableStateOf<AppWidgetHostView?>(null) }
             AndroidView(
-                factory = { ctx -> vm.widgetHost.createView(ctx, id, info) },
-                modifier = Modifier.fillMaxWidth().height(maxOf(minHeight, 72.dp)),
+                factory = { ctx -> vm.widgetHost.createView(ctx, id, info).also { hostView = it } },
+                modifier = Modifier.fillMaxWidth().height(maxOf(minHeight, 76.dp * rows, 72.dp)).onSizeChanged { size ->
+                    // Tell the widget its real size so it can lay itself out to fit.
+                    val w = (size.width / density.density).toInt()
+                    val h = (size.height / density.density).toInt()
+                    @Suppress("DEPRECATION")
+                    runCatching { hostView?.updateAppWidgetSize(Bundle(), w, h, w, h) }
+                },
             )
         }
     }

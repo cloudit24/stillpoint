@@ -1,5 +1,9 @@
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.runtime.withFrameMillis
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.animation.core.Animatable
@@ -134,27 +138,39 @@ fun HomeScreen(vm: LauncherViewModel) {
         }
     }
 
-    // Edge light: both (curved) screen edges fill from the bottom as the next prayer gets closer,
-    // rise when home opens, and breathe near a prayer and until its iqama.
+    // Edge light on the curved sides.
+    // Left: time left in the current prayer. Green, draining down; red and blinking in its last 15 minutes.
+    // Right: the next prayer coming. Fills up; a spark runs up it in the last 10 minutes; glows from adhan to iqama.
+    // Otherwise it's still and redrawn once a minute. The short animations run at ~20 frames a second
+    // and pause whenever home isn't on screen or the screen is off.
     val edgeCity = s.city
     val edgeSpan = if (s.edgeLight && s.prayerOn && edgeCity != null) {
         remember(now, edgeCity, s.prayerMethod, s.asrHanafi) {
             PrayerTimes.span(now, edgeCity.lat, edgeCity.lon, s.prayerMethod, s.asrHanafi)
         }
     } else null
-    val edgeProgress = edgeSpan?.let {
-        ((now - it.currentAt).toFloat() / (it.nextAt - it.currentAt).coerceAtLeast(1)).coerceIn(0f, 1f)
+    val edge = edgeSpan?.let { sp ->
+        val iqamaAt = if (sp.current.isPrayer) sp.currentAt + s.iqamaMin(sp.current) * 60_000L else 0L
+        EdgeInfo(
+            left = if (!sp.current.isPrayer) null
+            else (1f - (now - sp.currentAt).toFloat() / (sp.endsAt - sp.currentAt).coerceAtLeast(1)).coerceIn(0f, 1f),
+            ending = sp.current.isPrayer && sp.endsAt - now <= 15 * 60_000L,
+            right = ((now - sp.currentAt).toFloat() / (sp.nextAt - sp.currentAt).coerceAtLeast(1)).coerceIn(0f, 1f),
+            starting = sp.nextAt - now <= 10 * 60_000L,
+            started = now < iqamaAt,
+        )
     }
-    val edgeUrgent = edgeSpan != null && (edgeSpan.nextAt - now < 10 * 60_000L ||
-        (edgeSpan.current.isPrayer && now < edgeSpan.currentAt + s.iqamaMin(edgeSpan.current) * 60_000L))
     val edgeGrow = remember { Animatable(0f) }
     LaunchedEffect(Unit) { edgeGrow.animateTo(1f, tween(1400, easing = FastOutSlowInEasing)) }
-    val edgePulse = remember { Animatable(1f) }
-    LaunchedEffect(edgeUrgent) {
-        if (!edgeUrgent) edgePulse.snapTo(1f)
-        else while (true) {
-            edgePulse.animateTo(0.3f, tween(1100))
-            edgePulse.animateTo(1f, tween(1100))
+    var edgePhase by remember { mutableFloatStateOf(0f) }
+    val edgeMoving = edge != null && (edge.ending || edge.starting || edge.started)
+    LaunchedEffect(edgeMoving) {
+        if (edgeMoving) {
+            val start = withFrameMillis { it }
+            while (true) {
+                withFrameMillis { edgePhase = (it - start) / 1000f } // Waits while home is hidden.
+                delay(50)
+            }
         }
     }
 
@@ -163,7 +179,7 @@ fun HomeScreen(vm: LauncherViewModel) {
             .fillMaxSize()
             .drawWithContent {
                 drawContent()
-                if (edgeProgress != null) drawEdgeLight(edgeProgress * edgeGrow.value, accent, edgePulse.value)
+                if (edge != null) drawEdges(edge, edgeGrow.value, edgePhase, accent)
             }
             .drawBehind {
                 drawRect(Brush.radialGradient(
@@ -566,23 +582,55 @@ fun TasksBlock(vm: LauncherViewModel) {
     }
 }
 
-/** A thin accent line up both side edges, filled from the bottom to [progress], with a soft glow and a bright tip. */
-private fun DrawScope.drawEdgeLight(progress: Float, color: Color, alpha: Float) {
-    val h = size.height
+private class EdgeInfo(val left: Float?, val ending: Boolean, val right: Float, val starting: Boolean, val started: Boolean)
+
+private val EdgeCalm = Color(0xFF8FC4A8)
+private val EdgeRed = Color(0xFFE5484D)
+
+private fun DrawScope.drawEdges(e: EdgeInfo, grow: Float, phase: Float, accent: Color) {
     val line = 2.dp.toPx()
-    val top = h * (1f - progress)
-    for (x in floatArrayOf(line / 2, size.width - line / 2)) {
-        drawLine(color.copy(alpha = 0.07f), Offset(x, 0f), Offset(x, h), line)
-        if (progress <= 0f) continue
-        drawLine(
-            Brush.verticalGradient(listOf(color.copy(alpha = 0.22f * alpha), Color.Transparent), startY = top, endY = h),
-            Offset(x, top), Offset(x, h), 14.dp.toPx(),
-        )
-        drawLine(
-            Brush.verticalGradient(listOf(color.copy(alpha = alpha), color.copy(alpha = 0.25f * alpha)), startY = top, endY = h),
-            Offset(x, top), Offset(x, h), line,
-        )
-        drawCircle(color.copy(alpha = 0.3f * alpha), radius = 10.dp.toPx(), center = Offset(x, top))
-        drawCircle(color.copy(alpha = alpha), radius = 3.dp.toPx(), center = Offset(x, top))
+    val lx = line / 2
+    val rx = size.width - line / 2
+    for (x in floatArrayOf(lx, rx)) drawLine(Color.White.copy(alpha = 0.05f), Offset(x, 0f), Offset(x, size.height), line)
+
+    // Left: what's left of the current prayer.
+    e.left?.let { left ->
+        if (e.ending) edgeBeam(lx, left * grow, EdgeRed, 0.25f + 0.75f * wave(phase, 1.2f))
+        else edgeBeam(lx, left * grow, EdgeCalm, 0.85f)
     }
+
+    // Right: the next prayer coming, or the one that just began.
+    if (e.started) {
+        edgeBeam(rx, grow, accent, 0.4f + 0.6f * wave(phase, 3f))
+    } else {
+        edgeBeam(rx, e.right * grow, accent, 1f)
+        if (e.starting && e.right > 0f) {
+            val t = (phase % 1.8f) / 1.8f
+            val top = size.height * (1f - e.right * grow)
+            val y = size.height - (size.height - top) * t
+            val fade = sin(t * PI.toFloat())
+            drawCircle(accent.copy(alpha = 0.35f * fade), 12.dp.toPx(), Offset(rx, y))
+            drawCircle(Color.White.copy(alpha = 0.9f * fade), 2.5.dp.toPx(), Offset(rx, y))
+        }
+    }
+}
+
+/** 0..1..0 over [period] seconds. */
+private fun wave(phase: Float, period: Float): Float = 0.5f + 0.5f * cos(phase * 2f * PI.toFloat() / period)
+
+/** A line up one edge from the bottom to [frac] of the height, with a soft glow and a bright tip. */
+private fun DrawScope.edgeBeam(x: Float, frac: Float, color: Color, alpha: Float) {
+    if (frac <= 0f) return
+    val h = size.height
+    val top = h * (1f - frac)
+    drawLine(
+        Brush.verticalGradient(listOf(color.copy(alpha = 0.22f * alpha), Color.Transparent), startY = top, endY = h),
+        Offset(x, top), Offset(x, h), 14.dp.toPx(),
+    )
+    drawLine(
+        Brush.verticalGradient(listOf(color.copy(alpha = alpha), color.copy(alpha = 0.25f * alpha)), startY = top, endY = h),
+        Offset(x, top), Offset(x, h), 2.dp.toPx(),
+    )
+    drawCircle(color.copy(alpha = 0.3f * alpha), radius = 10.dp.toPx(), center = Offset(x, top))
+    drawCircle(color.copy(alpha = alpha), radius = 3.dp.toPx(), center = Offset(x, top))
 }

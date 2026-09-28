@@ -352,8 +352,9 @@ fun SettingsScreen(vm: LauncherViewModel) {
                             vm.updateSettings { it.copy(compassHaptics = on) }
                         }
                     }
-                    Note("Edge light: a thin line up both screen edges fills as the next prayer gets closer, " +
-                        "and breathes in the last 10 minutes and until the iqama. The compass ticks every 10°, " +
+                    Note("Edge light, left side: time left in the current prayer; it turns red and blinks in the " +
+                        "last 15 minutes. Right side: the next prayer coming; a spark runs up it in the last 10 minutes " +
+                        "and it glows from the adhan to the iqama. Still the rest of the time. The compass ticks every 10°, " +
                         "clicks at N, E, S and W, and taps once when you face the Qibla.")
                     Group("Dates") {
                         ToggleRow("Hijri date", s.hijriOn) { on -> vm.updateSettings { it.copy(hijriOn = on) } }
