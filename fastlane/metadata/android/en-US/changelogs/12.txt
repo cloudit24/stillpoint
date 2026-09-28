@@ -1,0 +1,1 @@
+Home: smaller clock, with the next prayer and gold price in the space under it. The app list moves up.

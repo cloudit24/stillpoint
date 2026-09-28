@@ -49,16 +49,17 @@ private val PrayerText = Color(0xFF8FC4A8)
 
 /** "Asr 3:34 PM · in 1h 12m". Tap for all times and the Qibla compass. */
 @Composable
-fun PrayerLine(vm: LauncherViewModel, s: LauncherSettings, now: Long) {
+fun PrayerLine(vm: LauncherViewModel, s: LauncherSettings, now: Long, compact: Boolean = false) {
     val context = LocalContext.current
     val city = s.city
     val next = remember(city, s.prayerMethod, s.asrHanafi, now) {
         city?.let { PrayerTimes.next(now, it.lat, it.lon, s.prayerMethod, s.asrHanafi) }
     }
     val text = when {
-        city == null -> "Prayer times: set a city in Settings"
+        city == null -> if (compact) "Prayer times:\nset a city" else "Prayer times: set a city in Settings"
         next == null -> "Prayer times unavailable at this latitude today"
-        else -> "${next.first.label} ${formatClock(context, next.second)}  ·  in ${formatDuration(next.second - now)}"
+        else -> "${next.first.label} ${formatClock(context, next.second)}" +
+            (if (compact) "\n" else "  ·  ") + "in ${formatDuration(next.second - now)}"
     }
     Text(
         text, color = PrayerText, fontSize = 14.sp,

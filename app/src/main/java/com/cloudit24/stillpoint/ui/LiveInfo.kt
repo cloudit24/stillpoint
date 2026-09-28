@@ -70,17 +70,18 @@ fun WeatherBadge(vm: LauncherViewModel, s: LauncherSettings, onSetup: () -> Unit
 
 /** "Gold 24K  516.50 AED/g · Dubai". Tap to refresh. */
 @Composable
-fun GoldLine(vm: LauncherViewModel, s: LauncherSettings) {
+fun GoldLine(vm: LauncherViewModel, s: LauncherSettings, compact: Boolean = false) {
     val g = vm.gold?.takeIf { it.currency == s.goldCurrency && it.source == s.goldSource }
     val price = g?.priceFor(s.goldKarat, s.goldPerGram)
-    val text = if (g == null || price == null) "Gold price loading…" else {
+    val text = if (g == null || price == null) (if (compact) "Gold\nloading…" else "Gold price loading…") else {
         val tag = when {
             price.dubai -> "Dubai"
             s.goldSource == GoldSource.DUBAI -> "spot (Dubai rate unavailable)"
             else -> "spot"
         }
-        "Gold ${s.goldKarat}K  " + String.format(Locale.US, "%,.2f", price.value) +
-            " ${g.currency}/${if (s.goldPerGram) "g" else "oz"}  · $tag"
+        val amount = String.format(Locale.US, "%,.2f", price.value) + " ${g.currency}/${if (s.goldPerGram) "g" else "oz"}"
+        if (compact) "Gold ${s.goldKarat}K · ${if (price.dubai) "Dubai" else "spot"}\n$amount"
+        else "Gold ${s.goldKarat}K  $amount  · $tag"
     }
     Text(
         text, color = GoldText, fontSize = 14.sp,

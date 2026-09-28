@@ -180,7 +180,19 @@ fun HomeScreen(vm: LauncherViewModel) {
         val hijri = if (s.hijriOn) remember(today, s.hijriAdjust) { Calendars.hijri(today, s.hijriAdjust) } else null
         val tamil = if (s.tamilOn) remember(today) { Calendars.tamil(today) } else null
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-            Clock(s.clockStyle, now)
+            Column {
+                Clock(s.clockStyle, now)
+                if (s.prayerOn || s.goldOn) {
+                    // Thin accent bar in the margin holds the two together.
+                    Row(Modifier.padding(top = 10.dp).offset(x = (-14).dp).height(IntrinsicSize.Min)) {
+                        Box(Modifier.width(2.dp).fillMaxHeight().background(Accent))
+                        Column(Modifier.padding(start = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (s.prayerOn) PrayerLine(vm, s, now, compact = true)
+                            if (s.goldOn) GoldLine(vm, s, compact = true)
+                        }
+                    }
+                }
+            }
             Column(
                 Modifier.weight(1f).padding(start = 16.dp),
                 horizontalAlignment = Alignment.End,
@@ -193,16 +205,6 @@ fun HomeScreen(vm: LauncherViewModel) {
                 ))
                 if (s.showStats) SystemStatsLine(onClick = { vm.screen = Screen.DATA })
                 if (s.showLocalIp || s.publicIpOn) IpLine(vm, s)
-            }
-        }
-        // Prayer and gold under the header, held together by a thin accent bar.
-        if (s.prayerOn || s.goldOn) {
-            Row(Modifier.padding(top = 20.dp).offset(x = (-14).dp).height(IntrinsicSize.Min)) {
-                Box(Modifier.width(2.dp).fillMaxHeight().background(Accent))
-                Column(Modifier.padding(start = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    if (s.prayerOn) PrayerLine(vm, s, now)
-                    if (s.goldOn) GoldLine(vm, s)
-                }
             }
         }
 
