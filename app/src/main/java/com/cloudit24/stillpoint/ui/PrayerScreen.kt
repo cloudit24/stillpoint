@@ -62,8 +62,7 @@ fun PrayerLine(vm: LauncherViewModel, s: LauncherSettings, now: Long) {
     }
     Text(
         text, color = PrayerText, fontSize = 14.sp,
-        modifier = Modifier.padding(top = 6.dp)
-            .clickable { vm.screen = if (city == null) Screen.SETTINGS else Screen.PRAYER },
+        modifier = Modifier.clickable { vm.screen = if (city == null) Screen.SETTINGS else Screen.PRAYER },
     )
 }
 

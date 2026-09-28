@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import kotlin.math.abs
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.provider.Settings
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -41,6 +42,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -110,6 +112,13 @@ fun HomeScreen(vm: LauncherViewModel) {
             delay(5 * 60_000L)
         }
     }
+    // Project Hub: every 2 minutes while home is shown.
+    LaunchedEffect(s.hubOn) {
+        while (s.hubOn) {
+            vm.refreshHub()
+            delay(2 * 60_000L)
+        }
+    }
 
     Column(
         Modifier
@@ -170,9 +179,13 @@ fun HomeScreen(vm: LauncherViewModel) {
         val today = LocalDate.now()
         val hijri = if (s.hijriOn) remember(today, s.hijriAdjust) { Calendars.hijri(today, s.hijriAdjust) } else null
         val tamil = if (s.tamilOn) remember(today) { Calendars.tamil(today) } else null
-        Row(verticalAlignment = Alignment.Top) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Clock(s.clockStyle, now)
-            Column(Modifier.weight(1f).padding(start = 12.dp, top = 4.dp), horizontalAlignment = Alignment.End) {
+            Column(
+                Modifier.weight(1f).padding(start = 16.dp),
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
                 Text(dateFmt.format(today), color = Ink, fontSize = 16.sp, textAlign = TextAlign.End)
                 RotatingLine(listOfNotNull(hijri, tamil))
                 if (s.showStats) SystemStatsLine(onClick = { vm.screen = Screen.DATA })
@@ -181,9 +194,9 @@ fun HomeScreen(vm: LauncherViewModel) {
         }
         // Prayer and gold under the header, held together by a thin accent bar.
         if (s.prayerOn || s.goldOn) {
-            Row(Modifier.padding(top = 16.dp).height(IntrinsicSize.Min)) {
+            Row(Modifier.padding(top = 20.dp).offset(x = (-14).dp).height(IntrinsicSize.Min)) {
                 Box(Modifier.width(2.dp).fillMaxHeight().background(Accent))
-                Column(Modifier.padding(start = 12.dp)) {
+                Column(Modifier.padding(start = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     if (s.prayerOn) PrayerLine(vm, s, now)
                     if (s.goldOn) GoldLine(vm, s)
                 }
@@ -194,14 +207,14 @@ fun HomeScreen(vm: LauncherViewModel) {
             if (vm.hasUsageAccess) {
                 Text(
                     "${formatDuration(vm.totalUsage)} on screen today",
-                    color = Muted, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp),
+                    color = Muted, fontSize = 14.sp, modifier = Modifier.padding(top = 16.dp),
                 )
             } else {
                 Text(
                     "Allow usage access to show screen time",
                     color = Accent, fontSize = 14.sp,
                     modifier = Modifier
-                        .padding(top = 10.dp)
+                        .padding(top = 16.dp)
                         .clickable { context.safeStart(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) },
                 )
             }
@@ -215,6 +228,7 @@ fun HomeScreen(vm: LauncherViewModel) {
         }
 
         Column(Modifier.weight(1f).padding(top = 28.dp).verticalScroll(rememberScrollState())) {
+            if (s.hubOn) HubCard(vm, now)
             if (s.showAgenda) AgendaBlock(context, vm.agenda)
         }
 
@@ -241,11 +255,11 @@ fun HomeScreen(vm: LauncherViewModel) {
             val left = s.gesture(GestureSlot.SHORTCUT_LEFT)
             val right = s.gesture(GestureSlot.SHORTCUT_RIGHT)
             vm.targetLabel(left)?.let { label ->
-                Text(label, color = Muted, modifier = Modifier.clickable { runTarget(vm, context, left) }.padding(8.dp))
+                Text(label, color = Muted, modifier = Modifier.clickable { runTarget(vm, context, left) }.padding(vertical = 10.dp))
             }
             Spacer(Modifier.weight(1f))
             vm.targetLabel(right)?.let { label ->
-                Text(label, color = Muted, modifier = Modifier.clickable { runTarget(vm, context, right) }.padding(8.dp))
+                Text(label, color = Muted, modifier = Modifier.clickable { runTarget(vm, context, right) }.padding(vertical = 10.dp))
             }
         }
     }
@@ -271,7 +285,7 @@ private fun RotatingLine(lines: List<String>) {
                 (slideOutVertically(tween(350)) { -it } + fadeOut(tween(250)))
         },
         label = "dates",
-    ) { Text(it, color = Muted, fontSize = 13.sp, textAlign = TextAlign.End, modifier = Modifier.padding(top = 2.dp)) }
+    ) { Text(it, color = Muted, fontSize = 13.sp, textAlign = TextAlign.End) }
 }
 
 /** Windows Phone start screen: square accent tiles, three across. Long-press shows the full name. */
@@ -322,6 +336,57 @@ private fun HomeIcons(vm: LauncherViewModel, apps: List<AppEntry>, size: Dp) {
     }
 }
 
+/**
+ * Project Hub: the ONE next thing and why, with Done / Not now. Everything else is one quiet line.
+ * Shows the last answer when offline, with its age.
+ */
+@Composable
+private fun HubCard(vm: LauncherViewModel, now: Long) {
+    val context = LocalContext.current
+    val g = vm.hub
+    if (g == null) {
+        Text(vm.hubError ?: "Loading Project Hub…", color = Muted, fontSize = 14.sp,
+            modifier = Modifier.padding(bottom = 20.dp).clickable { vm.refreshHub(force = true) })
+        return
+    }
+    val n = g.now
+    Row(Modifier.fillMaxWidth().padding(bottom = 20.dp).height(IntrinsicSize.Min)) {
+        Box(Modifier.width(3.dp).fillMaxHeight().background(Accent))
+        Column(Modifier.padding(start = 14.dp)) {
+            Text(n.label.uppercase(Locale.getDefault()), color = Accent, fontSize = 12.sp, fontWeight = FontWeight.Medium,
+                letterSpacing = 0.8.sp)
+            Text(
+                n.title, color = Ink, fontSize = 22.sp, lineHeight = 27.sp,
+                modifier = Modifier.padding(top = 2.dp).clickable { vm.hubUrl()?.let { context.safeStart(Intent(Intent.ACTION_VIEW, Uri.parse(it))) } },
+            )
+            if (n.project.isNotBlank()) Text(n.project, color = Muted, fontSize = 13.sp)
+            Text(n.why, color = Muted, fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp))
+            if (n.kind == "task") {
+                Row(Modifier.padding(top = 8.dp)) {
+                    Text("✓ Done", color = Accent, fontSize = 16.sp, fontWeight = FontWeight.Medium,
+                        modifier = Modifier.clickable { vm.hubDone(n.id) }.padding(end = 24.dp, top = 6.dp, bottom = 6.dp))
+                    Text("Not now", color = Muted, fontSize = 16.sp,
+                        modifier = Modifier.clickable { vm.hubNotNow(n.id) }.padding(vertical = 6.dp))
+                }
+            }
+            val bits = listOfNotNull(
+                g.doneToday.takeIf { it > 0 }?.let { "$it done today" },
+                g.nextEventStart?.let { "next ${it} ${g.nextEventTitle.orEmpty()}" },
+                g.due.takeIf { it > 0 }?.let { "$it due today" },
+                g.overdue.takeIf { it > 0 }?.let { "$it overdue" },
+                g.lost.takeIf { it > 0 }?.let { "$it lost" },
+            )
+            if (bits.isNotEmpty()) Text(bits.joinToString(" · "), color = Muted, fontSize = 13.sp, maxLines = 2,
+                overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
+            vm.hubError?.let {
+                val mins = ((now - g.fetchedAt) / 60_000L).coerceAtLeast(0)
+                Text("Offline · from ${if (mins < 1) "just now" else "$mins min ago"}", color = Muted, fontSize = 12.sp,
+                    modifier = Modifier.padding(top = 4.dp).clickable { vm.refreshHub(force = true) })
+            }
+        }
+    }
+}
+
 @Composable
 private fun AgendaBlock(context: Context, items: List<AgendaItem>) {
     Text("Today", color = Muted, fontSize = 13.sp)
@@ -347,8 +412,22 @@ fun TasksBlock(vm: LauncherViewModel) {
     var input by rememberSaveable { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
 
-    Text("Tasks", color = Muted, fontSize = 13.sp)
-    vm.tasks.forEach { t ->
+    // Connected to Project Hub: overdue + today's tasks come from the hub, and new ones go there.
+    val hub = vm.settings.hubOn && vm.hubConnected()
+    Text(if (hub) "Tasks · Project Hub" else "Tasks", color = Muted, fontSize = 13.sp)
+    if (hub) {
+        val list = vm.hub?.tasks.orEmpty()
+        if (list.isEmpty()) Text("Nothing due today.", color = Muted, fontSize = 16.sp, modifier = Modifier.padding(vertical = 6.dp))
+        list.forEach { t ->
+            Text(
+                t.text + (t.due?.let { if (it < LocalDate.now().toString()) "  · overdue" else "" } ?: ""),
+                fontSize = 16.sp,
+                color = if (t.done) Muted else Ink,
+                textDecoration = if (t.done) TextDecoration.LineThrough else null,
+                modifier = Modifier.fillMaxWidth().clickable { vm.hubDone(t.id, !t.done) }.padding(vertical = 6.dp),
+            )
+        }
+    } else vm.tasks.forEach { t ->
         Text(
             t.text,
             fontSize = 16.sp,
@@ -368,7 +447,7 @@ fun TasksBlock(vm: LauncherViewModel) {
         cursorBrush = SolidColor(Accent),
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = {
-            vm.addTask(input)
+            if (hub) vm.hubAdd(input) else vm.addTask(input)
             input = ""
             focusManager.clearFocus()
         }),

@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.List
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Face
 import androidx.compose.material.icons.outlined.Home
@@ -76,6 +77,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cloudit24.stillpoint.BuildConfig
@@ -105,6 +108,7 @@ private enum class SettingsPage(val section: String, val title: String, val summ
     INFO("On the home screen", "System info", "Network speed, RAM, IP address, calendar", Icons.AutoMirrored.Outlined.List),
     PRAYER("On the home screen", "Prayer and calendars", "Prayer times, Qibla, Hijri and Tamil dates", Icons.Outlined.DateRange),
     GOLD("On the home screen", "Gold price", "Source, currency and karat", Icons.Outlined.Star),
+    HUB("On the home screen", "Project Hub", "Your own server: next task, today, quick add", Icons.Outlined.CheckCircle),
     PRIVACY("System", "Permissions and data", "Usage access, gesture service, data usage", Icons.Outlined.Lock),
     UPDATES("System", "Updates", "Download new versions from GitHub", Icons.Outlined.Refresh),
     ABOUT("System", "About", "Version, source code and privacy", Icons.Outlined.Info),
@@ -305,6 +309,31 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         "AED and SAR use the official fixed rate. Jewellery adds making charges on top.")
                 }
 
+                SettingsPage.HUB -> {
+                    Group("Project Hub") {
+                        if (vm.hubConnected()) {
+                            ToggleRow("Show on home", s.hubOn) { on ->
+                                vm.updateSettings { it.copy(hubOn = on) }
+                                if (on) vm.refreshHub(force = true)
+                            }
+                            ActionRow("Server", vm.hubUrl().orEmpty()) {}
+                            ActionRow(
+                                "Status",
+                                vm.hubError ?: vm.hub?.let { "Connected · updated ${((System.currentTimeMillis() - it.fetchedAt) / 60_000L)} min ago. Tap to update." }
+                                    ?: "Connected. Tap to update.",
+                            ) { vm.refreshHub(force = true) }
+                            ActionRow("Disconnect", "Forget the address and key on this phone") { vm.disconnectHub() }
+                        } else {
+                            ActionRow("Connect", "Scan the QR code on your hub's \"Connect phone\" page, or type the address and key") {
+                                dialog = SettingsDialog.HUB
+                            }
+                        }
+                    }
+                    Note("Project Hub is a server you run yourself. Stillpoint talks only to the address you enter and nothing " +
+                        "else. Home shows the one next thing to do and why, with Done and Not now; the widget page shows " +
+                        "today's tasks. Use https unless the hub is on your home network.")
+                }
+
                 SettingsPage.PRIVACY -> {
                     Group("Permissions") {
                         ActionRow(
@@ -335,7 +364,8 @@ fun SettingsScreen(vm: LauncherViewModel) {
                     }
                     Group("Privacy") {
                         Text("No analytics and no accounts. The internet is used only for features you switch on: " +
-                            "gold price, public IP, city search" + (if (Updater.AVAILABLE) " and update checks. " else ". ") +
+                            "gold price, public IP, city search, your own Project Hub" +
+                            (if (Updater.AVAILABLE) " and update checks. " else ". ") +
                             "Prayer times, Qibla, Hijri and Tamil dates are calculated on the phone.",
                             color = Muted, fontSize = 14.sp, modifier = Modifier.padding(vertical = 12.dp))
                     }
@@ -376,6 +406,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
         }
         SettingsDialog.PRAYER_METHOD -> ChoiceDialog("Calculation method", PrayerMethod.entries, { it.label },
             onDismiss = { dialog = null }) { pm -> vm.updateSettings { it.copy(prayerMethod = pm) } }
+        SettingsDialog.HUB -> HubConnectDialog(vm, onDismiss = { dialog = null })
         null -> Unit
     }
 
@@ -385,7 +416,58 @@ fun SettingsScreen(vm: LauncherViewModel) {
 }
 
 private enum class SettingsDialog {
-    ACCENT, HOME_STYLE, DRAWER_START, CLOCK, GOLD_SOURCE, CURRENCY, KARAT, CITY, PRAYER_CITY, PRAYER_METHOD,
+    ACCENT, HOME_STYLE, DRAWER_START, CLOCK, GOLD_SOURCE, CURRENCY, KARAT, CITY, PRAYER_CITY, PRAYER_METHOD, HUB,
+}
+
+/** Type in the hub address and app key (from the hub's "Connect phone" page). Tested before it's saved. */
+@Composable
+fun HubConnectDialog(vm: LauncherViewModel, onDismiss: () -> Unit, url0: String = "", key0: String = "") {
+    val scope = rememberCoroutineScope()
+    var url by remember { mutableStateOf(url0) }
+    var key by remember { mutableStateOf(key0) }
+    var busy by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    val connect = {
+        if (!busy) {
+            busy = true
+            error = null
+            scope.launch {
+                error = vm.connectHub(url, key)
+                busy = false
+                if (error == null) onDismiss()
+            }
+        }
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = { TextButton(onClick = { connect() }) { Text(if (busy) "Checking…" else "Connect") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        title = { Text("Connect Project Hub") },
+        text = {
+            Column {
+                OutlinedTextField(value = url, onValueChange = { url = it }, singleLine = true, label = { Text("Address") },
+                    placeholder = { Text("https://hub.example.com") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next))
+                OutlinedTextField(value = key, onValueChange = { key = it }, singleLine = true, label = { Text("App key") },
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { connect() }),
+                    modifier = Modifier.padding(top = 8.dp))
+                if (url.startsWith("http://") && !url.isLocalAddress()) {
+                    Text("This address isn't encrypted. Use https unless the hub is on your home network.",
+                        color = Accent, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+                }
+                error?.let { Text(it, color = Accent, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp)) }
+            }
+        },
+    )
+}
+
+/** Home-network addresses (192.168.x, 10.x, 172.16-31.x, .local, localhost). */
+private fun String.isLocalAddress(): Boolean {
+    val host = removePrefix("http://").substringBefore('/').substringBefore(':')
+    return host == "localhost" || host.endsWith(".local") || host.startsWith("192.168.") || host.startsWith("10.") ||
+        Regex("""^172\.(1[6-9]|2\d|3[01])\.""").containsMatchIn(host)
 }
 
 /** A titled rounded card holding related rows. */

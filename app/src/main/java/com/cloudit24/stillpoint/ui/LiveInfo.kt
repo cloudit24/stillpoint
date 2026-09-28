@@ -84,7 +84,7 @@ fun GoldLine(vm: LauncherViewModel, s: LauncherSettings) {
     }
     Text(
         text, color = GoldText, fontSize = 14.sp,
-        modifier = Modifier.padding(top = 6.dp).clickable { vm.refreshLive(force = true) },
+        modifier = Modifier.clickable { vm.refreshLive(force = true) },
     )
 }
 
@@ -122,7 +122,7 @@ fun SystemStatsLine(onClick: () -> Unit) {
     }
     // Monospace so the line doesn't jitter as numbers change every second.
     Text(text, color = Muted, fontSize = 11.sp, fontFamily = FontFamily.Monospace, textAlign = TextAlign.End,
-        modifier = Modifier.padding(top = 6.dp).clickable(onClick = onClick))
+        modifier = Modifier.clickable(onClick = onClick))
 }
 
 /** "Wi-Fi 192.168.1.23 · Public 94.200.1.2". Local address re-read every 3 s while home is on top; tap to copy. */
@@ -152,7 +152,7 @@ fun IpLine(vm: LauncherViewModel, s: LauncherSettings) {
     )
     Text(
         parts.joinToString("\n"), color = Muted, fontSize = 11.sp, fontFamily = FontFamily.Monospace, textAlign = TextAlign.End,
-        modifier = Modifier.padding(top = 4.dp).clickable {
+        modifier = Modifier.clickable {
             val copy = listOfNotNull(l?.address, vm.publicIp).joinToString("\n")
             if (copy.isNotEmpty()) {
                 context.getSystemService(ClipboardManager::class.java)

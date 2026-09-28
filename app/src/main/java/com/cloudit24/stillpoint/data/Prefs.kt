@@ -51,6 +51,7 @@ class Prefs(context: Context) {
             goldPerGram = sp.getBoolean(K_GOLD_PER_GRAM, d.goldPerGram),
             goldSource = runCatching { GoldSource.valueOf(sp.getString(K_GOLD_SOURCE, d.goldSource.name)!!) }
                 .getOrDefault(d.goldSource),
+            hubOn = sp.getBoolean(K_HUB_ON, d.hubOn),
             gestures = loadGestures(),
             hidden = sp.getStringSet(K_HIDDEN, null)?.toSet() ?: emptySet(),
             pinned = readStringList(sp.getString(K_PINNED, null)),
@@ -94,6 +95,7 @@ class Prefs(context: Context) {
             .putInt(K_GOLD_KARAT, s.goldKarat)
             .putBoolean(K_GOLD_PER_GRAM, s.goldPerGram)
             .putString(K_GOLD_SOURCE, s.goldSource.name)
+            .putBoolean(K_HUB_ON, s.hubOn)
             .apply { GestureSlot.entries.forEach { putString(K_GESTURE + it.name, s.gesture(it)) } }
             .putStringSet(K_HIDDEN, HashSet(s.hidden))
             .putString(K_PINNED, JSONArray(s.pinned).toString())
@@ -164,6 +166,29 @@ class Prefs(context: Context) {
             JSONObject().put("src", it.source.name).put("dubai", dubai).put("usd", it.usdPerOz)
                 .put("cur", it.currency).put("fx", it.fxRate).put("at", it.fetchedAt).toString()
         }).apply()
+    }
+
+    // ---- Project Hub: address + app key live only here (backups are off in the manifest) ----
+
+    fun hubUrl(): String? = sp.getString(K_HUB_URL, null)
+    fun hubKey(): String? = sp.getString(K_HUB_KEY, null)
+
+    fun saveHub(url: String, key: String) {
+        sp.edit().putString(K_HUB_URL, url).putString(K_HUB_KEY, key).apply()
+    }
+
+    fun clearHub() {
+        sp.edit().remove(K_HUB_URL).remove(K_HUB_KEY).remove(K_HUB_CACHE).remove(K_HUB_CACHE_AT).apply()
+    }
+
+    /** Last answer from the hub, so home shows something instantly and while offline. */
+    fun loadHubCache(): HubGlance? {
+        val body = sp.getString(K_HUB_CACHE, null) ?: return null
+        return HubGlance.parse(body, sp.getLong(K_HUB_CACHE_AT, 0L))
+    }
+
+    fun saveHubCache(body: String, at: Long) {
+        sp.edit().putString(K_HUB_CACHE, body).putLong(K_HUB_CACHE_AT, at).apply()
     }
 
     private fun loadGestures(): Map<GestureSlot, String> {
@@ -244,5 +269,10 @@ class Prefs(context: Context) {
         const val K_FOCUS_ALLOWED = "focus_allowed"
         const val K_FOCUS_ENDS = "focus_ends_at"
         const val K_TASKS = "tasks"
+        const val K_HUB_ON = "hub_on"
+        const val K_HUB_URL = "hub_url"
+        const val K_HUB_KEY = "hub_key"
+        const val K_HUB_CACHE = "hub_cache"
+        const val K_HUB_CACHE_AT = "hub_cache_at"
     }
 }

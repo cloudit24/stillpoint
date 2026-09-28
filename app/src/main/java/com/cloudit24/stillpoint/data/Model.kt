@@ -162,6 +162,8 @@ data class LauncherSettings(
     val goldKarat: Int = 24,
     val goldPerGram: Boolean = true,
     val goldSource: GoldSource = GoldSource.DUBAI,
+    /** Project Hub card on home. Address and key are stored separately, see [Prefs.hubUrl]. */
+    val hubOn: Boolean = false,
     /** GestureSlot -> GestureTarget string. Missing slots fall back to [DEFAULT_GESTURES]. */
     val gestures: Map<GestureSlot, String> = DEFAULT_GESTURES,
     val hidden: Set<String> = emptySet(),

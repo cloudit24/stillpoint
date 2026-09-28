@@ -38,6 +38,7 @@ import com.cloudit24.stillpoint.ui.DrawerScreen
 import com.cloudit24.stillpoint.ui.PrayerScreen
 import com.cloudit24.stillpoint.ui.FocusScreen
 import com.cloudit24.stillpoint.ui.HomeScreen
+import com.cloudit24.stillpoint.ui.HubConnectDialog
 import com.cloudit24.stillpoint.ui.SettingsScreen
 import com.cloudit24.stillpoint.ui.StillpointTheme
 import com.cloudit24.stillpoint.ui.WidgetsScreen
@@ -59,6 +60,18 @@ class MainActivity : ComponentActivity() {
         setContent {
             StillpointTheme(accent = androidx.compose.ui.graphics.Color(vm.settings.accent)) { LauncherRoot(vm, ::addWidget) }
         }
+        if (savedInstanceState == null) handleHubLink(intent)
+    }
+
+    /** stillpoint://hub?url=...&key=... from the QR code on the hub's "Connect phone" page. Only fills in the
+     *  connect form: nothing is saved until the user sees the address and taps Connect. */
+    private fun handleHubLink(intent: Intent?) {
+        val data = intent?.data ?: return
+        if (intent.action != Intent.ACTION_VIEW || data.scheme != "stillpoint" || data.host != "hub") return
+        val url = data.getQueryParameter("url")
+        val key = data.getQueryParameter("key")
+        if (!url.isNullOrBlank() && !key.isNullOrBlank()) vm.pendingHubLink = url to key
+        vm.screen = Screen.HOME
     }
 
     override fun onStart() {
@@ -125,6 +138,7 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         if (intent.action == Intent.ACTION_MAIN) vm.screen = Screen.HOME
+        handleHubLink(intent)
     }
 }
 
@@ -153,6 +167,10 @@ private fun LauncherRoot(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderI
             confirmButton = { TextButton(onClick = { vm.blockedMessage = null }) { Text("OK") } },
             text = { Text(msg) },
         )
+    }
+
+    vm.pendingHubLink?.let { (url, key) ->
+        HubConnectDialog(vm, onDismiss = { vm.pendingHubLink = null }, url0 = url, key0 = key)
     }
 }
 

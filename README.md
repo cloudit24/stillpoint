@@ -17,6 +17,7 @@ Both builds go online **only** for features you switch on (all off by default):
 | Gold price | Dubai shop rate: [Dubai City of Gold](https://dubaicityofgold.com) board (default). World spot: Swissquote public quotes (XAU/USD), also the fallback | Nothing about you |
 | Currency rates | [Frankfurter](https://frankfurter.dev) (open source, ECB rates); AED and SAR use the official peg | Currency code |
 | Update check (`github` only) | GitHub Releases API | Nothing about you |
+| Project Hub | **Your own server** ([self-hosted Project Hub](#project-hub)), at the address you enter | Your app key; task text you add or tick off |
 
 The builds are signed with different keys, so switching from one to the other needs an uninstall.
 
@@ -75,6 +76,20 @@ Every gesture and both bottom shortcuts can be changed in Settings > Gestures an
 - *Home app size* sets the text size; icons scale with it. In icons-only mode, long-press an icon to see its name.
 - Tasks live on the widget page (swipe right): tap to toggle done, long-press to delete.
 
+## Project Hub
+
+Optional, off by default. Connect Stillpoint to your own self-hosted Project Hub (to-dos, calendar, things):
+
+- **Home** shows the one next thing to do and why it was picked (event starting soon, oldest overdue, due today...),
+  with **Done** and **Not now**, plus one quiet line: done today, next event, due, overdue.
+- **Widget page** tasks become the hub's overdue and today's tasks; adding a task sends it to the hub.
+- **Offline**: the last answer stays on screen, marked with its age.
+- **Connect**: open the hub's *Connect phone* page and scan the QR code with the phone camera, or
+  Settings > Project Hub > Connect and type the address and app key. Nothing is saved until the connection works.
+
+Stillpoint asks `GET /api/glance/` every 2 minutes while home is shown, and `POST /api/tasks/` or
+`POST /api/tasks/<id>/done/` when you add or tick something (header `Authorization: Token <key>`). Use https, unless the hub is on your home network.
+
 ## Permissions
 
 | Permission | Purpose |
@@ -83,7 +98,7 @@ Every gesture and both bottom shortcuts can be changed in Settings > Gestures an
 | ACCESS_NETWORK_STATE | Local IP address on home (opt-in) |
 | READ_CALENDAR | Today's agenda (optional) |
 | REQUEST_DELETE_PACKAGES | Uninstall from the app list |
-| INTERNET | Opt-in weather, gold price, and (`github` build) update check |
+| INTERNET | Opt-in weather, gold price, your Project Hub, and (`github` build) update check |
 | REQUEST_INSTALL_PACKAGES | `github` build only: installing an update you chose |
 | Accessibility service | Lock and notification shade only. Receives no events, cannot read screen content |
 | `<queries>` launcher and widget intents | Scoped package visibility instead of QUERY_ALL_PACKAGES |

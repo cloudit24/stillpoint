@@ -20,6 +20,8 @@ import com.cloudit24.stillpoint.data.CalendarRepository
 import com.cloudit24.stillpoint.data.DataUsageRepository
 import com.cloudit24.stillpoint.data.City
 import com.cloudit24.stillpoint.data.GoldQuote
+import com.cloudit24.stillpoint.data.HubGlance
+import com.cloudit24.stillpoint.data.HubRepository
 import com.cloudit24.stillpoint.data.LiveRepository
 import com.cloudit24.stillpoint.data.WeatherNow
 import com.cloudit24.stillpoint.data.FavFolder
@@ -45,6 +47,7 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     private val prefs = Prefs(app)
     private val live = LiveRepository()
     private val dataRepo = DataUsageRepository(app)
+    private val hubRepo = HubRepository()
 
     var screen by mutableStateOf(Screen.HOME)
     var blockedMessage by mutableStateOf<String?>(null)
@@ -126,6 +129,92 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
             if (ip != null || changed) publicIp = ip
             ipBusy = false
         }
+    }
+
+    // ---- Project Hub (opt-in, your own server) ----
+
+    var hub by mutableStateOf(prefs.loadHubCache())
+        private set
+    var hubError by mutableStateOf<String?>(null)
+        private set
+    /** A stillpoint://hub link was opened (QR code on the hub's "Connect phone" page); waiting for the user's OK. */
+    var pendingHubLink by mutableStateOf<Pair<String, String>?>(null)
+    /** Tasks the user said "Not now" to on this phone. Forgotten when Stillpoint restarts. */
+    private val hubSkipped = mutableSetOf<String>()
+    private var hubBusy = false
+
+    fun hubUrl(): String? = prefs.hubUrl()
+    fun hubConnected(): Boolean = prefs.hubUrl() != null && prefs.hubKey() != null
+
+    /** Asks the hub only when shown, connected, and the last answer is older than 2 minutes (or [force]). */
+    fun refreshHub(force: Boolean = false) {
+        val url = prefs.hubUrl() ?: return
+        val key = prefs.hubKey() ?: return
+        if (!settings.hubOn || hubBusy) return
+        if (!force && hub.let { it != null && System.currentTimeMillis() - it.fetchedAt < HUB_MAX_AGE }) return
+        hubBusy = true
+        viewModelScope.launch {
+            val skip = hubSkipped.toSet()
+            when (val r = withContext(Dispatchers.IO) { hubRepo.glance(url, key, skip) }) {
+                is HubRepository.Result.Ok -> {
+                    val at = System.currentTimeMillis()
+                    HubGlance.parse(r.value, at)?.let { hub = it; prefs.saveHubCache(r.value, at); hubError = null }
+                        ?: run { hubError = "The hub sent something Stillpoint doesn't understand. Update both." }
+                }
+                is HubRepository.Result.Failed -> hubError = r.reason
+            }
+            hubBusy = false
+        }
+    }
+
+    fun hubDone(id: String, done: Boolean = true) = hubWrite { url, key -> hubRepo.setDone(url, key, id, done) }
+
+    fun hubAdd(text: String) {
+        val t = text.trim()
+        if (t.isNotEmpty()) hubWrite { url, key -> hubRepo.addTask(url, key, t) }
+    }
+
+    fun hubNotNow(id: String) {
+        hubSkipped += id
+        refreshHub(force = true)
+    }
+
+    private fun hubWrite(action: (String, String) -> HubRepository.Result<String>) {
+        val url = prefs.hubUrl() ?: return
+        val key = prefs.hubKey() ?: return
+        viewModelScope.launch {
+            when (val r = withContext(Dispatchers.IO) { action(url, key) }) {
+                is HubRepository.Result.Ok -> refreshHub(force = true)
+                is HubRepository.Result.Failed -> blockedMessage = r.reason
+            }
+        }
+    }
+
+    /** Checks the address and key with a real request before saving them. Returns null on success, else why not. */
+    suspend fun connectHub(rawUrl: String, key: String): String? {
+        var url = rawUrl.trim().trimEnd('/')
+        if (url.isEmpty() || key.isBlank()) return "Enter the address and the app key."
+        if (!url.startsWith("http://") && !url.startsWith("https://")) url = "https://$url"
+        return when (val r = withContext(Dispatchers.IO) { hubRepo.glance(url, key.trim(), emptySet()) }) {
+            is HubRepository.Result.Failed -> r.reason
+            is HubRepository.Result.Ok -> {
+                val at = System.currentTimeMillis()
+                prefs.saveHub(url, key.trim())
+                prefs.saveHubCache(r.value, at)
+                hub = HubGlance.parse(r.value, at)
+                hubError = null
+                updateSettings { it.copy(hubOn = true) }
+                null
+            }
+        }
+    }
+
+    fun disconnectHub() {
+        prefs.clearHub()
+        hub = null
+        hubError = null
+        hubSkipped.clear()
+        updateSettings { it.copy(hubOn = false) }
     }
 
     suspend fun dataUsage(start: Long, end: Long): List<AppDataUsage> {
@@ -211,6 +300,7 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
             weekUsage = loaded.weekUsage
             agenda = loaded.agenda
             refreshLive()
+            refreshHub()
             if (settings.focusEndsAt in 1..System.currentTimeMillis()) {
                 updateSettings { it.copy(focusEndsAt = 0L) }
             }
@@ -230,6 +320,7 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         const val LIST_LIMIT = 30
         const val WEATHER_MAX_AGE = 30 * 60_000L
         const val GOLD_MAX_AGE = 15 * 60_000L
+        const val HUB_MAX_AGE = 2 * 60_000L
     }
 
     fun updateSettings(transform: (LauncherSettings) -> LauncherSettings) {

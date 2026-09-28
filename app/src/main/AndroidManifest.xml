@@ -7,7 +7,7 @@
         tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.READ_CALENDAR" />
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
-    <!-- Only for opt-in weather and gold price (off by default). -->
+    <!-- Only for opt-in gold price, public IP and your own Project Hub (all off by default). -->
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Local IP address on home (opt-in). Granted automatically, no prompt. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -28,6 +28,7 @@
         android:icon="@android:drawable/sym_def_app_icon"
         android:label="@string/app_name"
         android:supportsRtl="true"
+        android:networkSecurityConfig="@xml/network_security"
         android:theme="@style/Theme.Stillpoint">
 
         <activity
@@ -44,6 +45,13 @@
                 <category android:name="android.intent.category.HOME" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- stillpoint://hub?url=...&key=... : the QR code on a Project Hub's "Connect phone" page. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="stillpoint" android:host="hub" />
             </intent-filter>
         </activity>
 

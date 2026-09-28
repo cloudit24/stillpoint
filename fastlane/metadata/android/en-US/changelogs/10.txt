@@ -1,0 +1,1 @@
+Project Hub (optional, off by default): connect to your own self-hosted hub. Home shows the one next thing to do and why, with Done and Not now. The widget page shows the hub's tasks for today. Connect by scanning the hub's QR code, or type the address and key. Keeps the last answer when offline.
