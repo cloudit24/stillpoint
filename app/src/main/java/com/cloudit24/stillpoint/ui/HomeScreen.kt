@@ -1,5 +1,9 @@
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.geometry.Offset
+import com.cloudit24.stillpoint.data.ClockStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Spring
@@ -91,6 +95,7 @@ import java.util.Locale
 fun HomeScreen(vm: LauncherViewModel) {
     val context = LocalContext.current
     val s = vm.settings
+    val accent = Accent
     val now by rememberTicker(60_000L)
     val focusActive = s.focusEndsAt > now
     val dateFmt = remember { DateTimeFormatter.ofPattern("EEE, d MMM", Locale.getDefault()) }
@@ -123,6 +128,13 @@ fun HomeScreen(vm: LauncherViewModel) {
     Column(
         Modifier
             .fillMaxSize()
+            .drawBehind {
+                drawRect(Brush.radialGradient(
+                    listOf(accent.copy(alpha = 0.24f), accent.copy(alpha = 0.06f), Color.Transparent),
+                    center = Offset(size.width * 0.1f, 0f),
+                    radius = size.width * 1.1f,
+                ))
+            }
             .pointerInput(doubleTap) {
                 detectTapGestures(
                     onDoubleTap = if (doubleTap == GestureTarget.action(HomeAction.NONE)) null
@@ -179,7 +191,8 @@ fun HomeScreen(vm: LauncherViewModel) {
         val today = LocalDate.now()
         val hijri = if (s.hijriOn) remember(today, s.hijriAdjust) { Calendars.hijri(today, s.hijriAdjust) } else null
         val tamil = if (s.tamilOn) remember(today) { Calendars.tamil(today) } else null
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+        if (s.clockStyle == ClockStyle.HEADLINE) HeroHeader(vm, s, now)
+        else Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
             Column {
                 Clock(s.clockStyle, now)
                 if (s.prayerOn || s.goldOn) {

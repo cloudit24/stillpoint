@@ -69,6 +69,7 @@ fun Clock(style: ClockStyle, now: Long) {
             }
             amPm?.let { Text(it, fontSize = 14.sp, fontFamily = FontFamily.Monospace, color = Amber, modifier = Modifier.padding(start = 6.dp, bottom = 12.dp)) }
         }
+        ClockStyle.HEADLINE -> Unit
         ClockStyle.ANALOG -> AnalogClock(cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE))
     }
 }

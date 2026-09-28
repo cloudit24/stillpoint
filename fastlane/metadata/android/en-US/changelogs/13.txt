@@ -1,0 +1,1 @@
+New home header: no clock (the status bar has it). A big headline flips like a live tile between greeting, next prayer, gold, Hijri and Tamil dates; a glass strip shows network, memory and IP; a soft accent glow behind. The clock is still available in Settings > Appearance > Clock style.

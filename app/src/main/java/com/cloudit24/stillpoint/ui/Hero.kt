@@ -1,0 +1,264 @@
+package com.cloudit24.stillpoint.ui
+
+import android.app.ActivityManager
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.net.TrafficStats
+import android.os.SystemClock
+import android.widget.Toast
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
+import com.cloudit24.stillpoint.LauncherViewModel
+import com.cloudit24.stillpoint.Screen
+import com.cloudit24.stillpoint.data.Calendars
+import com.cloudit24.stillpoint.data.LauncherSettings
+import com.cloudit24.stillpoint.data.LocalIp
+import com.cloudit24.stillpoint.data.NetInfo
+import com.cloudit24.stillpoint.data.PrayerTimes
+import com.cloudit24.stillpoint.data.priceFor
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+import kotlin.math.roundToInt
+
+private val HeroPrayer = Color(0xFF8FC4A8)
+private val HeroGold = Color(0xFFE0C068)
+
+private data class HeroCard(val title: String, val subtitle: String, val color: Color)
+
+/**
+ * Clock-free header: accent date line, a big headline that flips like a live tile
+ * (greeting, next prayer, gold, Hijri, Tamil), page dots, and a glass strip with network, memory and IP.
+ */
+@Composable
+fun HeroHeader(vm: LauncherViewModel, s: LauncherSettings, now: Long) {
+    val context = LocalContext.current
+    val zdt = Instant.ofEpochMilli(now).atZone(ZoneId.systemDefault())
+    val today = LocalDate.now()
+    val dayLine = remember(today) {
+        DateTimeFormatter.ofPattern("EEEE, d MMMM", Locale.getDefault()).format(today).uppercase(Locale.getDefault())
+    }
+
+    val cards = buildList {
+        val greeting = when (zdt.hour) {
+            in 5..11 -> "Good morning"
+            in 12..16 -> "Good afternoon"
+            in 17..20 -> "Good evening"
+            else -> "Good night"
+        }
+        add(HeroCard(greeting, "It's ${formatClock(context, now)}", Ink))
+        val city = s.city
+        if (s.prayerOn && city != null) {
+            PrayerTimes.next(now, city.lat, city.lon, s.prayerMethod, s.asrHanafi)?.let { (p, at) ->
+                add(HeroCard("${p.label} in ${formatDuration(at - now)}", "at ${formatClock(context, at)} · ${city.name}", HeroPrayer))
+            }
+        }
+        if (s.goldOn) {
+            val g = vm.gold?.takeIf { it.currency == s.goldCurrency && it.source == s.goldSource }
+            if (g != null) g.priceFor(s.goldKarat, s.goldPerGram)?.let { price ->
+                add(HeroCard(
+                    "Gold " + String.format(Locale.US, "%,.2f", price.value),
+                    "${g.currency} per ${if (s.goldPerGram) "gram" else "ounce"} · ${s.goldKarat}K ${if (price.dubai) "Dubai" else "spot"}",
+                    HeroGold,
+                ))
+            }
+        }
+        if (s.hijriOn) {
+            val h = Calendars.hijri(today, s.hijriAdjust)
+            val m = Regex("^(.*) (\\d+ AH)$").find(h)
+            add(HeroCard(m?.groupValues?.get(1) ?: h, m?.groupValues?.get(2) ?: "", Ink))
+        }
+        if (s.tamilOn) {
+            val parts = Calendars.tamil(today).split(" · ", limit = 2)
+            add(HeroCard(parts[0], parts.getOrElse(1) { "" }, Ink))
+        }
+    }
+
+    var index by remember { mutableIntStateOf(0) }
+    LaunchedEffect(cards.size) {
+        while (cards.size > 1) {
+            delay(6_000)
+            index++
+        }
+    }
+    val current = index % cards.size
+
+    Column(Modifier.fillMaxWidth()) {
+        Text(dayLine, color = Accent, fontSize = 12.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.6.sp)
+        FlipCard(
+            key = current,
+            card = cards[current],
+            modifier = Modifier.padding(top = 6.dp).clickable(
+                interactionSource = remember { MutableInteractionSource() }, indication = null,
+            ) { index++ },
+        )
+        if (cards.size > 1) {
+            Row(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                cards.indices.forEach { i ->
+                    val w by animateDpAsState(if (i == current) 18.dp else 5.dp, tween(300), label = "dot")
+                    Box(Modifier.height(5.dp).width(w).clip(RoundedCornerShape(3.dp))
+                        .background(if (i == current) Accent else Muted.copy(alpha = 0.35f)))
+                }
+            }
+        }
+        if (s.showStats || s.showLocalIp || s.publicIpOn) StatsStrip(vm, s, Modifier.padding(top = 24.dp))
+    }
+}
+
+/** Flips around its horizontal axis when [key] changes; otherwise shows [card] live. */
+@Composable
+private fun FlipCard(key: Int, card: HeroCard, modifier: Modifier) {
+    var shownKey by remember { mutableIntStateOf(key) }
+    var shown by remember { mutableStateOf(card) }
+    val latest by rememberUpdatedState(card)
+    val rot = remember { Animatable(0f) }
+    LaunchedEffect(key) {
+        if (key == shownKey) return@LaunchedEffect
+        rot.animateTo(90f, tween(220, easing = FastOutLinearInEasing))
+        shown = latest
+        shownKey = key
+        rot.snapTo(-90f)
+        rot.animateTo(0f, tween(300, easing = LinearOutSlowInEasing))
+    }
+    val display = if (shownKey == key) card else shown
+    Column(modifier.graphicsLayer {
+        rotationX = rot.value
+        cameraDistance = 14f * density
+    }) {
+        Text(display.title, color = display.color, fontSize = 40.sp, lineHeight = 46.sp, fontWeight = FontWeight.Light,
+            maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(display.subtitle, color = Muted, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(top = 2.dp))
+    }
+}
+
+/** Glass strip: network speed, memory, IP. Sampled once a second only while home is on screen. */
+@Composable
+private fun StatsStrip(vm: LauncherViewModel, s: LauncherSettings, modifier: Modifier) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var down by remember { mutableStateOf("…") }
+    var up by remember { mutableStateOf("…") }
+    var ramPct by remember { mutableIntStateOf(0) }
+    var ramTotal by remember { mutableIntStateOf(0) }
+    var local by remember { mutableStateOf<LocalIp?>(null) }
+
+    LaunchedEffect(lifecycleOwner, s.publicIpOn) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            val am = context.getSystemService(ActivityManager::class.java)
+            val mem = ActivityManager.MemoryInfo()
+            var lastRx = TrafficStats.getTotalRxBytes()
+            var lastTx = TrafficStats.getTotalTxBytes()
+            var lastT = SystemClock.elapsedRealtime()
+            var tick = 0
+            while (true) {
+                if (tick % 3 == 0) {
+                    val l = withContext(Dispatchers.IO) { NetInfo.localIp(context) }
+                    local = l
+                    vm.refreshPublicIp(l?.address)
+                }
+                am.getMemoryInfo(mem)
+                ramPct = ((1 - mem.availMem.toDouble() / mem.totalMem) * 100).roundToInt()
+                ramTotal = (mem.totalMem / 1_073_741_824.0).roundToInt()
+                delay(1_000)
+                val rx = TrafficStats.getTotalRxBytes()
+                val tx = TrafficStats.getTotalTxBytes()
+                val t = SystemClock.elapsedRealtime()
+                val secs = (t - lastT).coerceAtLeast(1) / 1000.0
+                if (rx != TrafficStats.UNSUPPORTED.toLong() && tx != TrafficStats.UNSUPPORTED.toLong()) {
+                    down = speed((rx - lastRx) / secs)
+                    up = speed((tx - lastTx) / secs)
+                }
+                lastRx = rx; lastTx = tx; lastT = t
+                tick++
+            }
+        }
+    }
+
+    val shape = RoundedCornerShape(18.dp)
+    Row(
+        modifier.fillMaxWidth().clip(shape).background(Color.White.copy(alpha = 0.05f))
+            .border(0.5.dp, Color.White.copy(alpha = 0.09f), shape).padding(vertical = 12.dp),
+    ) {
+        if (s.showStats) {
+            StatCell("NETWORK", "↓ $down", "↑ $up", Modifier.weight(1f).clickable { vm.screen = Screen.DATA })
+            StatCell("MEMORY", "$ramPct%", "of $ramTotal GB", Modifier.weight(0.8f).clickable { vm.screen = Screen.DATA })
+        }
+        if (s.showLocalIp || s.publicIpOn) {
+            val l = local
+            val first = if (s.showLocalIp) l?.address ?: "Offline" else vm.publicIp ?: "…"
+            val second = when {
+                s.showLocalIp && s.publicIpOn -> vm.publicIp ?: "…"
+                s.showLocalIp -> l?.kind ?: ""
+                else -> "public"
+            }
+            StatCell(if (s.showLocalIp) (l?.kind?.uppercase() ?: "IP") else "PUBLIC IP", first, second,
+                Modifier.weight(1.3f).clickable {
+                    val copy = listOfNotNull(l?.address, vm.publicIp).joinToString("\n")
+                    if (copy.isNotEmpty()) {
+                        context.getSystemService(ClipboardManager::class.java)
+                            .setPrimaryClip(ClipData.newPlainText("IP address", copy))
+                        Toast.makeText(context, "IP copied", Toast.LENGTH_SHORT).show()
+                    }
+                    vm.refreshPublicIp(l?.address, force = true)
+                })
+        }
+    }
+}
+
+@Composable
+private fun StatCell(label: String, first: String, second: String, modifier: Modifier) {
+    Column(modifier.padding(horizontal = 14.dp)) {
+        Text(label, color = Accent, fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp, maxLines = 1)
+        Text(first, color = Ink, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
+        Text(second, color = Muted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+private fun speed(bytesPerSec: Double): String {
+    val b = bytesPerSec.coerceAtLeast(0.0)
+    return if (b >= 1_048_576) String.format(Locale.US, "%.1f MB/s", b / 1_048_576)
+    else String.format(Locale.US, "%.0f KB/s", b / 1024)
+}

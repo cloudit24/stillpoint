@@ -48,6 +48,7 @@ enum class ClockStyle(val label: String) {
     FLIP("Retro flip"),
     LCD("Retro LCD"),
     ANALOG("Analog"),
+    HEADLINE("No clock: flipping headline"),
 }
 
 /** A place picked by name; coordinates are rounded before any request. */

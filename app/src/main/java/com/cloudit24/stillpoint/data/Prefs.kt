@@ -9,6 +9,9 @@ class Prefs(context: Context) {
     private val sp = context.getSharedPreferences("stillpoint", Context.MODE_PRIVATE)
 
     fun loadSettings(): LauncherSettings {
+        if (!sp.getBoolean(K_HEADLINE_INTRO, false)) {
+            sp.edit().putBoolean(K_HEADLINE_INTRO, true).putString(K_CLOCK, ClockStyle.HEADLINE.name).apply()
+        }
         val d = LauncherSettings()
         return LauncherSettings(
             homeMode = runCatching { HomeMode.valueOf(sp.getString(K_HOME_MODE, d.homeMode.name)!!) }
@@ -240,6 +243,7 @@ class Prefs(context: Context) {
         const val K_WIDGET_IDS = "widget_ids"
         const val K_GESTURE = "gesture_"
         const val K_CLOCK = "clock_style"
+        const val K_HEADLINE_INTRO = "headline_intro_090"
         const val K_SHOW_STATS = "show_stats"
         const val K_LOCAL_IP = "show_local_ip"
         const val K_PUBLIC_IP = "public_ip_on"
