@@ -162,7 +162,10 @@ data class LauncherSettings(
     val adhanAlert: Boolean = false,
     val iqamaAlert: Boolean = false,
     val iqama: Map<Prayer, Int> = DEFAULT_IQAMA,
-    val edgeLight: Boolean = true,
+    val edgeStyle: EdgeStyle = EdgeStyle.FLAT,
+    val edgeBright: Int = 2,
+    val edgeWarnMin: Int = 15,
+    val edgeMotion: Boolean = true,
     val compassHaptics: Boolean = true,
     // Tasks, calendar and projects: where each comes from and how it syncs.
     val tasksSource: TaskSource = TaskSource.PHONE,
@@ -212,3 +215,11 @@ fun iqamaFrom(text: String?): Map<Prayer, Int> = DEFAULT_IQAMA + (text ?: "").sp
 }
 
 fun iqamaText(m: Map<Prayer, Int>): String = m.entries.joinToString(",") { "${it.key.name}:${it.value}" }
+
+/** Where the prayer light is drawn. Curved phones get the very edge; flat screens get lines inside it or a bottom bar. */
+enum class EdgeStyle(val label: String, val detail: String) {
+    OFF("Off", "No light on the screen."),
+    CURVED("Curved sides", "Lines on the very edge of the screen, made for curved-edge phones like the Motorola Edge."),
+    FLAT("Inner sides", "Lines just inside both sides, clear of the rounded corners. For flat screens."),
+    BOTTOM("Bottom bar", "Two short bars at the bottom that meet in the middle at prayer time. Works on any phone."),
+}

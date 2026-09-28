@@ -1,5 +1,8 @@
 package com.cloudit24.stillpoint.ui
 
+import com.cloudit24.stillpoint.data.EdgeStyle
+import androidx.compose.ui.geometry.lerp
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.runtime.withFrameMillis
 import kotlin.math.PI
 import kotlin.math.cos
@@ -144,7 +147,7 @@ fun HomeScreen(vm: LauncherViewModel) {
     // Otherwise it's still and redrawn once a minute. The short animations run at ~20 frames a second
     // and pause whenever home isn't on screen or the screen is off.
     val edgeCity = s.city
-    val edgeSpan = if (s.edgeLight && s.prayerOn && edgeCity != null) {
+    val edgeSpan = if (s.edgeStyle != EdgeStyle.OFF && s.prayerOn && edgeCity != null) {
         remember(now, edgeCity, s.prayerMethod, s.asrHanafi) {
             PrayerTimes.span(now, edgeCity.lat, edgeCity.lon, s.prayerMethod, s.asrHanafi)
         }
@@ -154,7 +157,7 @@ fun HomeScreen(vm: LauncherViewModel) {
         EdgeInfo(
             left = if (!sp.current.isPrayer) null
             else (1f - (now - sp.currentAt).toFloat() / (sp.endsAt - sp.currentAt).coerceAtLeast(1)).coerceIn(0f, 1f),
-            ending = sp.current.isPrayer && sp.endsAt - now <= 15 * 60_000L,
+            ending = sp.current.isPrayer && sp.endsAt - now <= s.edgeWarnMin * 60_000L,
             right = ((now - sp.currentAt).toFloat() / (sp.nextAt - sp.currentAt).coerceAtLeast(1)).coerceIn(0f, 1f),
             starting = sp.nextAt - now <= 10 * 60_000L,
             started = now < iqamaAt,
@@ -163,7 +166,7 @@ fun HomeScreen(vm: LauncherViewModel) {
     val edgeGrow = remember { Animatable(0f) }
     LaunchedEffect(Unit) { edgeGrow.animateTo(1f, tween(1400, easing = FastOutSlowInEasing)) }
     var edgePhase by remember { mutableFloatStateOf(0f) }
-    val edgeMoving = edge != null && (edge.ending || edge.starting || edge.started)
+    val edgeMoving = s.edgeMotion && edge != null && (edge.ending || edge.starting || edge.started)
     LaunchedEffect(edgeMoving) {
         if (edgeMoving) {
             val start = withFrameMillis { it }
@@ -179,7 +182,7 @@ fun HomeScreen(vm: LauncherViewModel) {
             .fillMaxSize()
             .drawWithContent {
                 drawContent()
-                if (edge != null) drawEdges(edge, edgeGrow.value, edgePhase, accent)
+                if (edge != null) drawEdges(edge, s.edgeStyle, EDGE_BRIGHTNESS[s.edgeBright.coerceIn(1, 3) - 1], edgeGrow.value, edgePhase, accent)
             }
             .drawBehind {
                 drawRect(Brush.radialGradient(
@@ -587,30 +590,50 @@ private class EdgeInfo(val left: Float?, val ending: Boolean, val right: Float, 
 private val EdgeCalm = Color(0xFF8FC4A8)
 private val EdgeRed = Color(0xFFE5484D)
 
-private fun DrawScope.drawEdges(e: EdgeInfo, grow: Float, phase: Float, accent: Color) {
+private val EDGE_BRIGHTNESS = floatArrayOf(0.45f, 0.75f, 1f)
+
+/** Each side is a track from "empty" to "full": up the sides, or from the outside towards the middle at the bottom. */
+private fun DrawScope.drawEdges(e: EdgeInfo, style: EdgeStyle, bright: Float, grow: Float, phase: Float, accent: Color) {
+    val w = size.width
+    val h = size.height
+    val (lFrom, lTo, rFrom, rTo) = when (style) {
+        EdgeStyle.BOTTOM -> {
+            val y = h - 4.dp.toPx()
+            val gap = 10.dp.toPx()
+            val pad = 28.dp.toPx()
+            listOf(Offset(pad, y), Offset(w / 2 - gap, y), Offset(w - pad, y), Offset(w / 2 + gap, y))
+        }
+        EdgeStyle.FLAT -> {
+            val x = 6.dp.toPx()
+            val m = 56.dp.toPx()
+            listOf(Offset(x, h - m), Offset(x, m), Offset(w - x, h - m), Offset(w - x, m))
+        }
+        else -> {
+            val x = 1.dp.toPx()
+            listOf(Offset(x, h), Offset(x, 0f), Offset(w - x, h), Offset(w - x, 0f))
+        }
+    }
     val line = 2.dp.toPx()
-    val lx = line / 2
-    val rx = size.width - line / 2
-    for (x in floatArrayOf(lx, rx)) drawLine(Color.White.copy(alpha = 0.05f), Offset(x, 0f), Offset(x, size.height), line)
+    drawLine(Color.White.copy(alpha = 0.05f), lFrom, lTo, line, cap = StrokeCap.Round)
+    drawLine(Color.White.copy(alpha = 0.05f), rFrom, rTo, line, cap = StrokeCap.Round)
 
     // Left: what's left of the current prayer.
     e.left?.let { left ->
-        if (e.ending) edgeBeam(lx, left * grow, EdgeRed, 0.25f + 0.75f * wave(phase, 1.2f))
-        else edgeBeam(lx, left * grow, EdgeCalm, 0.85f)
+        if (e.ending) edgeBeam(lFrom, lTo, left * grow, EdgeRed, bright * (0.25f + 0.75f * wave(phase, 1.2f)))
+        else edgeBeam(lFrom, lTo, left * grow, EdgeCalm, bright * 0.85f)
     }
 
     // Right: the next prayer coming, or the one that just began.
     if (e.started) {
-        edgeBeam(rx, grow, accent, 0.4f + 0.6f * wave(phase, 3f))
+        edgeBeam(rFrom, rTo, grow, accent, bright * (0.4f + 0.6f * wave(phase, 3f)))
     } else {
-        edgeBeam(rx, e.right * grow, accent, 1f)
+        edgeBeam(rFrom, rTo, e.right * grow, accent, bright)
         if (e.starting && e.right > 0f) {
             val t = (phase % 1.8f) / 1.8f
-            val top = size.height * (1f - e.right * grow)
-            val y = size.height - (size.height - top) * t
+            val at = lerp(rFrom, lerp(rFrom, rTo, e.right * grow), t)
             val fade = sin(t * PI.toFloat())
-            drawCircle(accent.copy(alpha = 0.35f * fade), 12.dp.toPx(), Offset(rx, y))
-            drawCircle(Color.White.copy(alpha = 0.9f * fade), 2.5.dp.toPx(), Offset(rx, y))
+            drawCircle(accent.copy(alpha = 0.35f * fade * bright), 12.dp.toPx(), at)
+            drawCircle(Color.White.copy(alpha = 0.9f * fade * bright), 2.5.dp.toPx(), at)
         }
     }
 }
@@ -618,19 +641,19 @@ private fun DrawScope.drawEdges(e: EdgeInfo, grow: Float, phase: Float, accent: 
 /** 0..1..0 over [period] seconds. */
 private fun wave(phase: Float, period: Float): Float = 0.5f + 0.5f * cos(phase * 2f * PI.toFloat() / period)
 
-/** A line up one edge from the bottom to [frac] of the height, with a soft glow and a bright tip. */
-private fun DrawScope.edgeBeam(x: Float, frac: Float, color: Color, alpha: Float) {
+/** A line from [from] towards [to], [frac] of the way, with a soft glow and a bright tip. */
+private fun DrawScope.edgeBeam(from: Offset, to: Offset, frac: Float, color: Color, alpha: Float) {
     if (frac <= 0f) return
-    val h = size.height
-    val top = h * (1f - frac)
+    val tip = lerp(from, to, frac.coerceAtMost(1f))
+    if ((tip - from).getDistance() < 1f) return
     drawLine(
-        Brush.verticalGradient(listOf(color.copy(alpha = 0.22f * alpha), Color.Transparent), startY = top, endY = h),
-        Offset(x, top), Offset(x, h), 14.dp.toPx(),
+        Brush.linearGradient(listOf(color.copy(alpha = 0.22f * alpha), Color.Transparent), start = tip, end = from),
+        tip, from, 14.dp.toPx(),
     )
     drawLine(
-        Brush.verticalGradient(listOf(color.copy(alpha = alpha), color.copy(alpha = 0.25f * alpha)), startY = top, endY = h),
-        Offset(x, top), Offset(x, h), 2.dp.toPx(),
+        Brush.linearGradient(listOf(color.copy(alpha = alpha), color.copy(alpha = 0.25f * alpha)), start = tip, end = from),
+        tip, from, 2.dp.toPx(), cap = StrokeCap.Round,
     )
-    drawCircle(color.copy(alpha = 0.3f * alpha), radius = 10.dp.toPx(), center = Offset(x, top))
-    drawCircle(color.copy(alpha = alpha), radius = 3.dp.toPx(), center = Offset(x, top))
+    drawCircle(color.copy(alpha = 0.3f * alpha), radius = 10.dp.toPx(), center = tip)
+    drawCircle(color.copy(alpha = alpha), radius = 3.dp.toPx(), center = tip)
 }

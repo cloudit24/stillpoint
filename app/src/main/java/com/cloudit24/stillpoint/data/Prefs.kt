@@ -46,7 +46,17 @@ class Prefs(context: Context) {
             adhanAlert = sp.getBoolean(K_ADHAN_ALERT, d.adhanAlert),
             iqamaAlert = sp.getBoolean(K_IQAMA_ALERT, d.iqamaAlert),
             iqama = iqamaFrom(sp.getString(K_IQAMA, null)),
-            edgeLight = sp.getBoolean(K_EDGE_LIGHT, d.edgeLight),
+            // Before 0.13 the light was on/off; curved Motorola Edge phones start on the curved style.
+            edgeStyle = runCatching { EdgeStyle.valueOf(sp.getString(K_EDGE_STYLE, null)!!) }.getOrElse {
+                when {
+                    !sp.getBoolean(K_EDGE_LIGHT, true) -> EdgeStyle.OFF
+                    android.os.Build.MODEL.contains("edge", ignoreCase = true) -> EdgeStyle.CURVED
+                    else -> EdgeStyle.FLAT
+                }
+            },
+            edgeBright = sp.getInt(K_EDGE_BRIGHT, d.edgeBright),
+            edgeWarnMin = sp.getInt(K_EDGE_WARN, d.edgeWarnMin),
+            edgeMotion = sp.getBoolean(K_EDGE_MOTION, d.edgeMotion),
             compassHaptics = sp.getBoolean(K_COMPASS_HAPTICS, d.compassHaptics),
             // Before 0.11, a connected hub was used for tasks and the home card: keep that on upgrade.
             tasksSource = runCatching { TaskSource.valueOf(sp.getString(K_TASKS_SRC, null)!!) }
@@ -112,7 +122,10 @@ class Prefs(context: Context) {
             .putBoolean(K_ADHAN_ALERT, s.adhanAlert)
             .putBoolean(K_IQAMA_ALERT, s.iqamaAlert)
             .putString(K_IQAMA, iqamaText(s.iqama))
-            .putBoolean(K_EDGE_LIGHT, s.edgeLight)
+            .putString(K_EDGE_STYLE, s.edgeStyle.name)
+            .putInt(K_EDGE_BRIGHT, s.edgeBright)
+            .putInt(K_EDGE_WARN, s.edgeWarnMin)
+            .putBoolean(K_EDGE_MOTION, s.edgeMotion)
             .putBoolean(K_COMPASS_HAPTICS, s.compassHaptics)
             .putString(K_TASKS_SRC, s.tasksSource.name)
             .putString(K_CAL_SRC, s.calendarSource.name)
@@ -334,6 +347,10 @@ class Prefs(context: Context) {
         const val K_IQAMA_ALERT = "iqama_alert"
         const val K_IQAMA = "iqama_minutes"
         const val K_EDGE_LIGHT = "edge_light"
+        const val K_EDGE_STYLE = "edge_style"
+        const val K_EDGE_BRIGHT = "edge_bright"
+        const val K_EDGE_WARN = "edge_warn"
+        const val K_EDGE_MOTION = "edge_motion"
         const val K_COMPASS_HAPTICS = "compass_haptics"
         const val K_TASKS_SRC = "tasks_source"
         const val K_CAL_SRC = "calendar_source"

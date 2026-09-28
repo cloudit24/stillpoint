@@ -1,5 +1,7 @@
 package com.cloudit24.stillpoint.ui
 
+import com.cloudit24.stillpoint.data.EdgeStyle
+import androidx.compose.material.icons.outlined.PlayArrow
 import com.cloudit24.stillpoint.widget.PrayerAlerts
 import com.cloudit24.stillpoint.data.Prayer
 import com.cloudit24.stillpoint.data.LauncherSettings
@@ -121,6 +123,7 @@ import kotlinx.coroutines.launch
 private enum class SettingsPage(val section: String, val title: String, val summary: String, val icon: ImageVector) {
     APPEARANCE("Personalization", "Appearance", "Accent colour and clock style", Icons.Outlined.Face),
     HOME("Personalization", "Home screen", "Layout, app count and size", Icons.Outlined.Home),
+    EDGE("Personalization", "Edge light", "Prayer light on the screen edges", Icons.Outlined.PlayArrow),
     APPS("Personalization", "App list", "Starting tab, icons, hidden apps", Icons.Outlined.Menu),
     GESTURES("Personalization", "Gestures and shortcuts", "Swipes, double-tap, bottom shortcuts", Icons.Outlined.ThumbUp),
     INFO("Information", "System info", "Network speed, RAM, IP address, calendar", Icons.AutoMirrored.Outlined.List),
@@ -347,15 +350,12 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         "To use an adhan recording, pick it as the sound in Android settings. On Motorola, turn on " +
                         "Edge lighting for Stillpoint in the Moto app and the curved edges light up with each alert.")
                     Group("Feel") {
-                        ToggleRow("Edge light on home", s.edgeLight) { on -> vm.updateSettings { it.copy(edgeLight = on) } }
+                        ActionRow("Edge light", s.edgeStyle.label) { page = SettingsPage.EDGE }
                         ToggleRow("Vibrate on the Qibla compass", s.compassHaptics) { on ->
                             vm.updateSettings { it.copy(compassHaptics = on) }
                         }
                     }
-                    Note("Edge light, left side: time left in the current prayer; it turns red and blinks in the " +
-                        "last 15 minutes. Right side: the next prayer coming; a spark runs up it in the last 10 minutes " +
-                        "and it glows from the adhan to the iqama. Still the rest of the time. The compass ticks every 10°, " +
-                        "clicks at N, E, S and W, and taps once when you face the Qibla.")
+                    Note("The compass ticks every 10°, clicks at N, E, S and W, and taps once when you face the Qibla.")
                     Group("Dates") {
                         ToggleRow("Hijri date", s.hijriOn) { on -> vm.updateSettings { it.copy(hijriOn = on) } }
                         Stepper("Hijri adjustment (days)", if (s.hijriAdjust > 0) "+${s.hijriAdjust}" else "${s.hijriAdjust}",
@@ -407,6 +407,34 @@ fun SettingsScreen(vm: LauncherViewModel) {
                     }
                     Note("Project Hub is a server you run yourself. Stillpoint talks only to the address you enter and nothing " +
                         "else. Choose what uses it under Productivity: Tasks, Calendar and Projects. Use https unless the hub is on your home network.")
+                }
+
+                SettingsPage.EDGE -> {
+                    Group("Edge light") {
+                        ActionRow("Style", s.edgeStyle.label) { dialog = SettingsDialog.EDGE_STYLE }
+                    }
+                    Note(s.edgeStyle.detail)
+                    if (s.edgeStyle != EdgeStyle.OFF) {
+                        Group("Adjust") {
+                            ActionRow("Brightness", listOf("Low", "Medium", "High")[s.edgeBright.coerceIn(1, 3) - 1]) {
+                                vm.updateSettings { it.copy(edgeBright = it.edgeBright % 3 + 1) }
+                            }
+                            Stepper("Red warning before a prayer ends", "${s.edgeWarnMin} min",
+                                onMinus = { vm.updateSettings { it.copy(edgeWarnMin = (it.edgeWarnMin - 5).coerceAtLeast(5)) } },
+                                onPlus = { vm.updateSettings { it.copy(edgeWarnMin = (it.edgeWarnMin + 5).coerceAtMost(60)) } })
+                            ToggleRow("Animations", s.edgeMotion) { on -> vm.updateSettings { it.copy(edgeMotion = on) } }
+                        }
+                        Note("Left: time left in the current prayer. Green, it shrinks as time passes, then turns red " +
+                            "and blinks before the prayer ends. Right: the next prayer coming. It grows towards prayer time, " +
+                            "a spark runs along it in the last 10 minutes, and it glows from the adhan to the iqama.")
+                        Note("Light on battery: it's still and redrawn once a minute. Animations run only in those last " +
+                            "minutes, at a low frame rate, and stop when home isn't on screen. Turn Animations off to keep it still.")
+                        if (!s.prayerOn || s.city == null) {
+                            Group("Needs prayer times") {
+                                ActionRow("Set up prayer times") { page = SettingsPage.PRAYER }
+                            }
+                        }
+                    }
                 }
 
                 SettingsPage.LOCK -> {
@@ -600,6 +628,9 @@ fun SettingsScreen(vm: LauncherViewModel) {
                 vm.setSync(f) { it.copy(everyMin = m) }
             }
         }
+        SettingsDialog.EDGE_STYLE -> ChoiceDialog("Edge light", EdgeStyle.entries, { it.label }, onDismiss = { dialog = null }) { e ->
+            vm.updateSettings { it.copy(edgeStyle = e) }
+        }
         SettingsDialog.ICS_URL -> IcsDialog(vm.icsUrl().orEmpty(), onDismiss = { dialog = null }) { vm.setIcsUrl(it) }
         null -> Unit
     }
@@ -611,7 +642,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
 
 private enum class SettingsDialog {
     ACCENT, HOME_STYLE, DRAWER_START, CLOCK, GOLD_SOURCE, CURRENCY, KARAT, CITY, PRAYER_CITY, PRAYER_METHOD, HUB,
-    SYNC_TASKS, SYNC_CALENDAR, SYNC_PROJECTS, ICS_URL,
+    SYNC_TASKS, SYNC_CALENDAR, SYNC_PROJECTS, ICS_URL, EDGE_STYLE,
 }
 
 /** Type in the hub address and app key (from the hub's "Connect phone" page). Tested before it's saved. */
