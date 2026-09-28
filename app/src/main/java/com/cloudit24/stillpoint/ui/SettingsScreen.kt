@@ -1,5 +1,8 @@
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.material.icons.outlined.Notifications
+import com.cloudit24.stillpoint.widget.LockNotification
+import com.cloudit24.stillpoint.widget.Refresh
 import android.net.Uri
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -105,10 +108,11 @@ private enum class SettingsPage(val section: String, val title: String, val summ
     HOME("Personalization", "Home screen", "Layout, app count and size", Icons.Outlined.Home),
     APPS("Personalization", "App list", "Starting tab, icons, hidden apps", Icons.Outlined.Menu),
     GESTURES("Personalization", "Gestures and shortcuts", "Swipes, double-tap, bottom shortcuts", Icons.Outlined.ThumbUp),
-    INFO("On the home screen", "System info", "Network speed, RAM, IP address, calendar", Icons.AutoMirrored.Outlined.List),
-    PRAYER("On the home screen", "Prayer and calendars", "Prayer times, Qibla, Hijri and Tamil dates", Icons.Outlined.DateRange),
-    GOLD("On the home screen", "Gold price", "Source, currency and karat", Icons.Outlined.Star),
-    HUB("On the home screen", "Project Hub", "Your own server: next task, today, quick add", Icons.Outlined.CheckCircle),
+    INFO("Information", "System info", "Network speed, RAM, IP address, calendar", Icons.AutoMirrored.Outlined.List),
+    PRAYER("Information", "Prayer and calendars", "Prayer times, Qibla, Hijri and Tamil dates", Icons.Outlined.DateRange),
+    LOCK("Information", "Lock screen", "Next prayer and dates on the lock screen", Icons.Outlined.Notifications),
+    GOLD("Extras", "Gold price", "Home line and widget · uses outside websites", Icons.Outlined.Star),
+    HUB("Extras", "Project Hub", "Your own server: next task, today, quick add", Icons.Outlined.CheckCircle),
     PRIVACY("System", "Permissions and data", "Usage access, gesture service, data usage", Icons.Outlined.Lock),
     UPDATES("System", "Updates", "Download new versions from GitHub", Icons.Outlined.Refresh),
     ABOUT("System", "About", "Version, source code and privacy", Icons.Outlined.Info),
@@ -127,6 +131,11 @@ fun SettingsScreen(vm: LauncherViewModel) {
     var dialog by remember { mutableStateOf<SettingsDialog?>(null) }
 
     BackHandler(enabled = page != null) { page = null }
+
+    val notifyPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        vm.updateSettings { it.copy(lockOn = granted) }
+        Refresh.all(ctx)
+    }
 
     val calendarPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         vm.updateSettings { it.copy(showAgenda = granted) }
@@ -305,7 +314,12 @@ fun SettingsScreen(vm: LauncherViewModel) {
                             vm.updateSettings { it.copy(goldPerGram = !it.goldPerGram) }
                         }
                     }
-                    Note(s.goldSource.detail + ". Other currencies use European Central Bank rates via Frankfurter; " +
+                    Group("Widget") {
+                        Text("Add \"Stillpoint Gold\" from the widget page (swipe right on home, Add widget) " +
+                            "or from any launcher. Tap the widget to refresh.", color = Muted, fontSize = 14.sp,
+                            modifier = Modifier.padding(vertical = 12.dp))
+                    }
+                    Note("Extras use outside websites. " + s.goldSource.detail + ". Other currencies use European Central Bank rates via Frankfurter; " +
                         "AED and SAR use the official fixed rate. Jewellery adds making charges on top.")
                 }
 
@@ -332,6 +346,26 @@ fun SettingsScreen(vm: LauncherViewModel) {
                     Note("Project Hub is a server you run yourself. Stillpoint talks only to the address you enter and nothing " +
                         "else. Home shows the one next thing to do and why, with Done and Not now; the widget page shows " +
                         "today's tasks. Use https unless the hub is on your home network.")
+                }
+
+                SettingsPage.LOCK -> {
+                    Group("Lock screen") {
+                        ToggleRow("Show info on the lock screen", s.lockOn) { on ->
+                            if (on && !LockNotification.canPost(ctx)) notifyPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            else { vm.updateSettings { it.copy(lockOn = on) }; Refresh.all(ctx) }
+                        }
+                    }
+                    Group("Show") {
+                        ToggleRow("Next prayer with countdown", s.lockPrayer) { on ->
+                            vm.updateSettings { it.copy(lockPrayer = on) }; Refresh.all(ctx)
+                        }
+                        ToggleRow("Hijri date", s.lockHijri) { on -> vm.updateSettings { it.copy(lockHijri = on) }; Refresh.all(ctx) }
+                        ToggleRow("Tamil date", s.lockTamil) { on -> vm.updateSettings { it.copy(lockTamil = on) }; Refresh.all(ctx) }
+                    }
+                    Note("A silent notification that stays on the lock screen. The countdown is kept by Android, " +
+                        "so nothing runs in the background. The gold price is never shown here. If it doesn't appear, " +
+                        "check that your phone shows notifications on the lock screen. The prayer uses the city set " +
+                        "under Prayer and calendars.")
                 }
 
                 SettingsPage.PRIVACY -> {

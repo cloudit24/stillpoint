@@ -153,6 +153,11 @@ data class LauncherSettings(
     /** Days added to the Hijri date for local moon sighting, -2..2. */
     val hijriAdjust: Int = 0,
     val tamilOn: Boolean = false,
+    // Lock screen notification (off by default). Gold is never shown there.
+    val lockOn: Boolean = false,
+    val lockPrayer: Boolean = true,
+    val lockHijri: Boolean = true,
+    val lockTamil: Boolean = false,
     // Live data: all off by default. Nothing goes online unless one of these is on.
     val weatherOn: Boolean = false,
     val city: City? = null,

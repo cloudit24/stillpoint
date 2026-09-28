@@ -1,6 +1,6 @@
 package com.cloudit24.stillpoint
 
-import com.cloudit24.stillpoint.widget.StillpointWidget
+import com.cloudit24.stillpoint.widget.Refresh
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.core.tween
@@ -82,7 +82,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         vm.refresh()
-        runCatching { StillpointWidget.updateAll(this) }
+        runCatching { Refresh.all(this) }
     }
 
     override fun onStop() {

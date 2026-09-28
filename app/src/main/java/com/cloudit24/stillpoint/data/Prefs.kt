@@ -39,6 +39,10 @@ class Prefs(context: Context) {
             hijriOn = sp.getBoolean(K_HIJRI_ON, d.hijriOn),
             hijriAdjust = sp.getInt(K_HIJRI_ADJUST, d.hijriAdjust),
             tamilOn = sp.getBoolean(K_TAMIL_ON, d.tamilOn),
+            lockOn = sp.getBoolean(K_LOCK_ON, d.lockOn),
+            lockPrayer = sp.getBoolean(K_LOCK_PRAYER, d.lockPrayer),
+            lockHijri = sp.getBoolean(K_LOCK_HIJRI, d.lockHijri),
+            lockTamil = sp.getBoolean(K_LOCK_TAMIL, d.lockTamil),
             weatherOn = false, // Weather was removed from home in 0.7.1.
             city = sp.getString(K_CITY, null)?.let { raw ->
                 runCatching {
@@ -87,6 +91,10 @@ class Prefs(context: Context) {
             .putBoolean(K_HIJRI_ON, s.hijriOn)
             .putInt(K_HIJRI_ADJUST, s.hijriAdjust)
             .putBoolean(K_TAMIL_ON, s.tamilOn)
+            .putBoolean(K_LOCK_ON, s.lockOn)
+            .putBoolean(K_LOCK_PRAYER, s.lockPrayer)
+            .putBoolean(K_LOCK_HIJRI, s.lockHijri)
+            .putBoolean(K_LOCK_TAMIL, s.lockTamil)
             .putBoolean(K_WEATHER_ON, s.weatherOn)
             .putString(K_CITY, s.city?.let {
                 JSONObject().put("name", it.name).put("country", it.country).put("lat", it.lat).put("lon", it.lon).toString()
@@ -253,6 +261,10 @@ class Prefs(context: Context) {
         const val K_HIJRI_ON = "hijri_on"
         const val K_HIJRI_ADJUST = "hijri_adjust"
         const val K_TAMIL_ON = "tamil_on"
+        const val K_LOCK_ON = "lock_on"
+        const val K_LOCK_PRAYER = "lock_prayer"
+        const val K_LOCK_HIJRI = "lock_hijri"
+        const val K_LOCK_TAMIL = "lock_tamil"
         const val K_WEATHER_ON = "weather_on"
         const val K_CITY = "weather_city"
         const val K_FAHRENHEIT = "weather_fahrenheit"

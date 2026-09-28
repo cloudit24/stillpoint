@@ -1,5 +1,6 @@
 package com.cloudit24.stillpoint
 
+import com.cloudit24.stillpoint.widget.GoldWidget
 import android.app.Application
 import android.appwidget.AppWidgetHost
 import android.appwidget.AppWidgetManager
@@ -99,7 +100,7 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
             val w = if (wantWeather && city != null) withContext(Dispatchers.IO) { live.weather(city) } else null
             val g = if (wantGold) withContext(Dispatchers.IO) { live.gold(s.goldSource, s.goldCurrency) } else null
             if (w != null) { weather = w; prefs.saveWeather(w) }
-            if (g != null) { gold = g; prefs.saveGold(g) }
+            if (g != null) { gold = g; prefs.saveGold(g); runCatching { GoldWidget.updateAll(getApplication()) } }
             liveBusy = false
         }
     }

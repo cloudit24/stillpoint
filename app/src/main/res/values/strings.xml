@@ -4,4 +4,6 @@
     <string name="a11y_description">Locks the screen on double-tap and opens the notification shade on swipe-down. Reads no screen content and collects no data.</string>
     <string name="widget_name">Stillpoint Widget</string>
     <string name="widget_description">Clock, date, Hijri and Tamil dates, and the next prayer</string>
+    <string name="gold_widget_name">Stillpoint Gold</string>
+    <string name="gold_widget_description">Gold price per gram or ounce, tap to refresh</string>
 </resources>

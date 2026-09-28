@@ -9,6 +9,9 @@
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
     <!-- Only for opt-in gold price, public IP and your own Project Hub (all off by default). -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Lock screen info notification (opt-in) and restoring it after a restart. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- Local IP address on home (opt-in). Granted automatically, no prompt. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
@@ -66,6 +69,29 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_stillpoint_info" />
+        </receiver>
+
+        <!-- Stillpoint Gold (Extras). -->
+        <receiver
+            android:name=".widget.GoldWidget"
+            android:exported="false"
+            android:label="@string/gold_widget_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_gold_info" />
+        </receiver>
+
+        <!-- Redraws widgets and the lock screen info at prayer times, midnight, after reboot and updates. -->
+        <receiver
+            android:name=".widget.RefreshReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
         </receiver>
 
         <!-- Optional. Used only for double-tap lock and swipe-down notifications. Off by default. -->
