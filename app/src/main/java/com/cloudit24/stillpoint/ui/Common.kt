@@ -1,5 +1,10 @@
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
+import androidx.compose.ui.graphics.Color
+import androidx.compose.runtime.remember
+import com.cloudit24.stillpoint.data.IconTint
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
@@ -135,8 +140,25 @@ fun AppIcon(vm: LauncherViewModel, app: AppEntry, size: Dp) {
     val bmp by produceState(vm.cachedIcon(app), app.key) {
         if (value == null) value = vm.loadIcon(app, px)
     }
+    val tint = vm.settings.iconTint
+    val accent = Accent
+    val filter = remember(tint, accent) { iconFilter(tint, accent) }
     Box(Modifier.size(size)) {
-        bmp?.let { Image(it, contentDescription = null, modifier = Modifier.size(size)) }
+        bmp?.let {
+            Image(it, contentDescription = null, modifier = Modifier.size(size), colorFilter = filter,
+                alpha = if (tint == IconTint.DIM) 0.55f else 1f)
+        }
+    }
+}
+
+/** Grey: colour removed. Accent: the grey shades recoloured in the accent, like Windows Phone tiles. */
+private fun iconFilter(tint: IconTint, accent: Color): ColorFilter? = when (tint) {
+    IconTint.ORIGINAL -> null
+    IconTint.GREY, IconTint.DIM -> ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
+    IconTint.ACCENT -> {
+        val l = floatArrayOf(0.2126f, 0.7152f, 0.0722f)
+        fun row(c: Float) = floatArrayOf(c * l[0] * 1.3f, c * l[1] * 1.3f, c * l[2] * 1.3f, 0f, 0f)
+        ColorFilter.colorMatrix(ColorMatrix(row(accent.red) + row(accent.green) + row(accent.blue) + floatArrayOf(0f, 0f, 0f, 1f, 0f)))
     }
 }
 

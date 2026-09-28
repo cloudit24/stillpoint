@@ -166,6 +166,7 @@ data class LauncherSettings(
     val edgeBright: Int = 2,
     val edgeWarnMin: Int = 15,
     val edgeMotion: Boolean = true,
+    val iconTint: IconTint = IconTint.ORIGINAL,
     val compassHaptics: Boolean = true,
     // Tasks, calendar and projects: where each comes from and how it syncs.
     val tasksSource: TaskSource = TaskSource.PHONE,
@@ -222,4 +223,11 @@ enum class EdgeStyle(val label: String, val detail: String) {
     CURVED("Curved sides", "Lines on the very edge of the screen, made for curved-edge phones like the Motorola Edge."),
     FLAT("Inner sides", "Lines just inside both sides, clear of the rounded corners. For flat screens."),
     BOTTOM("Bottom bar", "Two short bars at the bottom that meet in the middle at prayer time. Works on any phone."),
+}
+
+enum class IconTint(val label: String) {
+    ORIGINAL("Original colours"),
+    GREY("Grey"),
+    DIM("Dim grey"),
+    ACCENT("Accent colour"),
 }

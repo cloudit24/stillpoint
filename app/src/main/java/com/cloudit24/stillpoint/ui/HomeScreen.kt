@@ -1,5 +1,7 @@
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.platform.LocalConfiguration
 import com.cloudit24.stillpoint.data.EdgeStyle
 import androidx.compose.ui.geometry.lerp
 import androidx.compose.ui.graphics.StrokeCap
@@ -311,19 +313,24 @@ fun HomeScreen(vm: LauncherViewModel) {
         if (homeApps.isEmpty()) {
             Text("Swipe left for apps, right for widgets. Long-press for settings.", color = Muted, fontSize = 14.sp)
         }
-        if (s.homeStyle == HomeStyle.TILES) {
-            HomeTiles(vm, homeApps)
-        } else if (s.homeStyle == HomeStyle.ICONS) {
-            HomeIcons(vm, homeApps, (s.homeSize * 2).dp)
-        } else {
-            homeApps.forEach { app ->
-                AppRow(
-                    label = app.label,
-                    usageMs = if (s.showUsage) vm.usage[app.packageName] else null,
-                    fontSize = s.homeSize.sp,
-                    onClick = { vm.launch(app) },
-                    icon = appIcon(vm, app, (s.homeSize * 1.4f).dp),
-                )
+        // Past 7 apps the list gets a little smaller; past half the screen it scrolls.
+        val listScale = if (homeApps.size > 7) (7f / homeApps.size).coerceAtLeast(0.75f) else 1f
+        val maxListHeight = (LocalConfiguration.current.screenHeightDp * 0.5f).dp
+        Column(Modifier.heightIn(max = maxListHeight).verticalScroll(rememberScrollState())) {
+            if (s.homeStyle == HomeStyle.TILES) {
+                HomeTiles(vm, homeApps)
+            } else if (s.homeStyle == HomeStyle.ICONS) {
+                HomeIcons(vm, homeApps, (s.homeSize * 2).dp)
+            } else {
+                homeApps.forEach { app ->
+                    AppRow(
+                        label = app.label,
+                        usageMs = if (s.showUsage) vm.usage[app.packageName] else null,
+                        fontSize = (s.homeSize * listScale).sp,
+                        onClick = { vm.launch(app) },
+                        icon = appIcon(vm, app, (s.homeSize * 1.4f * listScale).dp),
+                    )
+                }
             }
         }
 

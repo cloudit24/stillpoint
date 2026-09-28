@@ -57,6 +57,7 @@ class Prefs(context: Context) {
             edgeBright = sp.getInt(K_EDGE_BRIGHT, d.edgeBright),
             edgeWarnMin = sp.getInt(K_EDGE_WARN, d.edgeWarnMin),
             edgeMotion = sp.getBoolean(K_EDGE_MOTION, d.edgeMotion),
+            iconTint = runCatching { IconTint.valueOf(sp.getString(K_ICON_TINT, null)!!) }.getOrDefault(d.iconTint),
             compassHaptics = sp.getBoolean(K_COMPASS_HAPTICS, d.compassHaptics),
             // Before 0.11, a connected hub was used for tasks and the home card: keep that on upgrade.
             tasksSource = runCatching { TaskSource.valueOf(sp.getString(K_TASKS_SRC, null)!!) }
@@ -67,7 +68,7 @@ class Prefs(context: Context) {
             tasksSync = loadSync(SyncFeature.TASKS),
             calendarSync = loadSync(SyncFeature.CALENDAR),
             projectsSync = loadSync(SyncFeature.PROJECTS),
-            weatherOn = false, // Weather was removed from home in 0.7.1.
+            weatherOn = sp.getBoolean(K_WEATHER_ON, d.weatherOn),
             city = sp.getString(K_CITY, null)?.let { raw ->
                 runCatching {
                     val o = JSONObject(raw)
@@ -126,6 +127,7 @@ class Prefs(context: Context) {
             .putInt(K_EDGE_BRIGHT, s.edgeBright)
             .putInt(K_EDGE_WARN, s.edgeWarnMin)
             .putBoolean(K_EDGE_MOTION, s.edgeMotion)
+            .putString(K_ICON_TINT, s.iconTint.name)
             .putBoolean(K_COMPASS_HAPTICS, s.compassHaptics)
             .putString(K_TASKS_SRC, s.tasksSource.name)
             .putString(K_CAL_SRC, s.calendarSource.name)
@@ -351,13 +353,14 @@ class Prefs(context: Context) {
         const val K_EDGE_BRIGHT = "edge_bright"
         const val K_EDGE_WARN = "edge_warn"
         const val K_EDGE_MOTION = "edge_motion"
+        const val K_ICON_TINT = "icon_tint"
         const val K_COMPASS_HAPTICS = "compass_haptics"
         const val K_TASKS_SRC = "tasks_source"
         const val K_CAL_SRC = "calendar_source"
         const val K_PROJ_SRC = "projects_source"
         const val K_PROJECTS = "projects"
         const val K_ICS_URL = "ics_url"
-        const val K_WEATHER_ON = "weather_on"
+        const val K_WEATHER_ON = "weather_card_on"
         const val K_CITY = "weather_city"
         const val K_FAHRENHEIT = "weather_fahrenheit"
         const val K_ANIMATE_WEATHER = "weather_animate"

@@ -1,5 +1,8 @@
 package com.cloudit24.stillpoint.ui
 
+import com.cloudit24.stillpoint.data.IconTint
+import com.cloudit24.stillpoint.CrashLog
+import androidx.compose.material.icons.outlined.LocationOn
 import com.cloudit24.stillpoint.data.EdgeStyle
 import androidx.compose.material.icons.outlined.PlayArrow
 import com.cloudit24.stillpoint.widget.PrayerAlerts
@@ -132,6 +135,7 @@ private enum class SettingsPage(val section: String, val title: String, val summ
     TASKS("Productivity", "Tasks", "On this phone, Project Hub, Tasks.org or OpenTasks", Icons.Outlined.Done),
     CALENDAR("Productivity", "Calendar", "Phone calendar, Project Hub or a calendar link", Icons.Outlined.DateRange),
     PROJECTS("Productivity", "Projects", "On this phone or Project Hub", Icons.Outlined.Build),
+    WEATHER("Extras", "Weather", "Headline card · uses Open-Meteo", Icons.Outlined.LocationOn),
     GOLD("Extras", "Gold price", "Home line and widget · uses outside websites", Icons.Outlined.Star),
     HUB("Extras", "Project Hub", "Connection to your own server", Icons.Outlined.CheckCircle),
     PRIVACY("System", "Permissions and data", "Usage access, gesture service, data usage", Icons.Outlined.Lock),
@@ -243,6 +247,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
                             Box(Modifier.size(28.dp).clip(CircleShape).background(Color(s.accent)))
                         }
                         ActionRow("Clock style", s.clockStyle.label) { dialog = SettingsDialog.CLOCK }
+                        ActionRow("Icon colours", s.iconTint.label) { dialog = SettingsDialog.ICON_TINT }
                     }
                 }
 
@@ -367,9 +372,25 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         "adjust if your country's moon sighting differs. Tamil date is the solar calendar at Chennai sunset.")
                 }
 
+                SettingsPage.WEATHER -> {
+                    Group("Weather") {
+                        ToggleRow("Weather card on home", s.weatherOn) { on ->
+                            vm.updateSettings { it.copy(weatherOn = on) }
+                            if (on && s.city == null) dialog = SettingsDialog.CITY else if (on) vm.refreshLive(force = true)
+                        }
+                        ActionRow("City", s.city?.let { "${it.name}, ${it.country}" } ?: "Not set") { dialog = SettingsDialog.CITY }
+                        ActionRow("Units", if (s.fahrenheit) "Fahrenheit (°F)" else "Celsius (°C)") {
+                            vm.updateSettings { it.copy(fahrenheit = !it.fahrenheit) }
+                        }
+                    }
+                    Note("Shown as one of the flipping cards on home. From Open-Meteo (free and open source): only the " +
+                        "city's rounded position is sent, at most every 30 minutes while home is open. " +
+                        "The city is shared with prayer times.")
+                }
+
                 SettingsPage.GOLD -> {
                     Group("Gold price") {
-                        ToggleRow("Show on home", s.goldOn) { on ->
+                        ToggleRow("Line on home (not with Headline)", s.goldOn) { on ->
                             vm.updateSettings { it.copy(goldOn = on) }
                             if (on) vm.refreshLive(force = true)
                         }
@@ -573,9 +594,24 @@ fun SettingsScreen(vm: LauncherViewModel) {
                             ctx.safeStart(Intent(Settings.ACTION_HOME_SETTINGS), Intent(Settings.ACTION_SETTINGS))
                         }
                     }
+                    var crash by remember { mutableStateOf(CrashLog.last(ctx)) }
+                    crash?.let { (at, text) ->
+                        Group("Last problem") {
+                            ActionRow("Stillpoint closed unexpectedly", "${formatAgo(at)} · tap to share the report") {
+                                ctx.safeStart(Intent.createChooser(
+                                    Intent(Intent.ACTION_SEND).setType("text/plain")
+                                        .putExtra(Intent.EXTRA_SUBJECT, "Stillpoint crash report")
+                                        .putExtra(Intent.EXTRA_TEXT, text),
+                                    "Share crash report",
+                                ))
+                            }
+                            ActionRow("Clear report") { CrashLog.clear(ctx); crash = null }
+                        }
+                        Note("Kept only on this phone. Nothing is sent unless you share it.")
+                    }
                     Group("Privacy") {
                         Text("No analytics and no accounts. The internet is used only for features you switch on: " +
-                            "gold price, public IP, city search, your own Project Hub" +
+                            "weather, gold price, public IP, city search, your own Project Hub" +
                             (if (Updater.AVAILABLE) " and update checks. " else ". ") +
                             "Prayer times, Qibla, Hijri and Tamil dates are calculated on the phone.",
                             color = Muted, fontSize = 14.sp, modifier = Modifier.padding(vertical = 12.dp))
@@ -631,6 +667,9 @@ fun SettingsScreen(vm: LauncherViewModel) {
         SettingsDialog.EDGE_STYLE -> ChoiceDialog("Edge light", EdgeStyle.entries, { it.label }, onDismiss = { dialog = null }) { e ->
             vm.updateSettings { it.copy(edgeStyle = e) }
         }
+        SettingsDialog.ICON_TINT -> ChoiceDialog("Icon colours", IconTint.entries, { it.label }, onDismiss = { dialog = null }) { t ->
+            vm.updateSettings { it.copy(iconTint = t) }
+        }
         SettingsDialog.ICS_URL -> IcsDialog(vm.icsUrl().orEmpty(), onDismiss = { dialog = null }) { vm.setIcsUrl(it) }
         null -> Unit
     }
@@ -642,7 +681,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
 
 private enum class SettingsDialog {
     ACCENT, HOME_STYLE, DRAWER_START, CLOCK, GOLD_SOURCE, CURRENCY, KARAT, CITY, PRAYER_CITY, PRAYER_METHOD, HUB,
-    SYNC_TASKS, SYNC_CALENDAR, SYNC_PROJECTS, ICS_URL, EDGE_STYLE,
+    SYNC_TASKS, SYNC_CALENDAR, SYNC_PROJECTS, ICS_URL, EDGE_STYLE, ICON_TINT,
 }
 
 /** Type in the hub address and app key (from the hub's "Connect phone" page). Tested before it's saved. */

@@ -53,6 +53,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        CrashLog.install(this)
+        if (CrashLog.takeUnseen(this)) {
+            vm.blockedMessage = "Stillpoint closed unexpectedly and restarted. " +
+                "If you want to report it, the details are in Settings, About."
+        }
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),

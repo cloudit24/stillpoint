@@ -55,7 +55,6 @@ import com.cloudit24.stillpoint.data.LauncherSettings
 import com.cloudit24.stillpoint.data.LocalIp
 import com.cloudit24.stillpoint.data.NetInfo
 import com.cloudit24.stillpoint.data.PrayerTimes
-import com.cloudit24.stillpoint.data.priceFor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -67,9 +66,9 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 private val HeroPrayer = Color(0xFF8FC4A8)
-private val HeroGold = Color(0xFFE0C068)
+private val HeroWeather = Color(0xFFA9C8E8)
 
-private data class HeroCard(val title: String, val subtitle: String, val color: Color)
+private data class HeroCard(val title: String, val subtitle: String, val color: Color, val small: Boolean = false)
 
 /**
  * Clock-free header: accent date line, a big headline that flips like a live tile
@@ -92,24 +91,19 @@ fun HeroHeader(vm: LauncherViewModel, s: LauncherSettings, now: Long) {
             else -> "Good night"
         }
         add(HeroCard(greeting, "It's ${formatClock(context, now)}", Ink))
-        if (s.goldOn) {
-            val g = vm.gold?.takeIf { it.currency == s.goldCurrency && it.source == s.goldSource }
-            if (g != null) g.priceFor(s.goldKarat, s.goldPerGram)?.let { price ->
-                add(HeroCard(
-                    "Gold " + String.format(Locale.US, "%,.2f", price.value),
-                    "${g.currency} per ${if (s.goldPerGram) "gram" else "ounce"} · ${s.goldKarat}K ${if (price.dubai) "Dubai" else "spot"}",
-                    HeroGold,
-                ))
-            }
+        val w = vm.weather
+        if (s.weatherOn && w != null) {
+            val t = if (s.fahrenheit) w.tempC * 9 / 5 + 32 else w.tempC
+            add(HeroCard("${t.roundToInt()}° ${weatherKind(w.code).label}", s.city?.name ?: "", HeroWeather))
         }
         if (s.hijriOn) {
             val h = Calendars.hijri(today, s.hijriAdjust)
             val m = Regex("^(.*) (\\d+ AH)$").find(h)
-            add(HeroCard(m?.groupValues?.get(1) ?: h, m?.groupValues?.get(2) ?: "", Ink))
+            add(HeroCard(m?.groupValues?.get(1) ?: h, m?.groupValues?.get(2) ?: "", Ink, small = true))
         }
         if (s.tamilOn) {
             val parts = Calendars.tamil(today).split(" · ", limit = 2)
-            add(HeroCard(parts[0], parts.getOrElse(1) { "" }, Ink))
+            add(HeroCard(parts[0], parts.getOrElse(1) { "" }, Ink, small = true))
         }
     }
 
@@ -168,7 +162,8 @@ private fun FlipCard(key: Int, card: HeroCard, modifier: Modifier) {
         rotationX = rot.value
         cameraDistance = 14f * density
     }) {
-        Text(display.title, color = display.color, fontSize = 40.sp, lineHeight = 46.sp, fontWeight = FontWeight.Light,
+        Text(display.title, color = display.color, fontSize = if (display.small) 30.sp else 40.sp, lineHeight = 46.sp,
+            fontWeight = FontWeight.Light,
             maxLines = 1, overflow = TextOverflow.Ellipsis)
         Text(display.subtitle, color = Muted, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(top = 2.dp))
