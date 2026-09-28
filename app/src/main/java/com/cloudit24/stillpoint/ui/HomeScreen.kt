@@ -179,15 +179,18 @@ fun HomeScreen(vm: LauncherViewModel) {
         val today = LocalDate.now()
         val hijri = if (s.hijriOn) remember(today, s.hijriAdjust) { Calendars.hijri(today, s.hijriAdjust) } else null
         val tamil = if (s.tamilOn) remember(today) { Calendars.tamil(today) } else null
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
             Clock(s.clockStyle, now)
             Column(
                 Modifier.weight(1f).padding(start = 16.dp),
                 horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 Text(dateFmt.format(today), color = Ink, fontSize = 16.sp, textAlign = TextAlign.End)
-                RotatingLine(listOfNotNull(hijri, tamil))
+                RotatingLine(listOfNotNull(
+                    hijri?.replace(Regex(" (\\d+ AH)$"), "\n$1"),
+                    tamil?.replaceFirst(" · ", "\n"),
+                ))
                 if (s.showStats) SystemStatsLine(onClick = { vm.screen = Screen.DATA })
                 if (s.showLocalIp || s.publicIpOn) IpLine(vm, s)
             }
@@ -285,7 +288,7 @@ private fun RotatingLine(lines: List<String>) {
                 (slideOutVertically(tween(350)) { -it } + fadeOut(tween(250)))
         },
         label = "dates",
-    ) { Text(it, color = Muted, fontSize = 13.sp, textAlign = TextAlign.End) }
+    ) { Text(it, color = Muted, fontSize = 13.sp, lineHeight = 18.sp, textAlign = TextAlign.End, minLines = 2) }
 }
 
 /** Windows Phone start screen: square accent tiles, three across. Long-press shows the full name. */

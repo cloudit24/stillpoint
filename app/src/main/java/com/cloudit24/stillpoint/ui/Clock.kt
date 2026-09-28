@@ -5,6 +5,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -53,10 +55,17 @@ fun Clock(style: ClockStyle, now: Long) {
             amPm?.let { Text(it, fontSize = 14.sp, color = Muted, modifier = Modifier.padding(start = 8.dp)) }
         }
         ClockStyle.LCD -> Row(verticalAlignment = Alignment.Bottom) {
-            Box {
-                // Unlit segments behind the digits, like an old LCD.
-                Text("88:88", fontSize = 44.sp, fontFamily = FontFamily.Monospace, color = Amber.copy(alpha = 0.10f))
-                Text(hh.padStart(2, ' ') + ":" + mm, fontSize = 44.sp, fontFamily = FontFamily.Monospace, color = Amber)
+            val density = LocalDensity.current
+            val digitCell = with(density) { (44.sp * 0.64f).toDp() }
+            val colonCell = with(density) { (44.sp * 0.36f).toDp() }
+            (hh.padStart(2, ' ') + ":" + mm).forEach { ch ->
+                Box(Modifier.width(if (ch == ':') colonCell else digitCell), contentAlignment = Alignment.Center) {
+                    // Unlit segments behind the digit, like an old LCD.
+                    Text(if (ch == ':') ":" else "8", fontSize = 44.sp, fontFamily = FontFamily.Monospace,
+                        color = Amber.copy(alpha = 0.10f), softWrap = false, maxLines = 1)
+                    Text(ch.toString(), fontSize = 44.sp, fontFamily = FontFamily.Monospace, color = Amber,
+                        softWrap = false, maxLines = 1)
+                }
             }
             amPm?.let { Text(it, fontSize = 14.sp, fontFamily = FontFamily.Monospace, color = Amber, modifier = Modifier.padding(start = 6.dp, bottom = 12.dp)) }
         }

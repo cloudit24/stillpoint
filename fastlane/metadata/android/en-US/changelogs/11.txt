@@ -1,0 +1,1 @@
+Home alignment: clock level with the date, even spacing on the right, dates split neatly over two lines, retro LCD digits line up with their background.
