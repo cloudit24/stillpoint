@@ -1,1 +1,1 @@
-Home: smaller clock with the date, Hijri/Tamil dates, network speed, RAM and IP on its right. Weather removed.
+Home: smaller clock with the date, Hijri/Tamil dates, network speed, RAM and IP on its right. Weather removed. Settings reorganised into clear sections. Widget picker grouped by app. New Stillpoint Widget (clock, dates, next prayer).

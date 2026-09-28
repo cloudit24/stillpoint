@@ -1,5 +1,11 @@
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import android.appwidget.AppWidgetProviderInfo
 import android.content.pm.PackageManager
 import androidx.activity.compose.BackHandler
@@ -116,22 +122,64 @@ private fun WidgetItem(vm: LauncherViewModel, id: Int, editing: Boolean) {
     }
 }
 
+/** Widgets grouped under their app, apps A to Z, with Stillpoint's own widget first and open. */
 @Composable
 private fun WidgetPicker(vm: LauncherViewModel, onPick: (AppWidgetProviderInfo) -> Unit) {
-    val pm = LocalContext.current.packageManager
-    val providers = remember { vm.widgetProviders() }
+    val context = LocalContext.current
+    val pm = context.packageManager
+    val own = context.packageName
+    val groups = remember {
+        vm.widgetProviders()
+            .groupBy { it.provider.packageName }
+            .map { (pkg, list) -> Triple(pkg, if (pkg == own) "Stillpoint" else appLabel(pm, pkg), list) }
+            .sortedWith(compareBy({ it.first != own }, { it.second.lowercase() }))
+    }
+    var open by remember { mutableStateOf(setOf(own)) }
 
-    LazyColumn(Modifier.fillMaxSize().padding(horizontal = 28.dp)) {
-        item { Text("Add widget", fontSize = 34.sp, fontWeight = FontWeight.Light, modifier = Modifier.padding(vertical = 24.dp)) }
-        if (providers.isEmpty()) {
-            item { Text("No widgets found on this phone.", color = Muted, fontSize = 14.sp) }
-        }
-        items(providers, key = { "${it.provider.flattenToString()}#${it.profile.hashCode()}" }) { p ->
-            Column(Modifier.fillMaxWidth().clickable { onPick(p) }.padding(vertical = 10.dp)) {
-                Text(p.loadLabel(pm), fontSize = 18.sp)
-                Text(appLabel(pm, p.provider.packageName), color = Muted, fontSize = 13.sp)
+    LazyColumn(Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
+        item {
+            Row(Modifier.padding(top = 20.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("Add widget", fontSize = 30.sp, fontWeight = FontWeight.Light, modifier = Modifier.weight(1f))
+                Text("${groups.size} apps", color = Muted, fontSize = 13.sp)
             }
         }
+        if (groups.isEmpty()) {
+            item { Text("No widgets found on this phone.", color = Muted, fontSize = 14.sp) }
+        }
+        groups.forEach { (pkg, label, list) ->
+            val isOpen = pkg in open
+            item(key = "app_$pkg") {
+                val app = remember(pkg) { vm.apps.firstOrNull { it.packageName == pkg } }
+                Row(
+                    Modifier.fillMaxWidth().clickable { open = if (isOpen) open - pkg else open + pkg }.padding(vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (app != null) AppIcon(vm, app, 36.dp) else Box(Modifier.size(36.dp).clip(CircleShape).background(Accent))
+                    Column(Modifier.weight(1f).padding(start = 14.dp)) {
+                        Text(label, fontSize = 17.sp, color = if (pkg == own) Accent else Ink)
+                        Text(if (list.size == 1) "1 widget" else "${list.size} widgets", color = Muted, fontSize = 13.sp)
+                    }
+                    Text(if (isOpen) "▾" else "▸", color = Muted, fontSize = 16.sp)
+                }
+            }
+            if (isOpen) {
+                items(list, key = { "${it.provider.flattenToString()}#${it.profile.hashCode()}" }) { p ->
+                    val dm = context.resources.displayMetrics
+                    // Rough size in home-screen cells (about 74dp each), as other launchers show it.
+                    val cols = ((p.minWidth / dm.density + 30) / 74).toInt().coerceAtLeast(1)
+                    val rows = ((p.minHeight / dm.density + 30) / 74).toInt().coerceAtLeast(1)
+                    Row(
+                        Modifier.fillMaxWidth().padding(start = 50.dp).clip(RoundedCornerShape(12.dp))
+                            .clickable { onPick(p) }.padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(p.loadLabel(pm), fontSize = 15.sp, modifier = Modifier.weight(1f))
+                        Text("$cols × $rows", color = Muted, fontSize = 12.sp)
+                    }
+                }
+            }
+        }
+        item { Spacer(Modifier.height(24.dp)) }
     }
 }
 

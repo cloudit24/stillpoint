@@ -1,5 +1,27 @@
 package com.cloudit24.stillpoint.ui
 
+import android.net.Uri
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.outlined.List
+import androidx.compose.material.icons.outlined.DateRange
+import androidx.compose.material.icons.outlined.Face
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Menu
+import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material.icons.outlined.ThumbUp
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
@@ -74,19 +96,22 @@ import com.cloudit24.stillpoint.data.HomeMode
 import com.cloudit24.stillpoint.service.LockAccessibilityService
 import kotlinx.coroutines.launch
 
-/** Settings groups, Windows Phone style: a menu of big lowercase names, each opening its own page. */
-private enum class SettingsPage(val title: String, val summary: String) {
-    APPEARANCE("appearance", "accent colour, clock style, app icons"),
-    HOME("home screen", "apps on home, size, style, screen time"),
-    INFO("info on home", "network speed, RAM, IP address, calendar"),
-    PRAYER("prayer & calendars", "prayer times, Qibla, Hijri and Tamil dates"),
-    GOLD("gold price", "source, currency, karat"),
-    APPS("app list", "start tab, hidden apps"),
-    GESTURES("gestures", "swipes, double-tap, bottom shortcuts"),
-    PRIVACY("permissions & data", "usage access, gesture service, data usage"),
-    UPDATES("updates", "download new versions from GitHub"),
-    ABOUT("about", "version and privacy"),
+/** Settings pages, grouped on the main screen under [section]. */
+private enum class SettingsPage(val section: String, val title: String, val summary: String, val icon: ImageVector) {
+    APPEARANCE("Personalization", "Appearance", "Accent colour and clock style", Icons.Outlined.Face),
+    HOME("Personalization", "Home screen", "Layout, app count and size", Icons.Outlined.Home),
+    APPS("Personalization", "App list", "Starting tab, icons, hidden apps", Icons.Outlined.Menu),
+    GESTURES("Personalization", "Gestures and shortcuts", "Swipes, double-tap, bottom shortcuts", Icons.Outlined.ThumbUp),
+    INFO("On the home screen", "System info", "Network speed, RAM, IP address, calendar", Icons.AutoMirrored.Outlined.List),
+    PRAYER("On the home screen", "Prayer and calendars", "Prayer times, Qibla, Hijri and Tamil dates", Icons.Outlined.DateRange),
+    GOLD("On the home screen", "Gold price", "Source, currency and karat", Icons.Outlined.Star),
+    PRIVACY("System", "Permissions and data", "Usage access, gesture service, data usage", Icons.Outlined.Lock),
+    UPDATES("System", "Updates", "Download new versions from GitHub", Icons.Outlined.Refresh),
+    ABOUT("System", "About", "Version, source code and privacy", Icons.Outlined.Info),
 }
+
+private val CardColor = Color(0xFF121211)
+private val DividerColor = Color(0xFF232321)
 
 @Composable
 fun SettingsScreen(vm: LauncherViewModel) {
@@ -108,161 +133,212 @@ fun SettingsScreen(vm: LauncherViewModel) {
         targetState = page,
         transitionSpec = {
             val forward = targetState != null
-            (slideInHorizontally(tween(260)) { w -> if (forward) w / 4 else -w / 4 } + fadeIn(tween(260))) togetherWith
-                (slideOutHorizontally(tween(180)) { w -> if (forward) -w / 4 else w / 4 } + fadeOut(tween(180)))
+            (slideInHorizontally(tween(240)) { w -> if (forward) w / 5 else -w / 5 } + fadeIn(tween(240))) togetherWith
+                (slideOutHorizontally(tween(180)) { w -> if (forward) -w / 5 else w / 5 } + fadeOut(tween(160)))
         },
         label = "settings",
     ) { current ->
         Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 28.dp, vertical = 20.dp),
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp),
         ) {
-            Text(if (current == null) "STILLPOINT" else "SETTINGS", color = Muted, fontSize = 13.sp,
-                fontWeight = FontWeight.Medium, letterSpacing = 1.sp)
-            Text(current?.title ?: "settings", fontSize = 44.sp, fontWeight = FontWeight.Light,
-                modifier = Modifier.padding(bottom = 12.dp))
+            if (current == null) {
+                Text("Settings", fontSize = 34.sp, fontWeight = FontWeight.Light,
+                    modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 8.dp))
+            } else {
+                Row(Modifier.padding(top = 4.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Ink,
+                        modifier = Modifier.clip(CircleShape).clickable { page = null }.padding(8.dp))
+                    Text(current.title, fontSize = 26.sp, fontWeight = FontWeight.Light, modifier = Modifier.padding(start = 8.dp))
+                }
+            }
 
             when (current) {
                 null -> {
-                    SettingsPage.entries.filter { it != SettingsPage.UPDATES || Updater.AVAILABLE }.forEach { p ->
-                        Column(Modifier.fillMaxWidth().clickable { page = p }.padding(vertical = 10.dp)) {
-                            Text(p.title, fontSize = 24.sp, fontWeight = FontWeight.Light)
-                            Text(p.summary, color = Muted, fontSize = 13.sp)
+                    SettingsPage.entries
+                        .filter { it != SettingsPage.UPDATES || Updater.AVAILABLE }
+                        .groupBy { it.section }
+                        .forEach { (section, pages) ->
+                            Group(section) {
+                                pages.forEachIndexed { i, p ->
+                                    if (i > 0) HorizontalDivider(color = DividerColor, thickness = 0.5.dp, modifier = Modifier.padding(start = 56.dp))
+                                    MenuRow(p.icon, p.title, p.summary) { page = p }
+                                }
+                            }
                         }
-                    }
-                    ActionRow("Set as default home app", "Opens the system home app picker") {
-                        ctx.safeStart(Intent(Settings.ACTION_HOME_SETTINGS), Intent(Settings.ACTION_SETTINGS))
-                    }
+                    Text("Stillpoint ${BuildConfig.VERSION_NAME}", color = Muted, fontSize = 12.sp,
+                        modifier = Modifier.fillMaxWidth().padding(top = 24.dp), textAlign = TextAlign.Center)
                 }
 
                 SettingsPage.APPEARANCE -> {
-                    Row(Modifier.fillMaxWidth().clickable { dialog = SettingsDialog.ACCENT }.padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text("Accent colour", fontSize = 16.sp)
-                            Text(ACCENTS.firstOrNull { it.argb == s.accent }?.name ?: "Custom", color = Muted, fontSize = 13.sp)
+                    Group("Theme") {
+                        Row(Modifier.fillMaxWidth().clickable { dialog = SettingsDialog.ACCENT }.padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text("Accent colour", fontSize = 16.sp)
+                                Text(ACCENTS.firstOrNull { it.argb == s.accent }?.name ?: "Custom", color = Muted, fontSize = 13.sp)
+                            }
+                            Box(Modifier.size(28.dp).clip(CircleShape).background(Color(s.accent)))
                         }
-                        Box(Modifier.size(36.dp).background(Color(s.accent)))
+                        ActionRow("Clock style", s.clockStyle.label) { dialog = SettingsDialog.CLOCK }
                     }
-                    ActionRow("Clock style", s.clockStyle.label) { dialog = SettingsDialog.CLOCK }
-                    ToggleRow("Show app icons in the app list", s.showIcons) { on -> vm.updateSettings { it.copy(showIcons = on) } }
                 }
 
                 SettingsPage.HOME -> {
-                    ActionRow("Home style", s.homeStyle.label) { dialog = SettingsDialog.HOME_STYLE }
-                    ToggleRow("Show most-used apps", s.homeMode == HomeMode.AUTO) { on ->
-                        vm.updateSettings { it.copy(homeMode = if (on) HomeMode.AUTO else HomeMode.PINNED) }
+                    Group("Layout") {
+                        ActionRow("Home style", s.homeStyle.label) { dialog = SettingsDialog.HOME_STYLE }
+                        ToggleRow("Show most-used apps", s.homeMode == HomeMode.AUTO) { on ->
+                            vm.updateSettings { it.copy(homeMode = if (on) HomeMode.AUTO else HomeMode.PINNED) }
+                        }
+                        Stepper("Apps on home", "${s.homeCount}",
+                            onMinus = { vm.updateSettings { it.copy(homeCount = (it.homeCount - 1).coerceAtLeast(3)) } },
+                            onPlus = { vm.updateSettings { it.copy(homeCount = (it.homeCount + 1).coerceAtMost(9)) } })
+                        Stepper("App size", "${s.homeSize}",
+                            onMinus = { vm.updateSettings { it.copy(homeSize = (it.homeSize - 2).coerceAtLeast(16)) } },
+                            onPlus = { vm.updateSettings { it.copy(homeSize = (it.homeSize + 2).coerceAtMost(40)) } })
                     }
-                    Stepper("Apps on home", "${s.homeCount}",
-                        onMinus = { vm.updateSettings { it.copy(homeCount = (it.homeCount - 1).coerceAtLeast(3)) } },
-                        onPlus = { vm.updateSettings { it.copy(homeCount = (it.homeCount + 1).coerceAtMost(9)) } })
                     Note("Pinned apps are shown when most-used is off, or before usage data exists. Pin from the app list by long-pressing.")
-                    Stepper("App size", "${s.homeSize}",
-                        onMinus = { vm.updateSettings { it.copy(homeSize = (it.homeSize - 2).coerceAtLeast(16)) } },
-                        onPlus = { vm.updateSettings { it.copy(homeSize = (it.homeSize + 2).coerceAtMost(40)) } })
-                    ToggleRow("Show screen time", s.showUsage) { on -> vm.updateSettings { it.copy(showUsage = on) } }
-                    ToggleRow("Show tasks on the widget page", s.showTasks) { on -> vm.updateSettings { it.copy(showTasks = on) } }
-                }
-
-                SettingsPage.INFO -> {
-                    ToggleRow("Network speed and RAM", s.showStats) { on -> vm.updateSettings { it.copy(showStats = on) } }
-                    ToggleRow("Local IP address", s.showLocalIp) { on -> vm.updateSettings { it.copy(showLocalIp = on) } }
-                    ToggleRow("Public IP address", s.publicIpOn) { on -> vm.updateSettings { it.copy(publicIpOn = on) } }
-                    if (s.publicIpOn) Note("Asked from api.ipify.org (open source) when your network changes.")
-                    ToggleRow("Today's calendar", s.showAgenda) { on ->
-                        val granted = ctx.checkSelfPermission(Manifest.permission.READ_CALENDAR) == PackageManager.PERMISSION_GRANTED
-                        if (on && !granted) calendarPermission.launch(Manifest.permission.READ_CALENDAR)
-                        else { vm.updateSettings { it.copy(showAgenda = on) }; vm.refresh() }
+                    Group("Extras") {
+                        ToggleRow("Screen time today", s.showUsage) { on -> vm.updateSettings { it.copy(showUsage = on) } }
+                        ToggleRow("Tasks on the widget page", s.showTasks) { on -> vm.updateSettings { it.copy(showTasks = on) } }
                     }
-                    Note("Dates, network and IP show on the right of the clock. Gold and prayer times have their own pages.")
-                }
-
-                SettingsPage.PRAYER -> {
-                    Header("Prayer times")
-                    ToggleRow("Show next prayer on home", s.prayerOn) { on ->
-                        if (on && s.city == null) dialog = SettingsDialog.PRAYER_CITY
-                        else vm.updateSettings { it.copy(prayerOn = on) }
-                    }
-                    ActionRow("City", s.city?.let { "${it.name}, ${it.country}" } ?: "Not set") {
-                        dialog = SettingsDialog.PRAYER_CITY
-                    }
-                    ActionRow("Calculation method", s.prayerMethod.label) { dialog = SettingsDialog.PRAYER_METHOD }
-                    ActionRow("Asr time", if (s.asrHanafi) "Hanafi (later)" else "Standard (Shafi'i, Maliki, Hanbali)") {
-                        vm.updateSettings { it.copy(asrHanafi = !it.asrHanafi) }
-                    }
-                    ActionRow("Today's times and Qibla compass") { vm.screen = Screen.PRAYER }
-                    Note("Calculated on the phone from the city's position. Nothing is sent.")
-
-                    Header("Dates on home")
-                    ToggleRow("Hijri date", s.hijriOn) { on -> vm.updateSettings { it.copy(hijriOn = on) } }
-                    Stepper("Hijri adjustment", if (s.hijriAdjust > 0) "+${s.hijriAdjust}" else "${s.hijriAdjust}",
-                        onMinus = { vm.updateSettings { it.copy(hijriAdjust = (it.hijriAdjust - 1).coerceAtLeast(-2)) } },
-                        onPlus = { vm.updateSettings { it.copy(hijriAdjust = (it.hijriAdjust + 1).coerceAtMost(2)) } })
-                    ToggleRow("Tamil date", s.tamilOn) { on -> vm.updateSettings { it.copy(tamilOn = on) } }
-                    Note("With both on, home switches between them every few seconds. Hijri follows the Umm al-Qura " +
-                        "calendar; adjust by a day if your country's moon sighting differs. Tamil date is the solar " +
-                        "calendar at Chennai sunset, with the 60-year name and Thiruvalluvar year.")
-                }
-
-                SettingsPage.GOLD -> {
-                    ToggleRow("Show gold price", s.goldOn) { on ->
-                        vm.updateSettings { it.copy(goldOn = on) }
-                        if (on) vm.refreshLive(force = true)
-                    }
-                    ActionRow("Price", s.goldSource.label) { dialog = SettingsDialog.GOLD_SOURCE }
-                    ActionRow("Currency", s.goldCurrency) { dialog = SettingsDialog.CURRENCY }
-                    ActionRow("Karat", "${s.goldKarat}K") { dialog = SettingsDialog.KARAT }
-                    ActionRow("Unit", if (s.goldPerGram) "Per gram" else "Per troy ounce") {
-                        vm.updateSettings { it.copy(goldPerGram = !it.goldPerGram) }
-                    }
-                    Note(s.goldSource.detail + ". Other currencies use European Central Bank rates via Frankfurter; " +
-                        "AED and SAR use the official fixed rate. Jewellery adds making charges on top.")
                 }
 
                 SettingsPage.APPS -> {
-                    ActionRow("Open the app list on", s.drawerStart.label) { dialog = SettingsDialog.DRAWER_START }
-                    ToggleRow("Show app icons", s.showIcons) { on -> vm.updateSettings { it.copy(showIcons = on) } }
-                    Header("Hidden apps")
-                    val hidden = vm.apps.filter { it.key in s.hidden }
-                    if (hidden.isEmpty()) Note("None. Long-press an app in the list to hide it.")
-                    hidden.forEach { app ->
-                        Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text(app.label, fontSize = 16.sp, modifier = Modifier.weight(1f))
-                            Text("Unhide", color = Accent, modifier = Modifier.clickable { vm.unhide(app.key) }.padding(8.dp))
+                    Group("Behaviour") {
+                        ActionRow("Open the app list on", s.drawerStart.label.replaceFirstChar { it.uppercase() }) {
+                            dialog = SettingsDialog.DRAWER_START
+                        }
+                        ToggleRow("Show app icons", s.showIcons) { on -> vm.updateSettings { it.copy(showIcons = on) } }
+                    }
+                    Group("Hidden apps") {
+                        val hidden = vm.apps.filter { it.key in s.hidden }
+                        if (hidden.isEmpty()) Text("None. Long-press an app in the list to hide it.", color = Muted,
+                            fontSize = 14.sp, modifier = Modifier.padding(vertical = 12.dp))
+                        hidden.forEach { app ->
+                            Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Text(app.label, fontSize = 16.sp, modifier = Modifier.weight(1f))
+                                Text("Unhide", color = Accent, modifier = Modifier.clickable { vm.unhide(app.key) }.padding(8.dp))
+                            }
                         }
                     }
                 }
 
                 SettingsPage.GESTURES -> {
-                    GestureSlot.entries.forEach { slot ->
-                        ActionRow(slot.label, vm.targetLabel(s.gesture(slot)) ?: "Nothing") { picking = slot }
+                    Group("Swipes and taps") {
+                        listOf(GestureSlot.SWIPE_LEFT, GestureSlot.SWIPE_RIGHT, GestureSlot.SWIPE_UP, GestureSlot.SWIPE_DOWN,
+                            GestureSlot.DOUBLE_TAP).forEach { slot ->
+                            ActionRow(slot.label, vm.targetLabel(s.gesture(slot)) ?: "Nothing") { picking = slot }
+                        }
                     }
-                    ActionRow(
-                        "Gesture service: ${if (a11yOn) "on" else "off"}",
-                        "Needed only for Lock screen and Notifications. " +
-                            "If the switch is greyed out on a sideloaded install: App info, menu, Allow restricted settings.",
-                    ) { ctx.safeStart(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
+                    Group("Bottom shortcuts") {
+                        listOf(GestureSlot.SHORTCUT_LEFT, GestureSlot.SHORTCUT_RIGHT).forEach { slot ->
+                            ActionRow(slot.label, vm.targetLabel(s.gesture(slot)) ?: "Nothing") { picking = slot }
+                        }
+                    }
+                    Group("Gesture service") {
+                        ActionRow(
+                            "Status: ${if (a11yOn) "on" else "off"}",
+                            "Needed only for Lock screen and Notifications. If the switch is greyed out: " +
+                                "App info, menu, Allow restricted settings.",
+                        ) { ctx.safeStart(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
+                    }
+                }
+
+                SettingsPage.INFO -> {
+                    Group("Right of the clock") {
+                        ToggleRow("Network speed and RAM", s.showStats) { on -> vm.updateSettings { it.copy(showStats = on) } }
+                        ToggleRow("Local IP address", s.showLocalIp) { on -> vm.updateSettings { it.copy(showLocalIp = on) } }
+                        ToggleRow("Public IP address", s.publicIpOn) { on -> vm.updateSettings { it.copy(publicIpOn = on) } }
+                    }
+                    Note("The public IP is asked from api.ipify.org (open source) only when your network changes. " +
+                        "Tap the network line for per-app data usage.")
+                    Group("Below the clock") {
+                        ToggleRow("Today's calendar", s.showAgenda) { on ->
+                            val granted = ctx.checkSelfPermission(Manifest.permission.READ_CALENDAR) == PackageManager.PERMISSION_GRANTED
+                            if (on && !granted) calendarPermission.launch(Manifest.permission.READ_CALENDAR)
+                            else { vm.updateSettings { it.copy(showAgenda = on) }; vm.refresh() }
+                        }
+                    }
+                }
+
+                SettingsPage.PRAYER -> {
+                    Group("Prayer times") {
+                        ToggleRow("Next prayer on home", s.prayerOn) { on ->
+                            if (on && s.city == null) dialog = SettingsDialog.PRAYER_CITY
+                            else vm.updateSettings { it.copy(prayerOn = on) }
+                        }
+                        ActionRow("City", s.city?.let { "${it.name}, ${it.country}" } ?: "Not set") {
+                            dialog = SettingsDialog.PRAYER_CITY
+                        }
+                        ActionRow("Calculation method", s.prayerMethod.label) { dialog = SettingsDialog.PRAYER_METHOD }
+                        ActionRow("Asr time", if (s.asrHanafi) "Hanafi (later)" else "Standard (Shafi'i, Maliki, Hanbali)") {
+                            vm.updateSettings { it.copy(asrHanafi = !it.asrHanafi) }
+                        }
+                        ActionRow("Today's times and Qibla compass") { vm.screen = Screen.PRAYER }
+                    }
+                    Note("Calculated on the phone from the city's position. Nothing is sent.")
+                    Group("Dates") {
+                        ToggleRow("Hijri date", s.hijriOn) { on -> vm.updateSettings { it.copy(hijriOn = on) } }
+                        Stepper("Hijri adjustment (days)", if (s.hijriAdjust > 0) "+${s.hijriAdjust}" else "${s.hijriAdjust}",
+                            onMinus = { vm.updateSettings { it.copy(hijriAdjust = (it.hijriAdjust - 1).coerceAtLeast(-2)) } },
+                            onPlus = { vm.updateSettings { it.copy(hijriAdjust = (it.hijriAdjust + 1).coerceAtMost(2)) } })
+                        ToggleRow("Tamil date", s.tamilOn) { on -> vm.updateSettings { it.copy(tamilOn = on) } }
+                    }
+                    Note("With both on, they take turns every few seconds. Hijri follows the Umm al-Qura calendar; " +
+                        "adjust if your country's moon sighting differs. Tamil date is the solar calendar at Chennai sunset.")
+                }
+
+                SettingsPage.GOLD -> {
+                    Group("Gold price") {
+                        ToggleRow("Show on home", s.goldOn) { on ->
+                            vm.updateSettings { it.copy(goldOn = on) }
+                            if (on) vm.refreshLive(force = true)
+                        }
+                        ActionRow("Source", s.goldSource.label) { dialog = SettingsDialog.GOLD_SOURCE }
+                        ActionRow("Currency", s.goldCurrency) { dialog = SettingsDialog.CURRENCY }
+                        ActionRow("Karat", "${s.goldKarat}K") { dialog = SettingsDialog.KARAT }
+                        ActionRow("Unit", if (s.goldPerGram) "Per gram" else "Per troy ounce") {
+                            vm.updateSettings { it.copy(goldPerGram = !it.goldPerGram) }
+                        }
+                    }
+                    Note(s.goldSource.detail + ". Other currencies use European Central Bank rates via Frankfurter; " +
+                        "AED and SAR use the official fixed rate. Jewellery adds making charges on top.")
                 }
 
                 SettingsPage.PRIVACY -> {
-                    ActionRow(
-                        "Usage access: ${if (vm.hasUsageAccess) "allowed" else "not allowed"}",
-                        "Used for screen time, most-used apps and data usage. Data stays on the device.",
-                    ) { ctx.safeStart(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) }
-                    ActionRow(
-                        "Gesture service: ${if (a11yOn) "on" else "off"}",
-                        "Only for the Lock screen and Notifications gestures.",
-                    ) { ctx.safeStart(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
-                    ActionRow("Data usage", "Per-app Wi-Fi and mobile data, from Android's own records") { vm.screen = Screen.DATA }
+                    Group("Permissions") {
+                        ActionRow(
+                            "Usage access: ${if (vm.hasUsageAccess) "allowed" else "not allowed"}",
+                            "Screen time, most-used apps and data usage. Data stays on the phone.",
+                        ) { ctx.safeStart(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) }
+                        ActionRow(
+                            "Gesture service: ${if (a11yOn) "on" else "off"}",
+                            "Only for the Lock screen and Notifications gestures.",
+                        ) { ctx.safeStart(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
+                    }
+                    Group("Data") {
+                        ActionRow("Data usage", "Per-app Wi-Fi and mobile data, from Android's own records") { vm.screen = Screen.DATA }
+                    }
                 }
 
-                SettingsPage.UPDATES -> UpdateSection()
+                SettingsPage.UPDATES -> Group("GitHub releases") { UpdateSection() }
 
                 SettingsPage.ABOUT -> {
-                    Text("Stillpoint ${BuildConfig.VERSION_NAME}", fontSize = 18.sp)
-                    Note("Open source (GPL-3.0): github.com/cloudit24/stillpoint")
-                    Note("No analytics, no accounts. The network is used only for features you switch on: " +
-                        "gold price, public IP, city search" + if (Updater.AVAILABLE) " and the update check." else ".")
-                    Note("Prayer times, Qibla, Hijri and Tamil dates are calculated on the phone.")
+                    Group("Stillpoint") {
+                        ActionRow("Version", BuildConfig.VERSION_NAME) {}
+                        ActionRow("Source code", "github.com/cloudit24/stillpoint · GPL-3.0") {
+                            ctx.safeStart(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/cloudit24/stillpoint")))
+                        }
+                        ActionRow("Set as default home app", "Opens the system home app picker") {
+                            ctx.safeStart(Intent(Settings.ACTION_HOME_SETTINGS), Intent(Settings.ACTION_SETTINGS))
+                        }
+                    }
+                    Group("Privacy") {
+                        Text("No analytics and no accounts. The internet is used only for features you switch on: " +
+                            "gold price, public IP, city search" + (if (Updater.AVAILABLE) " and update checks. " else ". ") +
+                            "Prayer times, Qibla, Hijri and Tamil dates are calculated on the phone.",
+                            color = Muted, fontSize = 14.sp, modifier = Modifier.padding(vertical = 12.dp))
+                    }
                 }
             }
         }
@@ -275,8 +351,10 @@ fun SettingsScreen(vm: LauncherViewModel) {
         SettingsDialog.HOME_STYLE -> ChoiceDialog("Home style", HomeStyle.entries, { it.label }, onDismiss = { dialog = null }) { h ->
             vm.updateSettings { it.copy(homeStyle = h) }
         }
-        SettingsDialog.DRAWER_START -> ChoiceDialog("Open the app list on", DrawerTab.entries, { it.label },
-            onDismiss = { dialog = null }) { t -> vm.updateSettings { it.copy(drawerStart = t) } }
+        SettingsDialog.DRAWER_START -> ChoiceDialog("Open the app list on", DrawerTab.entries,
+            { it.label.replaceFirstChar { c -> c.uppercase() } }, onDismiss = { dialog = null }) { t ->
+            vm.updateSettings { it.copy(drawerStart = t) }
+        }
         SettingsDialog.CLOCK -> ChoiceDialog("Clock style", ClockStyle.entries, { it.label }, onDismiss = { dialog = null }) { c ->
             vm.updateSettings { it.copy(clockStyle = c) }
         }
@@ -291,7 +369,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
         SettingsDialog.KARAT -> ChoiceDialog("Karat", listOf(24, 22, 21, 18), { "${it}K" }, onDismiss = { dialog = null }) { k ->
             vm.updateSettings { it.copy(goldKarat = k) }
         }
-        SettingsDialog.CITY -> CitySearchDialog(vm, onDismiss = { dialog = null }) { vm.setCity(it) }
+        SettingsDialog.CITY -> CitySearchDialog(vm, onDismiss = { dialog = null }) { vm.setCity(it, enableWeather = false) }
         SettingsDialog.PRAYER_CITY -> CitySearchDialog(vm, onDismiss = { dialog = null }) { c ->
             vm.setCity(c, enableWeather = false)
             vm.updateSettings { it.copy(prayerOn = true) }
@@ -310,25 +388,47 @@ private enum class SettingsDialog {
     ACCENT, HOME_STYLE, DRAWER_START, CLOCK, GOLD_SOURCE, CURRENCY, KARAT, CITY, PRAYER_CITY, PRAYER_METHOD,
 }
 
-/** Small accent-coloured group title inside a page. */
+/** A titled rounded card holding related rows. */
 @Composable
-private fun Header(text: String) {
-    Text(text.uppercase(), color = Accent, fontSize = 12.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp,
-        modifier = Modifier.padding(top = 22.dp, bottom = 4.dp))
+private fun Group(title: String, content: @Composable () -> Unit) {
+    Text(title.uppercase(), color = Accent, fontSize = 12.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.8.sp,
+        modifier = Modifier.padding(start = 4.dp, top = 20.dp, bottom = 8.dp))
+    Column(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(CardColor).padding(horizontal = 16.dp, vertical = 4.dp),
+    ) { content() }
+}
+
+/** Main-menu row: tinted icon, title, one-line summary, chevron. */
+@Composable
+private fun MenuRow(icon: ImageVector, title: String, summary: String, onClick: () -> Unit) {
+    val accent = Accent
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(36.dp).clip(CircleShape).background(accent.copy(alpha = 0.16f)), contentAlignment = Alignment.Center) {
+            Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(20.dp))
+        }
+        Column(Modifier.weight(1f).padding(start = 16.dp)) {
+            Text(title, fontSize = 16.sp)
+            Text(summary, color = Muted, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = null, tint = Muted)
+    }
 }
 
 @Composable
 private fun Note(text: String) {
-    Text(text, color = Muted, fontSize = 12.sp, modifier = Modifier.padding(vertical = 4.dp))
+    Text(text, color = Muted, fontSize = 12.sp, modifier = Modifier.padding(start = 4.dp, end = 4.dp, top = 8.dp))
 }
 
 @Composable
 private fun Stepper(label: String, value: String, onMinus: () -> Unit, onPlus: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(label, fontSize = 16.sp, modifier = Modifier.weight(1f))
-        Text("−", fontSize = 22.sp, modifier = Modifier.clickable(onClick = onMinus).padding(horizontal = 14.dp))
-        Text(value, fontSize = 18.sp)
-        Text("+", fontSize = 22.sp, modifier = Modifier.clickable(onClick = onPlus).padding(horizontal = 14.dp))
+        Text("−", fontSize = 22.sp, modifier = Modifier.clip(CircleShape).clickable(onClick = onMinus).padding(horizontal = 14.dp))
+        Text(value, fontSize = 17.sp)
+        Text("+", fontSize = 22.sp, modifier = Modifier.clip(CircleShape).clickable(onClick = onPlus).padding(horizontal = 14.dp))
     }
 }
 
