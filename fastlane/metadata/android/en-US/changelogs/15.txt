@@ -1,0 +1,1 @@
+New Productivity section in Settings: Tasks (on this phone, Project Hub, Tasks.org, OpenTasks), Calendar (phone calendar, Project Hub, .ics link) and Projects (on this phone, Project Hub). Outside sources have auto sync, interval, Wi-Fi only, last sync and Sync now. Projects on the phone with a next-step card on home.

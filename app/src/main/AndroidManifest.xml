@@ -12,11 +12,19 @@
     <!-- Lock screen info notification (opt-in) and restoring it after a restart. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Only when Tasks.org or OpenTasks is chosen as the task source (asked at that moment). -->
+    <uses-permission android:name="org.tasks.permission.READ_TASKS" />
+    <uses-permission android:name="org.tasks.permission.WRITE_TASKS" />
+    <uses-permission android:name="org.dmfs.permission.READ_TASKS" />
+    <uses-permission android:name="org.dmfs.permission.WRITE_TASKS" />
     <!-- Local IP address on home (opt-in). Granted automatically, no prompt. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <!-- Scoped package visibility: only launchable apps. No QUERY_ALL_PACKAGES. -->
     <queries>
+        <!-- Task apps that can be chosen as the task source. -->
+        <package android:name="org.tasks" />
+        <package android:name="org.dmfs.tasks" />
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />

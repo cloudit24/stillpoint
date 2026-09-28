@@ -43,6 +43,15 @@ class Prefs(context: Context) {
             lockPrayer = sp.getBoolean(K_LOCK_PRAYER, d.lockPrayer),
             lockHijri = sp.getBoolean(K_LOCK_HIJRI, d.lockHijri),
             lockTamil = sp.getBoolean(K_LOCK_TAMIL, d.lockTamil),
+            // Before 0.11, a connected hub was used for tasks and the home card: keep that on upgrade.
+            tasksSource = runCatching { TaskSource.valueOf(sp.getString(K_TASKS_SRC, null)!!) }
+                .getOrDefault(if (sp.getBoolean(K_HUB_ON, false)) TaskSource.HUB else TaskSource.PHONE),
+            calendarSource = runCatching { CalendarSource.valueOf(sp.getString(K_CAL_SRC, null)!!) }.getOrDefault(d.calendarSource),
+            projectsSource = runCatching { ProjectSource.valueOf(sp.getString(K_PROJ_SRC, null)!!) }
+                .getOrDefault(if (sp.getBoolean(K_HUB_ON, false)) ProjectSource.HUB else ProjectSource.PHONE),
+            tasksSync = loadSync(SyncFeature.TASKS),
+            calendarSync = loadSync(SyncFeature.CALENDAR),
+            projectsSync = loadSync(SyncFeature.PROJECTS),
             weatherOn = false, // Weather was removed from home in 0.7.1.
             city = sp.getString(K_CITY, null)?.let { raw ->
                 runCatching {
@@ -95,6 +104,17 @@ class Prefs(context: Context) {
             .putBoolean(K_LOCK_PRAYER, s.lockPrayer)
             .putBoolean(K_LOCK_HIJRI, s.lockHijri)
             .putBoolean(K_LOCK_TAMIL, s.lockTamil)
+            .putString(K_TASKS_SRC, s.tasksSource.name)
+            .putString(K_CAL_SRC, s.calendarSource.name)
+            .putString(K_PROJ_SRC, s.projectsSource.name)
+            .apply {
+                SyncFeature.entries.forEach { f ->
+                    val c = s.sync(f)
+                    putBoolean("sync_${f.name}_auto", c.auto)
+                    putInt("sync_${f.name}_every", c.everyMin)
+                    putBoolean("sync_${f.name}_wifi", c.wifiOnly)
+                }
+            }
             .putBoolean(K_WEATHER_ON, s.weatherOn)
             .putString(K_CITY, s.city?.let {
                 JSONObject().put("name", it.name).put("country", it.country).put("lat", it.lat).put("lon", it.lon).toString()
@@ -115,6 +135,41 @@ class Prefs(context: Context) {
             .putStringSet(K_FOCUS_ALLOWED, HashSet(s.focusAllowed))
             .putLong(K_FOCUS_ENDS, s.focusEndsAt)
             .apply()
+    }
+
+    private fun loadSync(f: SyncFeature) = SyncConfig(
+        auto = sp.getBoolean("sync_${f.name}_auto", true),
+        everyMin = sp.getInt("sync_${f.name}_every", 60),
+        wifiOnly = sp.getBoolean("sync_${f.name}_wifi", false),
+    )
+
+    fun loadProjects(): List<LocalProject> = sp.getString(K_PROJECTS, null)?.let { raw ->
+        runCatching {
+            val a = JSONArray(raw)
+            List(a.length()) { i ->
+                val o = a.getJSONObject(i)
+                LocalProject(o.getLong("id"), o.getString("name"), o.optString("next"))
+            }
+        }.getOrNull()
+    } ?: emptyList()
+
+    fun saveProjects(list: List<LocalProject>) {
+        val a = JSONArray()
+        list.forEach { a.put(JSONObject().put("id", it.id).put("name", it.name).put("next", it.next)) }
+        sp.edit().putString(K_PROJECTS, a.toString()).apply()
+    }
+
+    /** Private calendar address; kept here only (backups are off). */
+    fun icsUrl(): String? = sp.getString(K_ICS_URL, null)
+    fun saveIcsUrl(url: String?) = sp.edit().putString(K_ICS_URL, url).apply()
+
+    /** Last successful sync and last error, per outside source ("HUB", "ICS"). */
+    fun syncLast(source: String): Long = sp.getLong("sync_last_$source", 0L)
+    fun syncError(source: String): String? = sp.getString("sync_err_$source", null)
+    fun markSync(source: String, error: String?) {
+        val e = sp.edit().putString("sync_err_$source", error)
+        if (error == null) e.putLong("sync_last_$source", System.currentTimeMillis())
+        e.apply()
     }
 
     fun loadTasks(): List<TaskItem> {
@@ -265,6 +320,11 @@ class Prefs(context: Context) {
         const val K_LOCK_PRAYER = "lock_prayer"
         const val K_LOCK_HIJRI = "lock_hijri"
         const val K_LOCK_TAMIL = "lock_tamil"
+        const val K_TASKS_SRC = "tasks_source"
+        const val K_CAL_SRC = "calendar_source"
+        const val K_PROJ_SRC = "projects_source"
+        const val K_PROJECTS = "projects"
+        const val K_ICS_URL = "ics_url"
         const val K_WEATHER_ON = "weather_on"
         const val K_CITY = "weather_city"
         const val K_FAHRENHEIT = "weather_fahrenheit"

@@ -1,5 +1,7 @@
 package com.cloudit24.stillpoint.ui
 
+import com.cloudit24.stillpoint.data.ProjectSource
+import com.cloudit24.stillpoint.data.TaskSource
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.geometry.Offset
@@ -118,10 +120,12 @@ fun HomeScreen(vm: LauncherViewModel) {
         }
     }
     // Project Hub: every 2 minutes while home is shown.
-    LaunchedEffect(s.hubOn) {
-        while (s.hubOn) {
+    // The view model only asks the hub when the page's sync interval has passed.
+    val usesHub = vm.usesHub()
+    LaunchedEffect(usesHub) {
+        while (usesHub) {
             vm.refreshHub()
-            delay(2 * 60_000L)
+            delay(60_000L)
         }
     }
 
@@ -246,7 +250,9 @@ fun HomeScreen(vm: LauncherViewModel) {
         }
 
         Column(Modifier.weight(1f).padding(top = 28.dp).verticalScroll(rememberScrollState())) {
-            if (s.hubOn) HubCard(vm, now)
+            if (s.hubOn) {
+                if (s.projectsSource == ProjectSource.HUB) HubCard(vm, now) else LocalProjectCard(vm)
+            }
             if (s.showAgenda) AgendaBlock(context, vm.agenda)
         }
 
@@ -423,56 +429,106 @@ private fun AgendaBlock(context: Context, items: List<AgendaItem>) {
     Spacer(Modifier.height(20.dp))
 }
 
-/** Shown on the widget page. */
+/** Home card for projects kept on the phone: the first project with a next step. */
+@Composable
+private fun LocalProjectCard(vm: LauncherViewModel) {
+    val p = vm.projects.firstOrNull { it.next.isNotBlank() }
+    if (p == null) {
+        Text("No next step yet. Add projects on the widget page.", color = Muted, fontSize = 14.sp,
+            modifier = Modifier.padding(bottom = 20.dp).clickable { vm.screen = Screen.WIDGETS })
+        return
+    }
+    Row(Modifier.fillMaxWidth().padding(bottom = 20.dp).height(IntrinsicSize.Min)) {
+        Box(Modifier.width(3.dp).fillMaxHeight().background(Accent))
+        Column(Modifier.padding(start = 14.dp)) {
+            Text("NEXT STEP", color = Accent, fontSize = 12.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.8.sp)
+            Text(p.next, color = Ink, fontSize = 22.sp, lineHeight = 27.sp, modifier = Modifier.padding(top = 2.dp))
+            Text(p.name, color = Muted, fontSize = 13.sp)
+            Row(Modifier.padding(top = 8.dp)) {
+                Text("✓ Done", color = Accent, fontSize = 16.sp, fontWeight = FontWeight.Medium,
+                    modifier = Modifier.clickable { vm.projectStepDone(p.id) }.padding(end = 24.dp, top = 6.dp, bottom = 6.dp))
+                Text("Later", color = Muted, fontSize = 16.sp,
+                    modifier = Modifier.clickable { vm.projectLater(p.id) }.padding(vertical = 6.dp))
+            }
+        }
+    }
+}
+
+/** Shown on the widget page. Where the tasks come from is chosen in Settings, Tasks. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TasksBlock(vm: LauncherViewModel) {
     var input by rememberSaveable { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
+    val src = vm.settings.tasksSource
+    val hub = src == TaskSource.HUB && vm.hubConnected()
+    val provider = src.authority != null
+    LaunchedEffect(src) { if (provider) vm.loadProviderTasks() }
 
-    // Connected to Project Hub: overdue + today's tasks come from the hub, and new ones go there.
-    val hub = vm.settings.hubOn && vm.hubConnected()
-    Text(if (hub) "Tasks · Project Hub" else "Tasks", color = Muted, fontSize = 13.sp)
-    if (hub) {
-        val list = vm.hub?.tasks.orEmpty()
-        if (list.isEmpty()) Text("Nothing due today.", color = Muted, fontSize = 16.sp, modifier = Modifier.padding(vertical = 6.dp))
-        list.forEach { t ->
+    Text(if (src == TaskSource.PHONE) "Tasks" else "Tasks · ${src.label}", color = Muted, fontSize = 13.sp)
+    when {
+        src == TaskSource.HUB && !hub ->
+            Text("Connect Project Hub in Settings, Extras.", color = Muted, fontSize = 15.sp, modifier = Modifier.padding(vertical = 6.dp))
+        hub -> {
+            val list = vm.hub?.tasks.orEmpty()
+            if (list.isEmpty()) Text("Nothing due today.", color = Muted, fontSize = 16.sp, modifier = Modifier.padding(vertical = 6.dp))
+            list.forEach { t ->
+                Text(
+                    t.text + (t.due?.let { if (it < LocalDate.now().toString()) "  · overdue" else "" } ?: ""),
+                    fontSize = 16.sp,
+                    color = if (t.done) Muted else Ink,
+                    textDecoration = if (t.done) TextDecoration.LineThrough else null,
+                    modifier = Modifier.fillMaxWidth().clickable { vm.hubDone(t.id, !t.done) }.padding(vertical = 6.dp),
+                )
+            }
+        }
+        provider -> {
+            vm.providerError?.let {
+                Text(it, color = Accent, fontSize = 14.sp, modifier = Modifier.padding(vertical = 6.dp).clickable { vm.loadProviderTasks() })
+            }
+            if (vm.providerError == null && vm.providerTasks.isEmpty()) {
+                Text("No open tasks.", color = Muted, fontSize = 16.sp, modifier = Modifier.padding(vertical = 6.dp))
+            }
+            vm.providerTasks.forEach { t ->
+                Text(t.text, fontSize = 16.sp, color = Ink,
+                    modifier = Modifier.fillMaxWidth().clickable { vm.providerDone(t.id) }.padding(vertical = 6.dp))
+            }
+        }
+        else -> vm.tasks.forEach { t ->
             Text(
-                t.text + (t.due?.let { if (it < LocalDate.now().toString()) "  · overdue" else "" } ?: ""),
+                t.text,
                 fontSize = 16.sp,
                 color = if (t.done) Muted else Ink,
                 textDecoration = if (t.done) TextDecoration.LineThrough else null,
-                modifier = Modifier.fillMaxWidth().clickable { vm.hubDone(t.id, !t.done) }.padding(vertical = 6.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .combinedClickable(onClick = { vm.toggleTask(t.id) }, onLongClick = { vm.deleteTask(t.id) })
+                    .padding(vertical = 6.dp),
             )
         }
-    } else vm.tasks.forEach { t ->
-        Text(
-            t.text,
-            fontSize = 16.sp,
-            color = if (t.done) Muted else Ink,
-            textDecoration = if (t.done) TextDecoration.LineThrough else null,
-            modifier = Modifier
-                .fillMaxWidth()
-                .combinedClickable(onClick = { vm.toggleTask(t.id) }, onLongClick = { vm.deleteTask(t.id) })
-                .padding(vertical = 6.dp),
+    }
+    if (src != TaskSource.HUB || hub) {
+        BasicTextField(
+            value = input,
+            onValueChange = { input = it },
+            singleLine = true,
+            textStyle = TextStyle(color = Ink, fontSize = 16.sp),
+            cursorBrush = SolidColor(Accent),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = {
+                when {
+                    hub -> vm.hubAdd(input)
+                    provider -> vm.providerAdd(input)
+                    else -> vm.addTask(input)
+                }
+                input = ""
+                focusManager.clearFocus()
+            }),
+            modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+            decorationBox = { inner ->
+                if (input.isEmpty()) Text("Add a task", color = Muted, fontSize = 16.sp)
+                inner()
+            },
         )
     }
-    BasicTextField(
-        value = input,
-        onValueChange = { input = it },
-        singleLine = true,
-        textStyle = TextStyle(color = Ink, fontSize = 16.sp),
-        cursorBrush = SolidColor(Accent),
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-        keyboardActions = KeyboardActions(onDone = {
-            if (hub) vm.hubAdd(input) else vm.addTask(input)
-            input = ""
-            focusManager.clearFocus()
-        }),
-        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-        decorationBox = { inner ->
-            if (input.isEmpty()) Text("Add a task", color = Muted, fontSize = 16.sp)
-            inner()
-        },
-    )
 }

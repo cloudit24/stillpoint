@@ -1,5 +1,18 @@
 package com.cloudit24.stillpoint
 
+import com.cloudit24.stillpoint.data.CalendarSource
+import com.cloudit24.stillpoint.data.Ics
+import com.cloudit24.stillpoint.data.LocalProject
+import com.cloudit24.stillpoint.data.ProjectSource
+import com.cloudit24.stillpoint.data.ProviderTasks
+import com.cloudit24.stillpoint.data.SyncConfig
+import com.cloudit24.stillpoint.data.SyncFeature
+import com.cloudit24.stillpoint.data.TaskSource
+import com.cloudit24.stillpoint.sync.Sync
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.OffsetDateTime
+import java.time.ZoneId
 import com.cloudit24.stillpoint.widget.GoldWidget
 import android.app.Application
 import android.appwidget.AppWidgetHost
@@ -151,18 +164,30 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     fun refreshHub(force: Boolean = false) {
         val url = prefs.hubUrl() ?: return
         val key = prefs.hubKey() ?: return
-        if (!settings.hubOn || hubBusy) return
-        if (!force && hub.let { it != null && System.currentTimeMillis() - it.fetchedAt < HUB_MAX_AGE }) return
+        if (!usesHub() || hubBusy) return
+        if (!force) {
+            val every = hubAutoInterval() ?: return
+            if (hub.let { it != null && System.currentTimeMillis() - it.fetchedAt < every }) return
+        }
         hubBusy = true
         viewModelScope.launch {
             val skip = hubSkipped.toSet()
             when (val r = withContext(Dispatchers.IO) { hubRepo.glance(url, key, skip) }) {
                 is HubRepository.Result.Ok -> {
                     val at = System.currentTimeMillis()
-                    HubGlance.parse(r.value, at)?.let { hub = it; prefs.saveHubCache(r.value, at); hubError = null }
-                        ?: run { hubError = "The hub sent something Stillpoint doesn't understand. Update both." }
+                    HubGlance.parse(r.value, at)?.let {
+                        hub = it
+                        prefs.saveHubCache(r.value, at)
+                        prefs.markSync(Sync.HUB, null)
+                        hubError = null
+                        if (settings.calendarSource == CalendarSource.HUB && settings.showAgenda) agenda = hubAgenda()
+                        syncTick++
+                    } ?: run { hubError = "The hub sent something Stillpoint doesn't understand. Update both." }
                 }
-                is HubRepository.Result.Failed -> hubError = r.reason
+                is HubRepository.Result.Failed -> {
+                    hubError = r.reason
+                    prefs.markSync(Sync.HUB, r.reason)
+                }
             }
             hubBusy = false
         }
@@ -204,7 +229,10 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
                 prefs.saveHubCache(r.value, at)
                 hub = HubGlance.parse(r.value, at)
                 hubError = null
-                updateSettings { it.copy(hubOn = true) }
+                // A new hub is used for tasks and projects right away; calendar stays as chosen.
+                updateSettings { it.copy(hubOn = true, tasksSource = TaskSource.HUB, projectsSource = ProjectSource.HUB) }
+                prefs.markSync(Sync.HUB, null)
+                Sync.schedule(getApplication())
                 null
             }
         }
@@ -215,7 +243,180 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         hub = null
         hubError = null
         hubSkipped.clear()
-        updateSettings { it.copy(hubOn = false) }
+        updateSettings {
+            it.copy(
+                hubOn = false,
+                tasksSource = if (it.tasksSource == TaskSource.HUB) TaskSource.PHONE else it.tasksSource,
+                calendarSource = if (it.calendarSource == CalendarSource.HUB) CalendarSource.PHONE else it.calendarSource,
+                projectsSource = if (it.projectsSource == ProjectSource.HUB) ProjectSource.PHONE else it.projectsSource,
+            )
+        }
+        Sync.schedule(getApplication())
+    }
+
+    // ---- Tasks, calendar and projects: where they come from and how they sync ----
+
+    private val providerRepo = ProviderTasks(app)
+    var providerTasks by mutableStateOf<List<TaskItem>>(emptyList())
+        private set
+    var providerError by mutableStateOf<String?>(null)
+        private set
+    var projects by mutableStateOf(prefs.loadProjects())
+        private set
+    /** Bumped after every sync so Settings re-reads the last-sync times. */
+    var syncTick by mutableIntStateOf(0)
+        private set
+    var syncing by mutableStateOf(false)
+        private set
+
+    fun usesHub(): Boolean = settings.let {
+        it.tasksSource == TaskSource.HUB || it.calendarSource == CalendarSource.HUB || it.projectsSource == ProjectSource.HUB
+    }
+
+    /** Shortest auto-sync interval among the pages using the hub, or null when none sync automatically. */
+    private fun hubAutoInterval(): Long? = SyncFeature.entries
+        .filter { Sync.sourceOf(settings, it) == Sync.HUB && settings.sync(it).auto }
+        .minOfOrNull { settings.sync(it).everyMin * 60_000L }
+
+    fun syncLast(source: String): Long = prefs.syncLast(source)
+    fun syncError(source: String): String? = prefs.syncError(source)
+
+    fun syncNow(feature: SyncFeature) {
+        if (syncing) return
+        syncing = true
+        viewModelScope.launch {
+            Sync.run(getApplication(), force = true, only = feature)
+            hub = prefs.loadHubCache()
+            hubError = prefs.syncError(Sync.HUB)
+            if (settings.tasksSource.authority != null) loadProviderTasks()
+            agenda = loadAgenda()
+            syncing = false
+            syncTick++
+        }
+    }
+
+    fun setSync(feature: SyncFeature, transform: (SyncConfig) -> SyncConfig) {
+        updateSettings { s ->
+            when (feature) {
+                SyncFeature.TASKS -> s.copy(tasksSync = transform(s.tasksSync))
+                SyncFeature.CALENDAR -> s.copy(calendarSync = transform(s.calendarSync))
+                SyncFeature.PROJECTS -> s.copy(projectsSync = transform(s.projectsSync))
+            }
+        }
+        Sync.schedule(getApplication())
+    }
+
+    fun setTaskSource(src: TaskSource) {
+        updateSettings { it.copy(tasksSource = src) }
+        Sync.schedule(getApplication())
+        if (src.authority != null) loadProviderTasks()
+        if (src == TaskSource.HUB) refreshHub(force = true)
+    }
+
+    fun setCalendarSource(src: CalendarSource) {
+        updateSettings { it.copy(calendarSource = src) }
+        Sync.schedule(getApplication())
+        if (src == CalendarSource.PHONE) refresh() else syncNow(SyncFeature.CALENDAR)
+    }
+
+    fun setProjectSource(src: ProjectSource) {
+        updateSettings { it.copy(projectsSource = src) }
+        Sync.schedule(getApplication())
+        if (src == ProjectSource.HUB) refreshHub(force = true)
+    }
+
+    fun providerInstalled(src: TaskSource): Boolean = providerRepo.installed(src)
+    fun providerPermitted(src: TaskSource): Boolean = providerRepo.hasPermission(src)
+
+    fun loadProviderTasks() {
+        val src = settings.tasksSource
+        if (src.authority == null) return
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { runCatching { providerRepo.open(src) } }
+                .onSuccess { providerTasks = it; providerError = null }
+                .onFailure { providerError = it.message ?: "Couldn't read ${src.label}." }
+        }
+    }
+
+    fun providerDone(id: Long) = providerWrite { providerRepo.setDone(it, id, true) }
+
+    fun providerAdd(text: String) {
+        val t = text.trim()
+        if (t.isNotEmpty()) providerWrite { providerRepo.add(it, t) }
+    }
+
+    private fun providerWrite(action: (TaskSource) -> Unit) {
+        val src = settings.tasksSource
+        if (src.authority == null) return
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { runCatching { action(src) } }
+                .onFailure { blockedMessage = "${src.label} didn't accept the change: ${it.message ?: "unknown reason"}" }
+            loadProviderTasks()
+        }
+    }
+
+    fun icsUrl(): String? = prefs.icsUrl()
+
+    fun setIcsUrl(url: String) {
+        val u = url.trim()
+        prefs.saveIcsUrl(u.ifEmpty { null })
+        if (u.isNotEmpty()) syncNow(SyncFeature.CALENDAR)
+    }
+
+    /** Today's remaining events from the chosen calendar source. */
+    private suspend fun loadAgenda(): List<AgendaItem> {
+        if (!settings.showAgenda) return emptyList()
+        return when (settings.calendarSource) {
+            CalendarSource.PHONE -> withContext(Dispatchers.IO) { calendarRepo.today() }
+            CalendarSource.HUB -> hubAgenda()
+            CalendarSource.ICS -> withContext(Dispatchers.IO) {
+                val f = Sync.icsFile(getApplication())
+                if (!f.exists()) emptyList() else runCatching {
+                    val end = LocalDate.now().plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                    Ics.events(f.readText(), System.currentTimeMillis(), end)
+                }.getOrDefault(emptyList())
+            }
+        }
+    }
+
+    private fun hubAgenda(): List<AgendaItem> {
+        val g = hub ?: return emptyList()
+        val title = g.nextEventTitle?.takeIf { it.isNotBlank() } ?: return emptyList()
+        val ms = g.nextEventStart?.let { s ->
+            runCatching { OffsetDateTime.parse(s).toInstant().toEpochMilli() }.getOrNull()
+                ?: runCatching { LocalDateTime.parse(s).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli() }.getOrNull()
+        }
+        return listOf(AgendaItem(title, ms ?: 0L, ms ?: 0L, allDay = ms == null))
+    }
+
+    fun addProject(name: String, next: String) {
+        val n = name.trim()
+        if (n.isEmpty()) return
+        projects = projects + LocalProject(System.currentTimeMillis(), n, next.trim())
+        prefs.saveProjects(projects)
+    }
+
+    fun updateProject(p: LocalProject) {
+        projects = projects.map { if (it.id == p.id) p.copy(name = p.name.trim(), next = p.next.trim()) else it }
+        prefs.saveProjects(projects)
+    }
+
+    fun deleteProject(id: Long) {
+        projects = projects.filter { it.id != id }
+        prefs.saveProjects(projects)
+    }
+
+    /** Clears the next step; the project moves to the end until a new step is written. */
+    fun projectStepDone(id: Long) {
+        val p = projects.find { it.id == id } ?: return
+        projects = projects.filter { it.id != id } + p.copy(next = "")
+        prefs.saveProjects(projects)
+    }
+
+    fun projectLater(id: Long) {
+        val p = projects.find { it.id == id } ?: return
+        projects = projects.filter { it.id != id } + p
+        prefs.saveProjects(projects)
     }
 
     suspend fun dataUsage(start: Long, end: Long): List<AppDataUsage> {
@@ -284,7 +485,6 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
 
     fun refresh() {
         resumeTick++
-        val wantAgenda = settings.showAgenda
         viewModelScope.launch {
             val loaded = withContext(Dispatchers.IO) {
                 Loaded(
@@ -292,16 +492,22 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
                     usageAccess = usageRepo.hasPermission(),
                     usage = usageRepo.todayUsage(),
                     weekUsage = usageRepo.weekUsage(),
-                    agenda = if (wantAgenda) calendarRepo.today() else emptyList(),
                 )
             }
             apps = loaded.apps
             hasUsageAccess = loaded.usageAccess
             usage = loaded.usage
             weekUsage = loaded.weekUsage
-            agenda = loaded.agenda
+            agenda = loadAgenda()
             refreshLive()
             refreshHub()
+            Sync.schedule(getApplication())
+            if (settings.tasksSource.authority != null) loadProviderTasks()
+            if (settings.calendarSource == CalendarSource.ICS) {
+                Sync.run(getApplication(), force = false, only = SyncFeature.CALENDAR)
+                agenda = loadAgenda()
+                syncTick++
+            }
             if (settings.focusEndsAt in 1..System.currentTimeMillis()) {
                 updateSettings { it.copy(focusEndsAt = 0L) }
             }
@@ -313,7 +519,6 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         val usageAccess: Boolean,
         val usage: Map<String, Long>,
         val weekUsage: Map<String, Long>,
-        val agenda: List<AgendaItem>,
     )
 
     private companion object {
@@ -321,7 +526,6 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         const val LIST_LIMIT = 30
         const val WEATHER_MAX_AGE = 30 * 60_000L
         const val GOLD_MAX_AGE = 15 * 60_000L
-        const val HUB_MAX_AGE = 2 * 60_000L
     }
 
     fun updateSettings(transform: (LauncherSettings) -> LauncherSettings) {

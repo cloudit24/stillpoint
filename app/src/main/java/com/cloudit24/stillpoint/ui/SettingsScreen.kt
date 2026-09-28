@@ -1,5 +1,16 @@
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.material.icons.outlined.Build
+import androidx.compose.material.icons.outlined.Done
+import androidx.compose.material.icons.outlined.Place
+import com.cloudit24.stillpoint.data.CalendarSource
+import com.cloudit24.stillpoint.data.ProjectSource
+import com.cloudit24.stillpoint.data.SYNC_INTERVALS
+import com.cloudit24.stillpoint.data.SyncConfig
+import com.cloudit24.stillpoint.data.SyncFeature
+import com.cloudit24.stillpoint.data.TaskSource
+import com.cloudit24.stillpoint.data.intervalLabel
+import com.cloudit24.stillpoint.sync.Sync
 import androidx.compose.material.icons.outlined.Notifications
 import com.cloudit24.stillpoint.widget.LockNotification
 import com.cloudit24.stillpoint.widget.Refresh
@@ -109,10 +120,13 @@ private enum class SettingsPage(val section: String, val title: String, val summ
     APPS("Personalization", "App list", "Starting tab, icons, hidden apps", Icons.Outlined.Menu),
     GESTURES("Personalization", "Gestures and shortcuts", "Swipes, double-tap, bottom shortcuts", Icons.Outlined.ThumbUp),
     INFO("Information", "System info", "Network speed, RAM, IP address, calendar", Icons.AutoMirrored.Outlined.List),
-    PRAYER("Information", "Prayer and calendars", "Prayer times, Qibla, Hijri and Tamil dates", Icons.Outlined.DateRange),
+    PRAYER("Information", "Prayer and calendars", "Prayer times, Qibla, Hijri and Tamil dates", Icons.Outlined.Place),
     LOCK("Information", "Lock screen", "Next prayer and dates on the lock screen", Icons.Outlined.Notifications),
+    TASKS("Productivity", "Tasks", "On this phone, Project Hub, Tasks.org or OpenTasks", Icons.Outlined.Done),
+    CALENDAR("Productivity", "Calendar", "Phone calendar, Project Hub or a calendar link", Icons.Outlined.DateRange),
+    PROJECTS("Productivity", "Projects", "On this phone or Project Hub", Icons.Outlined.Build),
     GOLD("Extras", "Gold price", "Home line and widget · uses outside websites", Icons.Outlined.Star),
-    HUB("Extras", "Project Hub", "Your own server: next task, today, quick add", Icons.Outlined.CheckCircle),
+    HUB("Extras", "Project Hub", "Connection to your own server", Icons.Outlined.CheckCircle),
     PRIVACY("System", "Permissions and data", "Usage access, gesture service, data usage", Icons.Outlined.Lock),
     UPDATES("System", "Updates", "Download new versions from GitHub", Icons.Outlined.Refresh),
     ABOUT("System", "About", "Version, source code and privacy", Icons.Outlined.Info),
@@ -135,6 +149,16 @@ fun SettingsScreen(vm: LauncherViewModel) {
     val notifyPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         vm.updateSettings { it.copy(lockOn = granted) }
         Refresh.all(ctx)
+    }
+
+    var pendingTaskSource by remember { mutableStateOf<TaskSource?>(null) }
+    val taskPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
+        val src = pendingTaskSource
+        pendingTaskSource = null
+        if (src != null) {
+            if (src.readPermission?.let { result[it] } == true) vm.setTaskSource(src)
+            else vm.blockedMessage = "Stillpoint needs permission to read ${src.label}. Allow it in App info, Permissions."
+        }
     }
 
     val calendarPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -212,7 +236,6 @@ fun SettingsScreen(vm: LauncherViewModel) {
                     Note("Pinned apps are shown when most-used is off, or before usage data exists. Pin from the app list by long-pressing.")
                     Group("Extras") {
                         ToggleRow("Screen time today", s.showUsage) { on -> vm.updateSettings { it.copy(showUsage = on) } }
-                        ToggleRow("Tasks on the widget page", s.showTasks) { on -> vm.updateSettings { it.copy(showTasks = on) } }
                     }
                 }
 
@@ -265,13 +288,6 @@ fun SettingsScreen(vm: LauncherViewModel) {
                     }
                     Note("The public IP is asked from api.ipify.org (open source) only when your network changes. " +
                         "Tap the network line for per-app data usage.")
-                    Group("Below the clock") {
-                        ToggleRow("Today's calendar", s.showAgenda) { on ->
-                            val granted = ctx.checkSelfPermission(Manifest.permission.READ_CALENDAR) == PackageManager.PERMISSION_GRANTED
-                            if (on && !granted) calendarPermission.launch(Manifest.permission.READ_CALENDAR)
-                            else { vm.updateSettings { it.copy(showAgenda = on) }; vm.refresh() }
-                        }
-                    }
                 }
 
                 SettingsPage.PRAYER -> {
@@ -326,10 +342,6 @@ fun SettingsScreen(vm: LauncherViewModel) {
                 SettingsPage.HUB -> {
                     Group("Project Hub") {
                         if (vm.hubConnected()) {
-                            ToggleRow("Show on home", s.hubOn) { on ->
-                                vm.updateSettings { it.copy(hubOn = on) }
-                                if (on) vm.refreshHub(force = true)
-                            }
                             ActionRow("Server", vm.hubUrl().orEmpty()) {}
                             ActionRow(
                                 "Status",
@@ -344,8 +356,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         }
                     }
                     Note("Project Hub is a server you run yourself. Stillpoint talks only to the address you enter and nothing " +
-                        "else. Home shows the one next thing to do and why, with Done and Not now; the widget page shows " +
-                        "today's tasks. Use https unless the hub is on your home network.")
+                        "else. Choose what uses it under Productivity: Tasks, Calendar and Projects. Use https unless the hub is on your home network.")
                 }
 
                 SettingsPage.LOCK -> {
@@ -366,6 +377,94 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         "so nothing runs in the background. The gold price is never shown here. If it doesn't appear, " +
                         "check that your phone shows notifications on the lock screen. The prayer uses the city set " +
                         "under Prayer and calendars.")
+                }
+
+                SettingsPage.TASKS -> {
+                    SourcePicker(TaskSource.entries, s.tasksSource, { it.label }, { src ->
+                        src.detail + when {
+                            src.appPackage != null && !vm.providerInstalled(src) -> " Not installed: tap to get it."
+                            src == TaskSource.HUB && !vm.hubConnected() -> " Connect it under Extras first."
+                            else -> ""
+                        }
+                    }) { src ->
+                        when {
+                            src == TaskSource.HUB && !vm.hubConnected() -> page = SettingsPage.HUB
+                            src.appPackage != null && !vm.providerInstalled(src) -> ctx.safeStart(
+                                Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=${src.appPackage}")),
+                                Intent(Intent.ACTION_VIEW, Uri.parse("https://f-droid.org/packages/${src.appPackage}/")),
+                            )
+                            src.readPermission != null && !vm.providerPermitted(src) -> {
+                                pendingTaskSource = src
+                                taskPermission.launch(listOfNotNull(src.readPermission, src.writePermission).toTypedArray())
+                            }
+                            else -> vm.setTaskSource(src)
+                        }
+                    }
+                    when (s.tasksSource) {
+                        TaskSource.PHONE -> Note("Stored only on this phone. Add and tick tasks on the widget page.")
+                        TaskSource.HUB -> SyncGroup(vm, SyncFeature.TASKS, Sync.HUB, s.tasksSync) { dialog = SettingsDialog.SYNC_TASKS }
+                        else -> Group("Sync") {
+                            Text("${s.tasksSource.label} keeps itself in sync, for example with DAVx5. Stillpoint reads its open " +
+                                "tasks when you open the widget page; ticking one there marks it done in ${s.tasksSource.label}.",
+                                color = Muted, fontSize = 14.sp, modifier = Modifier.padding(vertical = 12.dp))
+                            ActionRow("Read now", vm.providerError ?: "${vm.providerTasks.size} open tasks") { vm.loadProviderTasks() }
+                        }
+                    }
+                    Group("Display") {
+                        ToggleRow("Tasks on the widget page", s.showTasks) { on -> vm.updateSettings { it.copy(showTasks = on) } }
+                    }
+                }
+
+                SettingsPage.CALENDAR -> {
+                    SourcePicker(CalendarSource.entries, s.calendarSource, { it.label }, { src ->
+                        src.detail + if (src == CalendarSource.HUB && !vm.hubConnected()) " Connect it under Extras first." else ""
+                    }) { src ->
+                        when {
+                            src == CalendarSource.HUB && !vm.hubConnected() -> page = SettingsPage.HUB
+                            src == CalendarSource.ICS && vm.icsUrl() == null -> {
+                                vm.setCalendarSource(src)
+                                dialog = SettingsDialog.ICS_URL
+                            }
+                            else -> vm.setCalendarSource(src)
+                        }
+                    }
+                    when (s.calendarSource) {
+                        CalendarSource.PHONE -> Note("Android syncs the accounts on this phone by itself. Stillpoint reads today's events.")
+                        CalendarSource.HUB -> SyncGroup(vm, SyncFeature.CALENDAR, Sync.HUB, s.calendarSync) { dialog = SettingsDialog.SYNC_CALENDAR }
+                        CalendarSource.ICS -> {
+                            Group("Calendar link") {
+                                ActionRow("Link", vm.icsUrl()?.let { maskUrl(it) } ?: "Not set · tap to add") { dialog = SettingsDialog.ICS_URL }
+                            }
+                            SyncGroup(vm, SyncFeature.CALENDAR, Sync.ICS, s.calendarSync) { dialog = SettingsDialog.SYNC_CALENDAR }
+                        }
+                    }
+                    Group("Display") {
+                        ToggleRow("Today's calendar on home", s.showAgenda) { on ->
+                            val needsPermission = s.calendarSource == CalendarSource.PHONE &&
+                                ctx.checkSelfPermission(Manifest.permission.READ_CALENDAR) != PackageManager.PERMISSION_GRANTED
+                            if (on && needsPermission) calendarPermission.launch(Manifest.permission.READ_CALENDAR)
+                            else { vm.updateSettings { it.copy(showAgenda = on) }; vm.refresh() }
+                        }
+                    }
+                }
+
+                SettingsPage.PROJECTS -> {
+                    SourcePicker(ProjectSource.entries, s.projectsSource, { it.label }, { src ->
+                        src.detail + if (src == ProjectSource.HUB && !vm.hubConnected()) " Connect it under Extras first." else ""
+                    }) { src ->
+                        if (src == ProjectSource.HUB && !vm.hubConnected()) page = SettingsPage.HUB else vm.setProjectSource(src)
+                    }
+                    when (s.projectsSource) {
+                        ProjectSource.PHONE -> Note("Add projects and their next step on the widget page. " +
+                            "Home shows the first project that has a next step.")
+                        ProjectSource.HUB -> SyncGroup(vm, SyncFeature.PROJECTS, Sync.HUB, s.projectsSync) { dialog = SettingsDialog.SYNC_PROJECTS }
+                    }
+                    Group("Display") {
+                        ToggleRow("Next step on home", s.hubOn) { on ->
+                            vm.updateSettings { it.copy(hubOn = on) }
+                            if (on && s.projectsSource == ProjectSource.HUB) vm.refreshHub(force = true)
+                        }
+                    }
                 }
 
                 SettingsPage.PRIVACY -> {
@@ -441,6 +540,17 @@ fun SettingsScreen(vm: LauncherViewModel) {
         SettingsDialog.PRAYER_METHOD -> ChoiceDialog("Calculation method", PrayerMethod.entries, { it.label },
             onDismiss = { dialog = null }) { pm -> vm.updateSettings { it.copy(prayerMethod = pm) } }
         SettingsDialog.HUB -> HubConnectDialog(vm, onDismiss = { dialog = null })
+        SettingsDialog.SYNC_TASKS, SettingsDialog.SYNC_CALENDAR, SettingsDialog.SYNC_PROJECTS -> {
+            val f = when (dialog) {
+                SettingsDialog.SYNC_TASKS -> SyncFeature.TASKS
+                SettingsDialog.SYNC_CALENDAR -> SyncFeature.CALENDAR
+                else -> SyncFeature.PROJECTS
+            }
+            ChoiceDialog("Sync every", SYNC_INTERVALS, { intervalLabel(it) }, onDismiss = { dialog = null }) { m ->
+                vm.setSync(f) { it.copy(everyMin = m) }
+            }
+        }
+        SettingsDialog.ICS_URL -> IcsDialog(vm.icsUrl().orEmpty(), onDismiss = { dialog = null }) { vm.setIcsUrl(it) }
         null -> Unit
     }
 
@@ -451,6 +561,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
 
 private enum class SettingsDialog {
     ACCENT, HOME_STYLE, DRAWER_START, CLOCK, GOLD_SOURCE, CURRENCY, KARAT, CITY, PRAYER_CITY, PRAYER_METHOD, HUB,
+    SYNC_TASKS, SYNC_CALENDAR, SYNC_PROJECTS, ICS_URL,
 }
 
 /** Type in the hub address and app key (from the hub's "Connect phone" page). Tested before it's saved. */
@@ -720,4 +831,73 @@ private fun UpdateSection() {
         }
     }
     error?.let { Text(it, color = Accent, fontSize = 13.sp) }
+}
+
+/** "Where does it come from?" list with a tick on the chosen source. */
+@Composable
+private fun <T> SourcePicker(options: List<T>, selected: T, label: (T) -> String, detail: (T) -> String, onPick: (T) -> Unit) {
+    Group("Source") {
+        options.forEachIndexed { i, o ->
+            if (i > 0) HorizontalDivider(color = DividerColor, thickness = 0.5.dp)
+            Row(Modifier.fillMaxWidth().clickable { onPick(o) }.padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(label(o), fontSize = 16.sp, color = if (o == selected) Accent else Ink)
+                    Text(detail(o), color = Muted, fontSize = 13.sp)
+                }
+                if (o == selected) {
+                    Icon(Icons.Outlined.Done, contentDescription = "Selected", tint = Accent, modifier = Modifier.padding(start = 12.dp))
+                }
+            }
+        }
+    }
+}
+
+/** Auto sync, interval, Wi-Fi only, last sync and Sync now for a page that uses an outside source. */
+@Composable
+private fun SyncGroup(vm: LauncherViewModel, feature: SyncFeature, source: String, cfg: SyncConfig, onEvery: () -> Unit) {
+    val tick = vm.syncTick
+    val last = remember(tick, source) { vm.syncLast(source) }
+    val error = remember(tick, source) { vm.syncError(source) }
+    Group("Sync") {
+        ToggleRow("Auto sync", cfg.auto) { on -> vm.setSync(feature) { it.copy(auto = on) } }
+        ActionRow("Sync every", intervalLabel(cfg.everyMin)) { onEvery() }
+        ToggleRow("Only on Wi-Fi", cfg.wifiOnly) { on -> vm.setSync(feature) { it.copy(wifiOnly = on) } }
+        ActionRow("Last sync", (if (last == 0L) "Never" else formatAgo(last)) + (error?.let { " · $it" } ?: "")) {}
+        ActionRow(if (vm.syncing) "Syncing…" else "Sync now") { vm.syncNow(feature) }
+    }
+}
+
+private fun formatAgo(ms: Long): String {
+    val min = ((System.currentTimeMillis() - ms) / 60_000L).coerceAtLeast(0)
+    return when {
+        min < 1 -> "just now"
+        min < 60 -> "$min min ago"
+        min < 1440 -> "${min / 60} h ago"
+        else -> "${min / 1440} days ago"
+    }
+}
+
+/** The link is private, so only its host is shown. */
+private fun maskUrl(u: String): String = runCatching { Uri.parse(u).host }.getOrNull()?.let { "$it/…" } ?: "Set"
+
+@Composable
+private fun IcsDialog(initial: String, onDismiss: () -> Unit, onSave: (String) -> Unit) {
+    var url by remember { mutableStateOf(initial) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = { TextButton(onClick = { onSave(url); onDismiss() }) { Text("Save") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        title = { Text("Calendar link") },
+        text = {
+            Column {
+                Text("Paste your calendar's private .ics address. Outlook: Settings, Calendar, Shared calendars, " +
+                    "Publish a calendar. Google: the calendar's settings, Secret address in iCal format.",
+                    color = Muted, fontSize = 13.sp)
+                OutlinedTextField(
+                    value = url, onValueChange = { url = it }, singleLine = true,
+                    placeholder = { Text("https://…/calendar.ics") }, modifier = Modifier.padding(top = 12.dp),
+                )
+            }
+        },
+    )
 }

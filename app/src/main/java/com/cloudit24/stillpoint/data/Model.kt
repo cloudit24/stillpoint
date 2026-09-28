@@ -158,6 +158,13 @@ data class LauncherSettings(
     val lockPrayer: Boolean = true,
     val lockHijri: Boolean = true,
     val lockTamil: Boolean = false,
+    // Tasks, calendar and projects: where each comes from and how it syncs.
+    val tasksSource: TaskSource = TaskSource.PHONE,
+    val calendarSource: CalendarSource = CalendarSource.PHONE,
+    val projectsSource: ProjectSource = ProjectSource.PHONE,
+    val tasksSync: SyncConfig = SyncConfig(),
+    val calendarSync: SyncConfig = SyncConfig(),
+    val projectsSync: SyncConfig = SyncConfig(),
     // Live data: all off by default. Nothing goes online unless one of these is on.
     val weatherOn: Boolean = false,
     val city: City? = null,
@@ -181,4 +188,10 @@ data class LauncherSettings(
     val focusEndsAt: Long = 0L,
 ) {
     fun gesture(slot: GestureSlot): String = gestures[slot] ?: DEFAULT_GESTURES.getValue(slot)
+
+    fun sync(f: SyncFeature): SyncConfig = when (f) {
+        SyncFeature.TASKS -> tasksSync
+        SyncFeature.CALENDAR -> calendarSync
+        SyncFeature.PROJECTS -> projectsSync
+    }
 }
