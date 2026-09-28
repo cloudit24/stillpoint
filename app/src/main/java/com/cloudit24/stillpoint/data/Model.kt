@@ -23,7 +23,23 @@ data class FavFolder(val id: Long, val name: String, val apps: List<String>)
 
 enum class HomeMode { AUTO, PINNED }
 
-enum class HomeStyle { LIST, ICONS }
+enum class HomeStyle(val label: String) { LIST("List"), ICONS("Icons only"), TILES("Tiles (Windows Phone)") }
+
+/** App list tabs, in pivot order. */
+enum class DrawerTab(val label: String) { MOST("most used"), RECENT("recent"), ALL("all"), FAVORITES("favorites") }
+
+data class AccentColor(val name: String, val argb: Long)
+
+/** The Windows Phone accent palette, plus Stillpoint's original slate. */
+val ACCENTS = listOf(
+    AccentColor("Cyan", 0xFF1BA1E2), AccentColor("Cobalt", 0xFF0050EF), AccentColor("Indigo", 0xFF6A00FF),
+    AccentColor("Violet", 0xFFAA00FF), AccentColor("Pink", 0xFFF472D0), AccentColor("Magenta", 0xFFD80073),
+    AccentColor("Crimson", 0xFFA20025), AccentColor("Red", 0xFFE51400), AccentColor("Orange", 0xFFFA6800),
+    AccentColor("Amber", 0xFFF0A30A), AccentColor("Yellow", 0xFFE3C800), AccentColor("Brown", 0xFF825A2C),
+    AccentColor("Olive", 0xFF6D8764), AccentColor("Lime", 0xFFA4C400), AccentColor("Green", 0xFF60A917),
+    AccentColor("Emerald", 0xFF008A00), AccentColor("Teal", 0xFF00ABA9), AccentColor("Steel", 0xFF647687),
+    AccentColor("Mauve", 0xFF76608A), AccentColor("Taupe", 0xFF87794E), AccentColor("Slate", 0xFF9FB4C7),
+)
 
 enum class ClockStyle(val label: String) {
     MINIMAL("Minimal"),
@@ -118,6 +134,9 @@ data class LauncherSettings(
     val showAgenda: Boolean = false,
     val showTasks: Boolean = true,
     val showIcons: Boolean = false,
+    val drawerStart: DrawerTab = DrawerTab.ALL,
+    /** ARGB accent colour, see [ACCENTS]. */
+    val accent: Long = 0xFF1BA1E2,
     val clockStyle: ClockStyle = ClockStyle.MINIMAL,
     /** Live network speed and RAM line under the date. */
     val showStats: Boolean = false,

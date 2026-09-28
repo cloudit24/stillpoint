@@ -1,5 +1,25 @@
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import kotlin.math.abs
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings
@@ -75,6 +95,12 @@ fun HomeScreen(vm: LauncherViewModel) {
     // Gesture handlers are installed once; read the newest settings through this.
     val latest by rememberUpdatedState(s)
     val doubleTap = s.gesture(GestureSlot.DOUBLE_TAP)
+    // The page follows the finger a little while swiping, then springs back.
+    var dragX by remember { mutableFloatStateOf(0f) }
+    var dragY by remember { mutableFloatStateOf(0f) }
+    var dragging by remember { mutableStateOf(false) }
+    val offX by animateFloatAsState(if (dragging) dragX else 0f, if (dragging) snap<Float>() else spring<Float>(stiffness = Spring.StiffnessMediumLow), label = "dragX")
+    val offY by animateFloatAsState(if (dragging) dragY else 0f, if (dragging) snap<Float>() else spring<Float>(stiffness = Spring.StiffnessMediumLow), label = "dragY")
 
     // Weather / gold: re-check every 5 minutes while home is shown; the view model skips fresh data.
     LaunchedEffect(s.weatherOn, s.goldOn, s.goldCurrency, s.city) {
@@ -98,13 +124,17 @@ fun HomeScreen(vm: LauncherViewModel) {
                 val threshold = 64.dp.toPx()
                 var total = 0f
                 detectHorizontalDragGestures(
-                    onDragStart = { total = 0f },
+                    onDragStart = { total = 0f; dragging = true },
+                    onDragCancel = { dragging = false; dragX = 0f },
                     onDragEnd = {
+                        dragging = false
+                        dragX = 0f
                         if (total < -threshold) runTarget(vm, context, latest.gesture(GestureSlot.SWIPE_LEFT))
                         else if (total > threshold) runTarget(vm, context, latest.gesture(GestureSlot.SWIPE_RIGHT))
                     },
                     onHorizontalDrag = { change, dx ->
                         total += dx
+                        dragX = total
                         change.consume()
                     },
                 )
@@ -113,16 +143,25 @@ fun HomeScreen(vm: LauncherViewModel) {
                 val threshold = 64.dp.toPx()
                 var total = 0f
                 detectVerticalDragGestures(
-                    onDragStart = { total = 0f },
+                    onDragStart = { total = 0f; dragging = true },
+                    onDragCancel = { dragging = false; dragY = 0f },
                     onDragEnd = {
+                        dragging = false
+                        dragY = 0f
                         if (total < -threshold) runTarget(vm, context, latest.gesture(GestureSlot.SWIPE_UP))
                         else if (total > threshold) runTarget(vm, context, latest.gesture(GestureSlot.SWIPE_DOWN))
                     },
                     onVerticalDrag = { change, dy ->
                         total += dy
+                        dragY = total
                         change.consume()
                     },
                 )
+            }
+            .graphicsLayer {
+                translationX = offX * 0.25f
+                translationY = offY * 0.2f
+                alpha = (1f - (abs(offX) + abs(offY)) / (size.width * 1.5f)).coerceIn(0.5f, 1f)
             }
             .padding(horizontal = 28.dp, vertical = 24.dp),
     ) {
@@ -131,13 +170,22 @@ fun HomeScreen(vm: LauncherViewModel) {
             if (s.weatherOn) WeatherBadge(vm, s, onSetup = { vm.screen = Screen.SETTINGS })
         }
         val today = LocalDate.now()
-        Text(dateFmt.format(today), color = Muted, fontSize = 16.sp)
-        if (s.hijriOn) Text(remember(today, s.hijriAdjust) { Calendars.hijri(today, s.hijriAdjust) }, color = Muted, fontSize = 15.sp)
-        if (s.tamilOn) Text(remember(today) { Calendars.tamil(today) }, color = Muted, fontSize = 15.sp)
-        if (s.prayerOn) PrayerLine(vm, s, now)
-        if (s.goldOn) GoldLine(vm, s)
-        if (s.showStats) SystemStatsLine(onClick = { vm.screen = Screen.DATA })
-        if (s.showLocalIp || s.publicIpOn) IpLine(vm, s)
+        Text(dateFmt.format(today), color = Ink.copy(alpha = 0.85f), fontSize = 18.sp, fontWeight = FontWeight.Light)
+        val hijri = if (s.hijriOn) remember(today, s.hijriAdjust) { Calendars.hijri(today, s.hijriAdjust) } else null
+        val tamil = if (s.tamilOn) remember(today) { Calendars.tamil(today) } else null
+        RotatingLine(listOfNotNull(hijri, tamil))
+        // At-a-glance lines, one accent bar on the left to hold them together.
+        if (s.prayerOn || s.goldOn || s.showStats || s.showLocalIp || s.publicIpOn) {
+            Row(Modifier.padding(top = 14.dp).height(IntrinsicSize.Min)) {
+                Box(Modifier.width(2.dp).fillMaxHeight().background(Accent))
+                Column(Modifier.padding(start = 12.dp)) {
+                    if (s.prayerOn) PrayerLine(vm, s, now)
+                    if (s.goldOn) GoldLine(vm, s)
+                    if (s.showStats) SystemStatsLine(onClick = { vm.screen = Screen.DATA })
+                    if (s.showLocalIp || s.publicIpOn) IpLine(vm, s)
+                }
+            }
+        }
 
         if (s.showUsage) {
             if (vm.hasUsageAccess) {
@@ -148,7 +196,7 @@ fun HomeScreen(vm: LauncherViewModel) {
             } else {
                 Text(
                     "Allow usage access to show screen time",
-                    color = Slate, fontSize = 14.sp,
+                    color = Accent, fontSize = 14.sp,
                     modifier = Modifier
                         .padding(top = 10.dp)
                         .clickable { context.safeStart(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) },
@@ -158,7 +206,7 @@ fun HomeScreen(vm: LauncherViewModel) {
         if (focusActive) {
             Text(
                 "Focus until ${formatClock(context, s.focusEndsAt)}",
-                color = Slate, fontSize = 14.sp,
+                color = Accent, fontSize = 14.sp,
                 modifier = Modifier.padding(top = 6.dp).clickable { vm.screen = Screen.FOCUS },
             )
         }
@@ -170,7 +218,9 @@ fun HomeScreen(vm: LauncherViewModel) {
         if (homeApps.isEmpty()) {
             Text("Swipe left for apps, right for widgets. Long-press for settings.", color = Muted, fontSize = 14.sp)
         }
-        if (s.homeStyle == HomeStyle.ICONS) {
+        if (s.homeStyle == HomeStyle.TILES) {
+            HomeTiles(vm, homeApps)
+        } else if (s.homeStyle == HomeStyle.ICONS) {
             HomeIcons(vm, homeApps, (s.homeSize * 2).dp)
         } else {
             homeApps.forEach { app ->
@@ -193,6 +243,55 @@ fun HomeScreen(vm: LauncherViewModel) {
             Spacer(Modifier.weight(1f))
             vm.targetLabel(right)?.let { label ->
                 Text(label, color = Muted, modifier = Modifier.clickable { runTarget(vm, context, right) }.padding(8.dp))
+            }
+        }
+    }
+}
+
+/** Hijri and Tamil dates; with both on, they take turns every few seconds with a small slide. */
+@Composable
+private fun RotatingLine(lines: List<String>) {
+    if (lines.isEmpty()) return
+    var index by remember { mutableIntStateOf(0) }
+    LaunchedEffect(lines.size) {
+        index = 0
+        while (lines.size > 1) {
+            delay(5_000)
+            index = (index + 1) % lines.size
+        }
+    }
+    AnimatedContent(
+        targetState = lines[index % lines.size],
+        transitionSpec = {
+            (slideInVertically(tween(350)) { it } + fadeIn(tween(350))) togetherWith
+                (slideOutVertically(tween(350)) { -it } + fadeOut(tween(250)))
+        },
+        label = "dates",
+    ) { Text(it, color = Muted, fontSize = 15.sp, modifier = Modifier.padding(top = 2.dp)) }
+}
+
+/** Windows Phone start screen: square accent tiles, three across. Long-press shows the full name. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun HomeTiles(vm: LauncherViewModel, apps: List<AppEntry>) {
+    val context = LocalContext.current
+    val accent = Accent
+    Column(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        apps.chunked(3).forEach { rowApps ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                rowApps.forEach { app ->
+                    Box(
+                        Modifier.weight(1f).aspectRatio(1f).background(accent).combinedClickable(
+                            onClick = { vm.launch(app) },
+                            onLongClick = { Toast.makeText(context, app.label, Toast.LENGTH_SHORT).show() },
+                        ),
+                    ) {
+                        Box(Modifier.align(Alignment.Center)) { AppIcon(vm, app, 40.dp) }
+                        Text(app.label, color = Color.White, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.align(Alignment.BottomStart).padding(horizontal = 8.dp, vertical = 6.dp))
+                    }
+                }
+                repeat(3 - rowApps.size) { Spacer(Modifier.weight(1f)) }
             }
         }
     }
@@ -262,7 +361,7 @@ fun TasksBlock(vm: LauncherViewModel) {
         onValueChange = { input = it },
         singleLine = true,
         textStyle = TextStyle(color = Ink, fontSize = 16.sp),
-        cursorBrush = SolidColor(Slate),
+        cursorBrush = SolidColor(Accent),
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = {
             vm.addTask(input)

@@ -1,0 +1,1 @@
+Windows Phone style: accent colours, pivot tabs in the app list, letter tiles with a jump grid, optional tile home. Search button at the bottom right (keyboard opens only when you tap it). Choose the starting tab. Settings grouped into pages. Hijri and Tamil dates take turns on home. Slide animations between screens.

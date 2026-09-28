@@ -53,7 +53,7 @@ fun WeatherBadge(vm: LauncherViewModel, s: LauncherSettings, onSetup: () -> Unit
         modifier = Modifier.clickable { if (city == null) onSetup() else vm.refreshLive(force = true) },
     ) {
         if (city == null) {
-            Text("Set city", color = Slate, fontSize = 13.sp)
+            Text("Set city", color = Accent, fontSize = 13.sp)
             return@Column
         }
         if (w == null) {

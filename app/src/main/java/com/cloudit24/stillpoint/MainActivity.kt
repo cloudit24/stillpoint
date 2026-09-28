@@ -1,5 +1,14 @@
 package com.cloudit24.stillpoint
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProviderInfo
 import android.content.ActivityNotFoundException
@@ -46,7 +55,9 @@ class MainActivity : ComponentActivity() {
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
         )
-        setContent { StillpointTheme { LauncherRoot(vm, ::addWidget) } }
+        setContent {
+            StillpointTheme(accent = androidx.compose.ui.graphics.Color(vm.settings.accent)) { LauncherRoot(vm, ::addWidget) }
+        }
     }
 
     override fun onStart() {
@@ -121,7 +132,8 @@ private fun LauncherRoot(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderI
     BackHandler { vm.screen = Screen.HOME }
 
     Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
-        when (vm.screen) {
+        AnimatedContent(targetState = vm.screen, transitionSpec = { screenTransition(initialState, targetState) }, label = "screen") { screen ->
+        when (screen) {
             Screen.HOME -> HomeScreen(vm)
             Screen.DRAWER -> DrawerScreen(vm)
             Screen.FOCUS -> FocusScreen(vm)
@@ -129,6 +141,7 @@ private fun LauncherRoot(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderI
             Screen.WIDGETS -> WidgetsScreen(vm, onAddWidget)
             Screen.DATA -> DataUsageScreen(vm)
             Screen.PRAYER -> PrayerScreen(vm)
+        }
         }
     }
 
@@ -138,5 +151,26 @@ private fun LauncherRoot(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderI
             confirmButton = { TextButton(onClick = { vm.blockedMessage = null }) { Text("OK") } },
             text = { Text(msg) },
         )
+    }
+}
+
+/** Widgets sit left of home and the app list right, so they slide sideways; other pages rise in. */
+private fun Screen.lane(): Int = when (this) {
+    Screen.WIDGETS -> -1
+    Screen.HOME -> 0
+    Screen.DRAWER -> 1
+    else -> 2
+}
+
+private fun screenTransition(from: Screen, to: Screen): ContentTransform {
+    val a = from.lane()
+    val b = to.lane()
+    return if (a != 2 && b != 2) {
+        val dir = if (b > a) 1 else -1
+        (slideInHorizontally(tween(260)) { w -> dir * w / 3 } + fadeIn(tween(260))) togetherWith
+            (slideOutHorizontally(tween(220)) { w -> -dir * w / 3 } + fadeOut(tween(180)))
+    } else {
+        (slideInVertically(tween(260)) { h -> if (b == 2) h / 12 else -h / 24 } + fadeIn(tween(260))) togetherWith
+            fadeOut(tween(160))
     }
 }

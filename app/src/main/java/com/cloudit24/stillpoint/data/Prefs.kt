@@ -21,6 +21,9 @@ class Prefs(context: Context) {
             showAgenda = sp.getBoolean(K_SHOW_AGENDA, d.showAgenda),
             showTasks = sp.getBoolean(K_SHOW_TASKS, d.showTasks),
             showIcons = sp.getBoolean(K_SHOW_ICONS, d.showIcons),
+            drawerStart = runCatching { DrawerTab.valueOf(sp.getString(K_DRAWER_START, d.drawerStart.name)!!) }
+                .getOrDefault(d.drawerStart),
+            accent = sp.getLong(K_ACCENT, d.accent),
             clockStyle = runCatching { ClockStyle.valueOf(sp.getString(K_CLOCK, d.clockStyle.name)!!) }
                 .getOrDefault(d.clockStyle),
             showStats = sp.getBoolean(K_SHOW_STATS, d.showStats),
@@ -68,6 +71,8 @@ class Prefs(context: Context) {
             .putBoolean(K_SHOW_AGENDA, s.showAgenda)
             .putBoolean(K_SHOW_TASKS, s.showTasks)
             .putBoolean(K_SHOW_ICONS, s.showIcons)
+            .putString(K_DRAWER_START, s.drawerStart.name)
+            .putLong(K_ACCENT, s.accent)
             .putString(K_CLOCK, s.clockStyle.name)
             .putBoolean(K_SHOW_STATS, s.showStats)
             .putBoolean(K_LOCAL_IP, s.showLocalIp)
@@ -205,6 +210,8 @@ class Prefs(context: Context) {
         const val K_SHOW_AGENDA = "show_agenda"
         const val K_SHOW_TASKS = "show_tasks"
         const val K_SHOW_ICONS = "show_icons"
+        const val K_DRAWER_START = "drawer_start"
+        const val K_ACCENT = "accent"
         const val K_WIDGET_IDS = "widget_ids"
         const val K_GESTURE = "gesture_"
         const val K_CLOCK = "clock_style"

@@ -80,7 +80,7 @@ fun PrayerScreen(vm: LauncherViewModel) {
     ) {
         Text("Prayer", fontSize = 34.sp, fontWeight = FontWeight.Light)
         if (city == null) {
-            Text("Choose a city in Settings to calculate prayer times.", color = Slate, fontSize = 15.sp,
+            Text("Choose a city in Settings to calculate prayer times.", color = Accent, fontSize = 15.sp,
                 modifier = Modifier.padding(top = 16.dp).clickable { vm.screen = Screen.SETTINGS })
             return@Column
         }

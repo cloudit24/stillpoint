@@ -9,7 +9,7 @@ import kotlin.math.sin
 /** Hijri (Arabic) and Tamil dates, calculated on the phone. */
 object Calendars {
 
-    /** e.g. "١٦ ربيع الآخر ١٤٤٨ هـ". [adjust] shifts by whole days for local moon sighting. */
+    /** e.g. "16 Rabi al-Akhir 1448 AH". [adjust] shifts by whole days for local moon sighting. */
     fun hijri(date: LocalDate, adjust: Int): String {
         val d = date.plusDays(adjust.toLong())
         // Umm al-Qura tables built into Android; the arithmetic calendar if they are missing or out of range.
@@ -17,7 +17,7 @@ object Calendars {
             val h = HijrahDate.from(d)
             Triple(h.get(ChronoField.YEAR), h.get(ChronoField.MONTH_OF_YEAR), h.get(ChronoField.DAY_OF_MONTH))
         }.getOrElse { tabularHijri(d) }
-        return "${arabicDigits(day)} ${HIJRI_MONTHS[m - 1]} ${arabicDigits(y)} هـ"
+        return "$day ${HIJRI_MONTHS[m - 1]} $y AH"
     }
 
     /**
@@ -73,16 +73,14 @@ object Calendars {
         return Triple(y.toInt(), m.toInt(), day.toInt())
     }
 
-    private fun arabicDigits(n: Int): String = n.toString().map { if (it in '0'..'9') '٠' + (it - '0') else it }.joinToString("")
-
     private fun sinD(d: Double) = sin(Math.toRadians(d - 360 * floor(d / 360)))
 
     private const val CHENNAI_LAT = 13.0827
     private const val CHENNAI_LON = 80.2707
 
     private val HIJRI_MONTHS = listOf(
-        "محرم", "صفر", "ربيع الأول", "ربيع الآخر", "جمادى الأولى", "جمادى الآخرة",
-        "رجب", "شعبان", "رمضان", "شوال", "ذو القعدة", "ذو الحجة",
+        "Muharram", "Safar", "Rabi al-Awwal", "Rabi al-Akhir", "Jumada al-Ula", "Jumada al-Akhirah",
+        "Rajab", "Sha'ban", "Ramadan", "Shawwal", "Dhu al-Qadah", "Dhu al-Hijjah",
     )
 
     private val TAMIL_MONTHS = listOf(

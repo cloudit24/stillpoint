@@ -102,7 +102,7 @@ private fun WidgetItem(vm: LauncherViewModel, id: Int, editing: Boolean) {
             Row(Modifier.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(info?.loadLabel(context.packageManager) ?: "Widget no longer available",
                     color = Muted, fontSize = 13.sp, modifier = Modifier.weight(1f))
-                Text("Remove", color = Slate, modifier = Modifier.clickable { vm.removeWidget(id) }.padding(8.dp))
+                Text("Remove", color = Accent, modifier = Modifier.clickable { vm.removeWidget(id) }.padding(8.dp))
             }
         }
         if (info != null) {

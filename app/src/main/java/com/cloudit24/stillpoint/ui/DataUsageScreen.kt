@@ -57,7 +57,7 @@ fun DataUsageScreen(vm: LauncherViewModel) {
         if (!vm.hasUsageAccess) {
             Text(
                 "Allow usage access to see data use per app",
-                color = Slate, fontSize = 15.sp,
+                color = Accent, fontSize = 15.sp,
                 modifier = Modifier.padding(top = 16.dp)
                     .clickable { context.safeStart(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) },
             )
