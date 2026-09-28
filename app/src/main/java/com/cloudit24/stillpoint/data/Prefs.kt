@@ -24,6 +24,8 @@ class Prefs(context: Context) {
             clockStyle = runCatching { ClockStyle.valueOf(sp.getString(K_CLOCK, d.clockStyle.name)!!) }
                 .getOrDefault(d.clockStyle),
             showStats = sp.getBoolean(K_SHOW_STATS, d.showStats),
+            showLocalIp = sp.getBoolean(K_LOCAL_IP, d.showLocalIp),
+            publicIpOn = sp.getBoolean(K_PUBLIC_IP, d.publicIpOn),
             weatherOn = sp.getBoolean(K_WEATHER_ON, d.weatherOn),
             city = sp.getString(K_CITY, null)?.let { raw ->
                 runCatching {
@@ -61,6 +63,8 @@ class Prefs(context: Context) {
             .putBoolean(K_SHOW_ICONS, s.showIcons)
             .putString(K_CLOCK, s.clockStyle.name)
             .putBoolean(K_SHOW_STATS, s.showStats)
+            .putBoolean(K_LOCAL_IP, s.showLocalIp)
+            .putBoolean(K_PUBLIC_IP, s.publicIpOn)
             .putBoolean(K_WEATHER_ON, s.weatherOn)
             .putString(K_CITY, s.city?.let {
                 JSONObject().put("name", it.name).put("country", it.country).put("lat", it.lat).put("lon", it.lon).toString()
@@ -192,6 +196,8 @@ class Prefs(context: Context) {
         const val K_GESTURE = "gesture_"
         const val K_CLOCK = "clock_style"
         const val K_SHOW_STATS = "show_stats"
+        const val K_LOCAL_IP = "show_local_ip"
+        const val K_PUBLIC_IP = "public_ip_on"
         const val K_WEATHER_ON = "weather_on"
         const val K_CITY = "weather_city"
         const val K_FAHRENHEIT = "weather_fahrenheit"

@@ -14,6 +14,7 @@ import kotlin.math.roundToInt
  *  - Gold: Dubai shop rates from dubaicityofgold.com (HTML, AED/g per karat), or
  *    Swissquote public quotes (XAU/USD mid price) for the world spot price and as a fallback.
  *  - Currency: fixed pegs for AED/SAR, otherwise Frankfurter (open source, European Central Bank rates).
+ *  - Public IP: ipify (open source, no logging), icanhazip as a fallback.
  * Call from a background thread.
  */
 class LiveRepository {
@@ -87,6 +88,14 @@ class LiveRepository {
                 if (bid.isNaN() || ask.isNaN() || bid <= 0) null else (bid + ask) / 2
             }
         }.getOrNull()
+    }
+
+    /** The address the internet sees for this phone. */
+    fun publicIp(): String? {
+        val body = get("https://api.ipify.org", accept = "text/plain")
+            ?: get("https://icanhazip.com", accept = "text/plain")
+            ?: return null
+        return body.trim().takeIf { it.length in 3..45 && it.all { c -> c.isLetterOrDigit() || c == '.' || c == ':' } }
     }
 
     private fun usdTo(currency: String): Double? {

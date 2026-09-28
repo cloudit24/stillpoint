@@ -109,6 +109,10 @@ fun SettingsScreen(vm: LauncherViewModel) {
         ToggleRow("Show tasks on the widget page", s.showTasks) { on -> vm.updateSettings { it.copy(showTasks = on) } }
         ActionRow("Clock style", s.clockStyle.label) { dialog = SettingsDialog.CLOCK }
         ToggleRow("Show network speed and RAM", s.showStats) { on -> vm.updateSettings { it.copy(showStats = on) } }
+        ToggleRow("Show local IP address", s.showLocalIp) { on -> vm.updateSettings { it.copy(showLocalIp = on) } }
+        ToggleRow("Show public IP address", s.publicIpOn) { on -> vm.updateSettings { it.copy(publicIpOn = on) } }
+        if (s.publicIpOn) Text("Asked from api.ipify.org (open source) when your network changes.",
+            color = Muted, fontSize = 13.sp)
         ToggleRow("Show today's calendar", s.showAgenda) { on ->
             val granted = ctx.checkSelfPermission(Manifest.permission.READ_CALENDAR) == PackageManager.PERMISSION_GRANTED
             if (on && !granted) calendarPermission.launch(Manifest.permission.READ_CALENDAR)

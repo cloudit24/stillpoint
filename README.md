@@ -79,6 +79,7 @@ Every gesture and both bottom shortcuts can be changed in Settings > Gestures an
 | Permission | Purpose |
 |---|---|
 | PACKAGE_USAGE_STATS | Screen time, most-used apps, data usage per app |
+| ACCESS_NETWORK_STATE | Local IP address on home (opt-in) |
 | READ_CALENDAR | Today's agenda (optional) |
 | REQUEST_DELETE_PACKAGES | Uninstall from the app list |
 | INTERNET | Opt-in weather, gold price, and (`github` build) update check |

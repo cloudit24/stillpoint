@@ -1,8 +1,11 @@
 package com.cloudit24.stillpoint.ui
 
 import android.app.ActivityManager
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.net.TrafficStats
 import android.os.SystemClock
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
@@ -29,8 +32,12 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.cloudit24.stillpoint.LauncherViewModel
 import com.cloudit24.stillpoint.data.GoldSource
 import com.cloudit24.stillpoint.data.LauncherSettings
+import com.cloudit24.stillpoint.data.LocalIp
+import com.cloudit24.stillpoint.data.NetInfo
 import com.cloudit24.stillpoint.data.priceFor
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -115,6 +122,45 @@ fun SystemStatsLine(onClick: () -> Unit) {
     // Monospace so the line doesn't jitter as numbers change every second.
     Text(text, color = Muted, fontSize = 12.sp, fontFamily = FontFamily.Monospace,
         modifier = Modifier.padding(top = 6.dp).clickable(onClick = onClick))
+}
+
+/** "Wi-Fi 192.168.1.23 · Public 94.200.1.2". Local address re-read every 3 s while home is on top; tap to copy. */
+@Composable
+fun IpLine(vm: LauncherViewModel, s: LauncherSettings) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var local by remember { mutableStateOf<LocalIp?>(null) }
+    var loaded by remember { mutableStateOf(false) }
+
+    LaunchedEffect(lifecycleOwner, s.publicIpOn) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            while (true) {
+                val l = withContext(Dispatchers.IO) { NetInfo.localIp(context) }
+                local = l
+                loaded = true
+                vm.refreshPublicIp(l?.address)
+                delay(3_000)
+            }
+        }
+    }
+
+    val l = local
+    val parts = listOfNotNull(
+        if (s.showLocalIp) (if (!loaded) "IP …" else l?.let { "${it.kind} ${it.address}" } ?: "Offline") else null,
+        if (s.publicIpOn && (l != null || !s.showLocalIp)) "Public ${vm.publicIp ?: "…"}" else null,
+    )
+    Text(
+        parts.joinToString("  ·  "), color = Muted, fontSize = 12.sp, fontFamily = FontFamily.Monospace,
+        modifier = Modifier.padding(top = 4.dp).clickable {
+            val copy = listOfNotNull(l?.address, vm.publicIp).joinToString("\n")
+            if (copy.isNotEmpty()) {
+                context.getSystemService(ClipboardManager::class.java)
+                    .setPrimaryClip(ClipData.newPlainText("IP address", copy))
+                Toast.makeText(context, "IP copied", Toast.LENGTH_SHORT).show()
+            }
+            vm.refreshPublicIp(l?.address, force = true)
+        },
+    )
 }
 
 private fun rate(bytesPerSec: Double): String {

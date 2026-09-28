@@ -101,6 +101,33 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ---- Public IP (opt-in) ----
+
+    var publicIp by mutableStateOf<String?>(null)
+        private set
+    /** Local address the public IP was looked up for; a new one means the network changed. */
+    private var publicIpFor: String? = null
+    private var publicIpTriedAt = 0L
+    private var ipBusy = false
+
+    /** Looks up the public IP only when the network changed, after a failure (once a minute), or on [force]. */
+    fun refreshPublicIp(localAddress: String?, force: Boolean = false) {
+        if (!settings.publicIpOn || ipBusy) return
+        if (localAddress == null) { publicIp = null; publicIpFor = null; return }
+        val now = System.currentTimeMillis()
+        val changed = localAddress != publicIpFor
+        if (!force && !changed && (publicIp != null || now - publicIpTriedAt < 60_000L)) return
+        if (changed) publicIp = null
+        ipBusy = true
+        publicIpTriedAt = now
+        viewModelScope.launch {
+            val ip = withContext(Dispatchers.IO) { live.publicIp() }
+            publicIpFor = localAddress
+            if (ip != null || changed) publicIp = ip
+            ipBusy = false
+        }
+    }
+
     suspend fun dataUsage(start: Long, end: Long): List<AppDataUsage> {
         val labels = apps.associate { it.packageName to it.label }
         return withContext(Dispatchers.IO) { dataRepo.query(start, end) { labels[it] } }

@@ -120,6 +120,10 @@ data class LauncherSettings(
     val clockStyle: ClockStyle = ClockStyle.MINIMAL,
     /** Live network speed and RAM line under the date. */
     val showStats: Boolean = false,
+    /** Phone's address on Wi-Fi / mobile. Read locally, never sent anywhere. */
+    val showLocalIp: Boolean = false,
+    /** Internet-facing address, asked from api.ipify.org when the network changes. */
+    val publicIpOn: Boolean = false,
     // Live data: all off by default. Nothing goes online unless one of these is on.
     val weatherOn: Boolean = false,
     val city: City? = null,
