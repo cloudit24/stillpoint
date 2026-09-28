@@ -36,7 +36,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-enum class Screen { HOME, DRAWER, FOCUS, SETTINGS, WIDGETS, DATA }
+enum class Screen { HOME, DRAWER, FOCUS, SETTINGS, WIDGETS, DATA, PRAYER }
 
 class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     private val appsRepo = AppRepository(app)
@@ -135,8 +135,8 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
 
     suspend fun searchCities(query: String): List<City> = withContext(Dispatchers.IO) { live.searchCity(query) }
 
-    fun setCity(city: City) {
-        updateSettings { it.copy(city = city, weatherOn = true) }
+    fun setCity(city: City, enableWeather: Boolean = true) {
+        updateSettings { it.copy(city = city, weatherOn = it.weatherOn || enableWeather) }
         weather = null
         prefs.saveWeather(null)
         refreshLive(force = true)

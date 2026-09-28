@@ -48,6 +48,7 @@ import com.cloudit24.stillpoint.data.GoldSource
 import com.cloudit24.stillpoint.data.GestureTarget
 import com.cloudit24.stillpoint.data.HomeAction
 import com.cloudit24.stillpoint.data.HomeStyle
+import com.cloudit24.stillpoint.data.PrayerMethod
 import com.cloudit24.stillpoint.update.UpdateCheck
 import com.cloudit24.stillpoint.update.Updater
 import com.cloudit24.stillpoint.data.HomeMode
@@ -130,6 +131,38 @@ fun SettingsScreen(vm: LauncherViewModel) {
         Text("Weather data by Open-Meteo.com (CC BY 4.0). Only the city's approximate location is sent. No GPS.",
             color = Muted, fontSize = 12.sp)
 
+        SectionHeader("Prayer times")
+        ToggleRow("Show next prayer on home", s.prayerOn) { on ->
+            if (on && s.city == null) dialog = SettingsDialog.PRAYER_CITY
+            else vm.updateSettings { it.copy(prayerOn = on) }
+        }
+        ActionRow("City", s.city?.let { "${it.name}, ${it.country} (shared with weather)" } ?: "Not set") {
+            dialog = SettingsDialog.PRAYER_CITY
+        }
+        ActionRow("Calculation method", s.prayerMethod.label) { dialog = SettingsDialog.PRAYER_METHOD }
+        ActionRow("Asr time", if (s.asrHanafi) "Hanafi (later)" else "Standard (Shafi'i, Maliki, Hanbali)") {
+            vm.updateSettings { it.copy(asrHanafi = !it.asrHanafi) }
+        }
+        ActionRow("Today's times and Qibla compass") { vm.screen = Screen.PRAYER }
+        Text("Calculated on the phone from the city's position. Nothing is sent.", color = Muted, fontSize = 12.sp)
+
+        SectionHeader("Other calendars")
+        ToggleRow("Show Hijri date (Arabic)", s.hijriOn) { on -> vm.updateSettings { it.copy(hijriOn = on) } }
+        Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("Hijri adjustment", fontSize = 16.sp, modifier = Modifier.weight(1f))
+            Text("−", fontSize = 22.sp, modifier = Modifier
+                .clickable { vm.updateSettings { it.copy(hijriAdjust = (it.hijriAdjust - 1).coerceAtLeast(-2)) } }
+                .padding(horizontal = 14.dp))
+            Text(if (s.hijriAdjust > 0) "+${s.hijriAdjust}" else "${s.hijriAdjust}", fontSize = 18.sp)
+            Text("+", fontSize = 22.sp, modifier = Modifier
+                .clickable { vm.updateSettings { it.copy(hijriAdjust = (it.hijriAdjust + 1).coerceAtMost(2)) } }
+                .padding(horizontal = 14.dp))
+        }
+        ToggleRow("Show Tamil date", s.tamilOn) { on -> vm.updateSettings { it.copy(tamilOn = on) } }
+        Text("Hijri follows the Umm al-Qura calendar; adjust by a day if your country's moon sighting differs. " +
+            "Tamil date is the solar calendar at Chennai sunset, with the 60-year name and Thiruvalluvar year.",
+            color = Muted, fontSize = 12.sp)
+
         SectionHeader("Gold price")
         ToggleRow("Show gold price", s.goldOn) { on ->
             vm.updateSettings { it.copy(goldOn = on) }
@@ -183,7 +216,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
 
         Text(
             "Stillpoint ${BuildConfig.VERSION_NAME}. No analytics. " +
-                "Network is used only for features you switch on (weather, gold price" +
+                "Network is used only for features you switch on (weather, gold price, public IP" +
                 if (Updater.AVAILABLE) ", update check)." else ").",
             color = Muted, fontSize = 12.sp, modifier = Modifier.padding(top = 32.dp),
         )
@@ -204,7 +237,13 @@ fun SettingsScreen(vm: LauncherViewModel) {
         SettingsDialog.KARAT -> ChoiceDialog("Karat", listOf(24, 22, 21, 18), { "${it}K" }, onDismiss = { dialog = null }) { k ->
             vm.updateSettings { it.copy(goldKarat = k) }
         }
-        SettingsDialog.CITY -> CitySearchDialog(vm, onDismiss = { dialog = null })
+        SettingsDialog.CITY -> CitySearchDialog(vm, onDismiss = { dialog = null }) { vm.setCity(it) }
+        SettingsDialog.PRAYER_CITY -> CitySearchDialog(vm, onDismiss = { dialog = null }) { c ->
+            vm.setCity(c, enableWeather = false)
+            vm.updateSettings { it.copy(prayerOn = true) }
+        }
+        SettingsDialog.PRAYER_METHOD -> ChoiceDialog("Calculation method", PrayerMethod.entries, { it.label },
+            onDismiss = { dialog = null }) { pm -> vm.updateSettings { it.copy(prayerMethod = pm) } }
         null -> Unit
     }
 
@@ -213,7 +252,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
     }
 }
 
-private enum class SettingsDialog { CLOCK, GOLD_SOURCE, CURRENCY, KARAT, CITY }
+private enum class SettingsDialog { CLOCK, GOLD_SOURCE, CURRENCY, KARAT, CITY, PRAYER_CITY, PRAYER_METHOD }
 
 @Composable
 private fun <T> ChoiceDialog(
@@ -238,9 +277,9 @@ private fun <T> ChoiceDialog(
     )
 }
 
-/** Search Open-Meteo's place names; picking one also switches weather on. */
+/** Search Open-Meteo's place names. */
 @Composable
-private fun CitySearchDialog(vm: LauncherViewModel, onDismiss: () -> Unit) {
+private fun CitySearchDialog(vm: LauncherViewModel, onDismiss: () -> Unit, onPick: (City) -> Unit) {
     val scope = rememberCoroutineScope()
     var query by remember { mutableStateOf("") }
     var results by remember { mutableStateOf<List<City>>(emptyList()) }
@@ -277,7 +316,7 @@ private fun CitySearchDialog(vm: LauncherViewModel, onDismiss: () -> Unit) {
                 }
                 LazyColumn(Modifier.heightIn(max = 300.dp)) {
                     items(results) { c ->
-                        Column(Modifier.fillMaxWidth().clickable { vm.setCity(c); onDismiss() }.padding(vertical = 8.dp)) {
+                        Column(Modifier.fillMaxWidth().clickable { onPick(c); onDismiss() }.padding(vertical = 8.dp)) {
                             Text(c.name, fontSize = 17.sp)
                             Text(c.country, color = Muted, fontSize = 13.sp)
                         }

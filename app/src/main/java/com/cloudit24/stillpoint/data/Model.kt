@@ -70,6 +70,7 @@ enum class HomeAction(val label: String, val needsGestureService: Boolean = fals
     FOCUS("Focus"),
     SETTINGS("Settings"),
     DATA_USAGE("Data usage"),
+    PRAYER("Prayer times and Qibla"),
     NOTIFICATIONS("Notifications", needsGestureService = true),
     LOCK("Lock screen", needsGestureService = true),
 }
@@ -124,6 +125,14 @@ data class LauncherSettings(
     val showLocalIp: Boolean = false,
     /** Internet-facing address, asked from api.ipify.org when the network changes. */
     val publicIpOn: Boolean = false,
+    // Prayer and calendars: calculated on the phone, nothing goes online.
+    val prayerOn: Boolean = false,
+    val prayerMethod: PrayerMethod = PrayerMethod.UAE,
+    val asrHanafi: Boolean = false,
+    val hijriOn: Boolean = false,
+    /** Days added to the Hijri date for local moon sighting, -2..2. */
+    val hijriAdjust: Int = 0,
+    val tamilOn: Boolean = false,
     // Live data: all off by default. Nothing goes online unless one of these is on.
     val weatherOn: Boolean = false,
     val city: City? = null,

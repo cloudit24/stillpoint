@@ -54,6 +54,7 @@ import com.cloudit24.stillpoint.LauncherViewModel
 import com.cloudit24.stillpoint.Screen
 import com.cloudit24.stillpoint.data.AgendaItem
 import com.cloudit24.stillpoint.data.AppEntry
+import com.cloudit24.stillpoint.data.Calendars
 import com.cloudit24.stillpoint.data.GestureSlot
 import com.cloudit24.stillpoint.data.HomeAction
 import com.cloudit24.stillpoint.data.HomeStyle
@@ -129,7 +130,11 @@ fun HomeScreen(vm: LauncherViewModel) {
             Box(Modifier.weight(1f)) { Clock(s.clockStyle, now) }
             if (s.weatherOn) WeatherBadge(vm, s, onSetup = { vm.screen = Screen.SETTINGS })
         }
-        Text(dateFmt.format(LocalDate.now()), color = Muted, fontSize = 16.sp)
+        val today = LocalDate.now()
+        Text(dateFmt.format(today), color = Muted, fontSize = 16.sp)
+        if (s.hijriOn) Text(remember(today, s.hijriAdjust) { Calendars.hijri(today, s.hijriAdjust) }, color = Muted, fontSize = 15.sp)
+        if (s.tamilOn) Text(remember(today) { Calendars.tamil(today) }, color = Muted, fontSize = 15.sp)
+        if (s.prayerOn) PrayerLine(vm, s, now)
         if (s.goldOn) GoldLine(vm, s)
         if (s.showStats) SystemStatsLine(onClick = { vm.screen = Screen.DATA })
         if (s.showLocalIp || s.publicIpOn) IpLine(vm, s)

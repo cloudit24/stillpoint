@@ -1,0 +1,1 @@
+Prayer times with a Qibla compass, Hijri date in Arabic and Tamil date on home. All calculated on the phone; off by default.

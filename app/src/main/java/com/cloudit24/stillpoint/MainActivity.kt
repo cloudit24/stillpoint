@@ -25,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.cloudit24.stillpoint.ui.DataUsageScreen
 import com.cloudit24.stillpoint.ui.DrawerScreen
+import com.cloudit24.stillpoint.ui.PrayerScreen
 import com.cloudit24.stillpoint.ui.FocusScreen
 import com.cloudit24.stillpoint.ui.HomeScreen
 import com.cloudit24.stillpoint.ui.SettingsScreen
@@ -127,6 +128,7 @@ private fun LauncherRoot(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderI
             Screen.SETTINGS -> SettingsScreen(vm)
             Screen.WIDGETS -> WidgetsScreen(vm, onAddWidget)
             Screen.DATA -> DataUsageScreen(vm)
+            Screen.PRAYER -> PrayerScreen(vm)
         }
     }
 

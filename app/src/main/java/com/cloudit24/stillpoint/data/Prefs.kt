@@ -26,6 +26,13 @@ class Prefs(context: Context) {
             showStats = sp.getBoolean(K_SHOW_STATS, d.showStats),
             showLocalIp = sp.getBoolean(K_LOCAL_IP, d.showLocalIp),
             publicIpOn = sp.getBoolean(K_PUBLIC_IP, d.publicIpOn),
+            prayerOn = sp.getBoolean(K_PRAYER_ON, d.prayerOn),
+            prayerMethod = runCatching { PrayerMethod.valueOf(sp.getString(K_PRAYER_METHOD, d.prayerMethod.name)!!) }
+                .getOrDefault(d.prayerMethod),
+            asrHanafi = sp.getBoolean(K_ASR_HANAFI, d.asrHanafi),
+            hijriOn = sp.getBoolean(K_HIJRI_ON, d.hijriOn),
+            hijriAdjust = sp.getInt(K_HIJRI_ADJUST, d.hijriAdjust),
+            tamilOn = sp.getBoolean(K_TAMIL_ON, d.tamilOn),
             weatherOn = sp.getBoolean(K_WEATHER_ON, d.weatherOn),
             city = sp.getString(K_CITY, null)?.let { raw ->
                 runCatching {
@@ -65,6 +72,12 @@ class Prefs(context: Context) {
             .putBoolean(K_SHOW_STATS, s.showStats)
             .putBoolean(K_LOCAL_IP, s.showLocalIp)
             .putBoolean(K_PUBLIC_IP, s.publicIpOn)
+            .putBoolean(K_PRAYER_ON, s.prayerOn)
+            .putString(K_PRAYER_METHOD, s.prayerMethod.name)
+            .putBoolean(K_ASR_HANAFI, s.asrHanafi)
+            .putBoolean(K_HIJRI_ON, s.hijriOn)
+            .putInt(K_HIJRI_ADJUST, s.hijriAdjust)
+            .putBoolean(K_TAMIL_ON, s.tamilOn)
             .putBoolean(K_WEATHER_ON, s.weatherOn)
             .putString(K_CITY, s.city?.let {
                 JSONObject().put("name", it.name).put("country", it.country).put("lat", it.lat).put("lon", it.lon).toString()
@@ -198,6 +211,12 @@ class Prefs(context: Context) {
         const val K_SHOW_STATS = "show_stats"
         const val K_LOCAL_IP = "show_local_ip"
         const val K_PUBLIC_IP = "public_ip_on"
+        const val K_PRAYER_ON = "prayer_on"
+        const val K_PRAYER_METHOD = "prayer_method"
+        const val K_ASR_HANAFI = "prayer_asr_hanafi"
+        const val K_HIJRI_ON = "hijri_on"
+        const val K_HIJRI_ADJUST = "hijri_adjust"
+        const val K_TAMIL_ON = "tamil_on"
         const val K_WEATHER_ON = "weather_on"
         const val K_CITY = "weather_city"
         const val K_FAHRENHEIT = "weather_fahrenheit"

@@ -69,6 +69,7 @@ Every gesture and both bottom shortcuts can be changed in Settings > Gestures an
 
 - Clock styles: Minimal, Bold, Classic serif, Retro flip, Retro LCD, Analog.
 - Optional: animated weather next to the clock, gold price (currency, karat, per gram / ounce), live network speed and RAM.
+- Prayer times (next prayer on home, tap for all five and a Qibla compass), Hijri date in Arabic and Tamil date, all calculated on the phone with no network use.
 - Tap the weather or gold price to refresh it. Tap the network/RAM line for **Data usage**: per-app Wi-Fi and mobile data for today, 7 or 30 days, read from Android's own records (no tracking by Stillpoint, uses the usage-access permission).
 - Most-used or pinned apps, as a text list or icons only (Settings > Home screen).
 - *Home app size* sets the text size; icons scale with it. In icons-only mode, long-press an icon to see its name.
