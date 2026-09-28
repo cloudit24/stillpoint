@@ -1,5 +1,8 @@
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.ui.Alignment
+import com.cloudit24.stillpoint.data.Prayer
 import android.app.ActivityManager
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -89,12 +92,6 @@ fun HeroHeader(vm: LauncherViewModel, s: LauncherSettings, now: Long) {
             else -> "Good night"
         }
         add(HeroCard(greeting, "It's ${formatClock(context, now)}", Ink))
-        val city = s.city
-        if (s.prayerOn && city != null) {
-            PrayerTimes.next(now, city.lat, city.lon, s.prayerMethod, s.asrHanafi)?.let { (p, at) ->
-                add(HeroCard("${p.label} in ${formatDuration(at - now)}", "at ${formatClock(context, at)} · ${city.name}", HeroPrayer))
-            }
-        }
         if (s.goldOn) {
             val g = vm.gold?.takeIf { it.currency == s.goldCurrency && it.source == s.goldSource }
             if (g != null) g.priceFor(s.goldKarat, s.goldPerGram)?.let { price ->
@@ -143,7 +140,11 @@ fun HeroHeader(vm: LauncherViewModel, s: LauncherSettings, now: Long) {
                 }
             }
         }
-        if (s.showStats || s.showLocalIp || s.publicIpOn) StatsStrip(vm, s, Modifier.padding(top = 24.dp))
+        val prayerShown = s.prayerOn && s.city != null
+        if (prayerShown) PrayerNowPanel(vm, s, now, Modifier.padding(top = 24.dp))
+        if (s.showStats || s.showLocalIp || s.publicIpOn) {
+            StatsStrip(vm, s, Modifier.padding(top = if (prayerShown) 10.dp else 24.dp))
+        }
     }
 }
 
@@ -171,6 +172,54 @@ private fun FlipCard(key: Int, card: HeroCard, modifier: Modifier) {
             maxLines = 1, overflow = TextOverflow.Ellipsis)
         Text(display.subtitle, color = Muted, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(top = 2.dp))
+    }
+}
+
+/** Glass panel: the prayer time we're in (with iqama countdown) and the next one, with progress between them. */
+@Composable
+private fun PrayerNowPanel(vm: LauncherViewModel, s: LauncherSettings, now: Long, modifier: Modifier) {
+    val context = LocalContext.current
+    val city = s.city ?: return
+    val span = remember(now, city, s.prayerMethod, s.asrHanafi) {
+        PrayerTimes.span(now, city.lat, city.lon, s.prayerMethod, s.asrHanafi)
+    } ?: return
+    val iqamaAt = if (span.current.isPrayer) span.currentAt + s.iqamaMin(span.current) * 60_000L else 0L
+    val nowLine = when {
+        now < iqamaAt -> "Iqama in ${formatDuration(iqamaAt - now)}"
+        span.current == Prayer.FAJR -> "until sunrise ${formatClock(context, span.endsAt)}"
+        else -> "since ${formatClock(context, span.currentAt)}"
+    }
+    val progress = ((now - span.currentAt).toFloat() / (span.nextAt - span.currentAt).coerceAtLeast(1)).coerceIn(0f, 1f)
+    val shape = RoundedCornerShape(18.dp)
+    Column(
+        modifier.fillMaxWidth().clip(shape).background(Color.White.copy(alpha = 0.05f))
+            .border(0.5.dp, Color.White.copy(alpha = 0.09f), shape)
+            .clickable { vm.screen = Screen.PRAYER }
+            .padding(vertical = 14.dp),
+    ) {
+        Row {
+            PrayerCell("NOW", span.current, nowLine, HeroPrayer, Modifier.weight(1f))
+            PrayerCell("NEXT", span.next, "${formatClock(context, span.nextAt)} · in ${formatDuration(span.nextAt - now)}", Ink,
+                Modifier.weight(1f))
+        }
+        Box(
+            Modifier.padding(start = 14.dp, end = 14.dp, top = 12.dp).fillMaxWidth().height(3.dp)
+                .clip(RoundedCornerShape(2.dp)).background(Color.White.copy(alpha = 0.08f)),
+        ) {
+            Box(Modifier.fillMaxWidth(progress).fillMaxHeight().background(HeroPrayer))
+        }
+    }
+}
+
+@Composable
+private fun PrayerCell(label: String, p: Prayer, line: String, color: Color, modifier: Modifier) {
+    Column(modifier.padding(horizontal = 14.dp)) {
+        Text(label, color = Accent, fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp, maxLines = 1)
+        Row(Modifier.padding(top = 2.dp), verticalAlignment = Alignment.Bottom) {
+            Text(p.label, color = color, fontSize = 22.sp, fontWeight = FontWeight.Light, maxLines = 1)
+            Text(p.arabic, color = Muted, fontSize = 13.sp, maxLines = 1, modifier = Modifier.padding(start = 8.dp, bottom = 3.dp))
+        }
+        Text(line, color = Muted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 

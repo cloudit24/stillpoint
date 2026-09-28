@@ -1,5 +1,9 @@
 package com.cloudit24.stillpoint.ui
 
+import com.cloudit24.stillpoint.widget.PrayerAlerts
+import com.cloudit24.stillpoint.data.Prayer
+import com.cloudit24.stillpoint.data.LauncherSettings
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Done
 import androidx.compose.material.icons.outlined.Place
@@ -150,6 +154,25 @@ fun SettingsScreen(vm: LauncherViewModel) {
         vm.updateSettings { it.copy(lockOn = granted) }
         Refresh.all(ctx)
     }
+
+    var pendingAlert by remember { mutableStateOf<((LauncherSettings) -> LauncherSettings)?>(null) }
+    val alertPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        val f = pendingAlert
+        pendingAlert = null
+        if (granted && f != null) vm.updateSettings(f)
+    }
+    val alertToggle: (Boolean, (LauncherSettings) -> LauncherSettings) -> Unit = { on, f ->
+        when {
+            on && s.city == null -> dialog = SettingsDialog.PRAYER_CITY
+            on && !LockNotification.canPost(ctx) -> {
+                pendingAlert = f
+                alertPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+            else -> vm.updateSettings(f)
+        }
+    }
+    // Any change to the city, method or alerts moves the next alert.
+    LaunchedEffect(s.city, s.prayerMethod, s.asrHanafi, s.adhanAlert, s.iqamaAlert, s.iqama) { PrayerAlerts.schedule(ctx) }
 
     var pendingTaskSource by remember { mutableStateOf<TaskSource?>(null) }
     val taskPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
@@ -306,6 +329,32 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         ActionRow("Today's times and Qibla compass") { vm.screen = Screen.PRAYER }
                     }
                     Note("Calculated on the phone from the city's position. Nothing is sent.")
+                    Group("Alerts") {
+                        ToggleRow("Prayer time alert", s.adhanAlert) { on -> alertToggle(on) { it.copy(adhanAlert = on) } }
+                        ToggleRow("Iqama alert", s.iqamaAlert) { on -> alertToggle(on) { it.copy(iqamaAlert = on) } }
+                        if (s.adhanAlert || s.iqamaAlert) {
+                            ActionRow("Alert sound and vibration", "Android settings") { ctx.safeStart(PrayerAlerts.soundSettings(ctx)) }
+                        }
+                    }
+                    Group("Iqama after the adhan") {
+                        Prayer.entries.filter { it.isPrayer }.forEach { p ->
+                            Stepper(p.label, "${s.iqamaMin(p)} min",
+                                onMinus = { vm.updateSettings { it.copy(iqama = it.iqama + (p to (it.iqamaMin(p) - 5).coerceAtLeast(5))) } },
+                                onPlus = { vm.updateSettings { it.copy(iqama = it.iqama + (p to (it.iqamaMin(p) + 5).coerceAtMost(60))) } })
+                        }
+                    }
+                    Note("Iqama times differ by mosque; set yours. The prayer alert counts down to the iqama. " +
+                        "To use an adhan recording, pick it as the sound in Android settings. On Motorola, turn on " +
+                        "Edge lighting for Stillpoint in the Moto app and the curved edges light up with each alert.")
+                    Group("Feel") {
+                        ToggleRow("Edge light on home", s.edgeLight) { on -> vm.updateSettings { it.copy(edgeLight = on) } }
+                        ToggleRow("Vibrate on the Qibla compass", s.compassHaptics) { on ->
+                            vm.updateSettings { it.copy(compassHaptics = on) }
+                        }
+                    }
+                    Note("Edge light: a thin line up both screen edges fills as the next prayer gets closer, " +
+                        "and breathes in the last 10 minutes and until the iqama. The compass ticks every 10°, " +
+                        "clicks at N, E, S and W, and taps once when you face the Qibla.")
                     Group("Dates") {
                         ToggleRow("Hijri date", s.hijriOn) { on -> vm.updateSettings { it.copy(hijriOn = on) } }
                         Stepper("Hijri adjustment (days)", if (s.hijriAdjust > 0) "+${s.hijriAdjust}" else "${s.hijriAdjust}",

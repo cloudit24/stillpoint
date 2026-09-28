@@ -11,6 +11,11 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Lock screen info notification (opt-in) and restoring it after a restart. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Prayer and iqama alerts arrive on the minute. -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission
+        android:name="android.permission.SCHEDULE_EXACT_ALARM"
+        android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- Only when Tasks.org or OpenTasks is chosen as the task source (asked at that moment). -->
     <uses-permission android:name="org.tasks.permission.READ_TASKS" />
@@ -99,8 +104,15 @@
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
             </intent-filter>
         </receiver>
+
+        <!-- Prayer time and iqama alerts. -->
+        <receiver
+            android:name=".widget.PrayerAlertReceiver"
+            android:exported="false" />
 
         <!-- Optional. Used only for double-tap lock and swipe-down notifications. Off by default. -->
         <service

@@ -29,6 +29,9 @@ enum class PrayerMethod(val label: String, val fajr: Double, val isha: Double, v
     ISNA("North America (ISNA)", 15.0, 15.0),
 }
 
+/** The time we're in ([current] since [currentAt], until [endsAt]) and the next of the five prayers. */
+data class PrayerSpan(val current: Prayer, val currentAt: Long, val endsAt: Long, val next: Prayer, val nextAt: Long)
+
 enum class Prayer(val label: String, val arabic: String, val isPrayer: Boolean = true) {
     FAJR("Fajr", "الفجر"),
     SUNRISE("Sunrise", "الشروق", isPrayer = false),
@@ -82,6 +85,16 @@ object PrayerTimes {
                 ?.let { return it.key to it.value }
         }
         return null
+    }
+
+    /** Current and next prayer around [now]; the current one can be Sunrise (after Fajr has ended). */
+    fun span(now: Long, lat: Double, lon: Double, method: PrayerMethod, hanafi: Boolean): PrayerSpan? {
+        val today = Instant.ofEpochMilli(now).atZone(ZoneId.systemDefault()).toLocalDate()
+        val all = (-1L..1L).flatMap { d -> forDate(today.plusDays(d), lat, lon, method, hanafi).toList() }.sortedBy { it.second }
+        val i = all.indexOfLast { it.second <= now }
+        if (i < 0 || i + 1 >= all.size) return null
+        val next = all.drop(i + 1).firstOrNull { it.first.isPrayer } ?: return null
+        return PrayerSpan(all[i].first, all[i].second, all[i + 1].second, next.first, next.second)
     }
 
     /** Degrees clockwise from true north towards the Kaaba. */

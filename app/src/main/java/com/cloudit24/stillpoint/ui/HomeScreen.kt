@@ -1,5 +1,10 @@
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import com.cloudit24.stillpoint.data.PrayerTimes
 import com.cloudit24.stillpoint.data.ProjectSource
 import com.cloudit24.stillpoint.data.TaskSource
 import androidx.compose.ui.draw.drawBehind
@@ -129,9 +134,37 @@ fun HomeScreen(vm: LauncherViewModel) {
         }
     }
 
+    // Edge light: both (curved) screen edges fill from the bottom as the next prayer gets closer,
+    // rise when home opens, and breathe near a prayer and until its iqama.
+    val edgeCity = s.city
+    val edgeSpan = if (s.edgeLight && s.prayerOn && edgeCity != null) {
+        remember(now, edgeCity, s.prayerMethod, s.asrHanafi) {
+            PrayerTimes.span(now, edgeCity.lat, edgeCity.lon, s.prayerMethod, s.asrHanafi)
+        }
+    } else null
+    val edgeProgress = edgeSpan?.let {
+        ((now - it.currentAt).toFloat() / (it.nextAt - it.currentAt).coerceAtLeast(1)).coerceIn(0f, 1f)
+    }
+    val edgeUrgent = edgeSpan != null && (edgeSpan.nextAt - now < 10 * 60_000L ||
+        (edgeSpan.current.isPrayer && now < edgeSpan.currentAt + s.iqamaMin(edgeSpan.current) * 60_000L))
+    val edgeGrow = remember { Animatable(0f) }
+    LaunchedEffect(Unit) { edgeGrow.animateTo(1f, tween(1400, easing = FastOutSlowInEasing)) }
+    val edgePulse = remember { Animatable(1f) }
+    LaunchedEffect(edgeUrgent) {
+        if (!edgeUrgent) edgePulse.snapTo(1f)
+        else while (true) {
+            edgePulse.animateTo(0.3f, tween(1100))
+            edgePulse.animateTo(1f, tween(1100))
+        }
+    }
+
     Column(
         Modifier
             .fillMaxSize()
+            .drawWithContent {
+                drawContent()
+                if (edgeProgress != null) drawEdgeLight(edgeProgress * edgeGrow.value, accent, edgePulse.value)
+            }
             .drawBehind {
                 drawRect(Brush.radialGradient(
                     listOf(accent.copy(alpha = 0.24f), accent.copy(alpha = 0.06f), Color.Transparent),
@@ -530,5 +563,26 @@ fun TasksBlock(vm: LauncherViewModel) {
                 inner()
             },
         )
+    }
+}
+
+/** A thin accent line up both side edges, filled from the bottom to [progress], with a soft glow and a bright tip. */
+private fun DrawScope.drawEdgeLight(progress: Float, color: Color, alpha: Float) {
+    val h = size.height
+    val line = 2.dp.toPx()
+    val top = h * (1f - progress)
+    for (x in floatArrayOf(line / 2, size.width - line / 2)) {
+        drawLine(color.copy(alpha = 0.07f), Offset(x, 0f), Offset(x, h), line)
+        if (progress <= 0f) continue
+        drawLine(
+            Brush.verticalGradient(listOf(color.copy(alpha = 0.22f * alpha), Color.Transparent), startY = top, endY = h),
+            Offset(x, top), Offset(x, h), 14.dp.toPx(),
+        )
+        drawLine(
+            Brush.verticalGradient(listOf(color.copy(alpha = alpha), color.copy(alpha = 0.25f * alpha)), startY = top, endY = h),
+            Offset(x, top), Offset(x, h), line,
+        )
+        drawCircle(color.copy(alpha = 0.3f * alpha), radius = 10.dp.toPx(), center = Offset(x, top))
+        drawCircle(color.copy(alpha = alpha), radius = 3.dp.toPx(), center = Offset(x, top))
     }
 }

@@ -1,5 +1,10 @@
 package com.cloudit24.stillpoint.ui
 
+import android.os.Build
+import android.view.HapticFeedbackConstants
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.mutableIntStateOf
 import android.hardware.GeomagneticField
 import android.hardware.Sensor
 import android.hardware.SensorEvent
@@ -114,15 +119,16 @@ fun PrayerScreen(vm: LauncherViewModel) {
             "Calculated on the phone; your mosque may differ by a few minutes.",
             color = Muted, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
 
-        QiblaCompass(city.lat, city.lon)
+        QiblaCompass(city.lat, city.lon, s.compassHaptics)
     }
 }
 
 @Composable
-private fun ColumnScope.QiblaCompass(lat: Double, lon: Double) {
+private fun ColumnScope.QiblaCompass(lat: Double, lon: Double, haptics: Boolean) {
     val qibla = remember(lat, lon) { PrayerTimes.qibla(lat, lon) }
     val heading by rememberTrueHeading(lat, lon)
     val h = heading
+    if (haptics && h != null) CompassHaptics(h, qibla)
 
     Text("Qibla", fontSize = 24.sp, fontWeight = FontWeight.Light, modifier = Modifier.padding(top = 28.dp))
     val delta = h?.let { ((qibla - it + 540) % 360) - 180 }
@@ -198,4 +204,33 @@ private fun rememberTrueHeading(lat: Double, lon: Double): State<Double?> {
         onPauseOrDispose { sm?.unregisterListener(listener) }
     }
     return heading
+}
+
+/**
+ * Feel the dial turn: a light tick every 10°, a firmer click at N, E, S and W,
+ * and a confirm when the phone lines up with the Qibla. Follows the phone's touch-vibration setting.
+ */
+@Composable
+private fun CompassHaptics(heading: Double, qibla: Double) {
+    val view = LocalView.current
+    val lastMark = remember { mutableIntStateOf(Int.MIN_VALUE) }
+    val aligned = remember { mutableStateOf(false) }
+    SideEffect {
+        val mark = (heading / 10).roundToInt() * 10 % 360
+        if (lastMark.intValue == Int.MIN_VALUE) lastMark.intValue = mark
+        else if (abs(((heading - lastMark.intValue + 540) % 360) - 180) >= 10) {
+            lastMark.intValue = mark
+            view.performHapticFeedback(
+                if (mark % 90 == 0) HapticFeedbackConstants.VIRTUAL_KEY else HapticFeedbackConstants.CLOCK_TICK,
+            )
+        }
+        // A little slack on the way out, so it doesn't buzz on the edge.
+        val off = abs(((qibla - heading + 540) % 360) - 180)
+        if (!aligned.value && off < 3) {
+            aligned.value = true
+            view.performHapticFeedback(
+                if (Build.VERSION.SDK_INT >= 30) HapticFeedbackConstants.CONFIRM else HapticFeedbackConstants.LONG_PRESS,
+            )
+        } else if (aligned.value && off > 8) aligned.value = false
+    }
 }

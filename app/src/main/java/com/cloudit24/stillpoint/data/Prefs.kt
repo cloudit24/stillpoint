@@ -43,6 +43,11 @@ class Prefs(context: Context) {
             lockPrayer = sp.getBoolean(K_LOCK_PRAYER, d.lockPrayer),
             lockHijri = sp.getBoolean(K_LOCK_HIJRI, d.lockHijri),
             lockTamil = sp.getBoolean(K_LOCK_TAMIL, d.lockTamil),
+            adhanAlert = sp.getBoolean(K_ADHAN_ALERT, d.adhanAlert),
+            iqamaAlert = sp.getBoolean(K_IQAMA_ALERT, d.iqamaAlert),
+            iqama = iqamaFrom(sp.getString(K_IQAMA, null)),
+            edgeLight = sp.getBoolean(K_EDGE_LIGHT, d.edgeLight),
+            compassHaptics = sp.getBoolean(K_COMPASS_HAPTICS, d.compassHaptics),
             // Before 0.11, a connected hub was used for tasks and the home card: keep that on upgrade.
             tasksSource = runCatching { TaskSource.valueOf(sp.getString(K_TASKS_SRC, null)!!) }
                 .getOrDefault(if (sp.getBoolean(K_HUB_ON, false)) TaskSource.HUB else TaskSource.PHONE),
@@ -104,6 +109,11 @@ class Prefs(context: Context) {
             .putBoolean(K_LOCK_PRAYER, s.lockPrayer)
             .putBoolean(K_LOCK_HIJRI, s.lockHijri)
             .putBoolean(K_LOCK_TAMIL, s.lockTamil)
+            .putBoolean(K_ADHAN_ALERT, s.adhanAlert)
+            .putBoolean(K_IQAMA_ALERT, s.iqamaAlert)
+            .putString(K_IQAMA, iqamaText(s.iqama))
+            .putBoolean(K_EDGE_LIGHT, s.edgeLight)
+            .putBoolean(K_COMPASS_HAPTICS, s.compassHaptics)
             .putString(K_TASKS_SRC, s.tasksSource.name)
             .putString(K_CAL_SRC, s.calendarSource.name)
             .putString(K_PROJ_SRC, s.projectsSource.name)
@@ -320,6 +330,11 @@ class Prefs(context: Context) {
         const val K_LOCK_PRAYER = "lock_prayer"
         const val K_LOCK_HIJRI = "lock_hijri"
         const val K_LOCK_TAMIL = "lock_tamil"
+        const val K_ADHAN_ALERT = "adhan_alert"
+        const val K_IQAMA_ALERT = "iqama_alert"
+        const val K_IQAMA = "iqama_minutes"
+        const val K_EDGE_LIGHT = "edge_light"
+        const val K_COMPASS_HAPTICS = "compass_haptics"
         const val K_TASKS_SRC = "tasks_source"
         const val K_CAL_SRC = "calendar_source"
         const val K_PROJ_SRC = "projects_source"

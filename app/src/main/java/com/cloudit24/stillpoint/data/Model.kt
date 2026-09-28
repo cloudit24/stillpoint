@@ -158,6 +158,12 @@ data class LauncherSettings(
     val lockPrayer: Boolean = true,
     val lockHijri: Boolean = true,
     val lockTamil: Boolean = false,
+    // Prayer alerts, iqama minutes after each adhan, edge light and compass vibration.
+    val adhanAlert: Boolean = false,
+    val iqamaAlert: Boolean = false,
+    val iqama: Map<Prayer, Int> = DEFAULT_IQAMA,
+    val edgeLight: Boolean = true,
+    val compassHaptics: Boolean = true,
     // Tasks, calendar and projects: where each comes from and how it syncs.
     val tasksSource: TaskSource = TaskSource.PHONE,
     val calendarSource: CalendarSource = CalendarSource.PHONE,
@@ -189,9 +195,20 @@ data class LauncherSettings(
 ) {
     fun gesture(slot: GestureSlot): String = gestures[slot] ?: DEFAULT_GESTURES.getValue(slot)
 
+    fun iqamaMin(p: Prayer): Int = iqama[p] ?: DEFAULT_IQAMA[p] ?: 0
+
     fun sync(f: SyncFeature): SyncConfig = when (f) {
         SyncFeature.TASKS -> tasksSync
         SyncFeature.CALENDAR -> calendarSync
         SyncFeature.PROJECTS -> projectsSync
     }
 }
+
+/** Minutes from the adhan to the iqama; common UAE mosque times. */
+val DEFAULT_IQAMA = mapOf(Prayer.FAJR to 25, Prayer.DHUHR to 20, Prayer.ASR to 20, Prayer.MAGHRIB to 5, Prayer.ISHA to 20)
+
+fun iqamaFrom(text: String?): Map<Prayer, Int> = DEFAULT_IQAMA + (text ?: "").split(",").mapNotNull { part ->
+    runCatching { val (k, v) = part.split(":"); Prayer.valueOf(k) to v.toInt() }.getOrNull()
+}
+
+fun iqamaText(m: Map<Prayer, Int>): String = m.entries.joinToString(",") { "${it.key.name}:${it.value}" }
