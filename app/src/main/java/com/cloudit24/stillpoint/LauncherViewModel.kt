@@ -65,6 +65,8 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
 
     var screen by mutableStateOf(Screen.HOME)
     var blockedMessage by mutableStateOf<String?>(null)
+    /** Set by the home search pill; the app list opens straight into search. */
+    var openSearch = false
 
     var apps by mutableStateOf<List<AppEntry>>(emptyList())
         private set

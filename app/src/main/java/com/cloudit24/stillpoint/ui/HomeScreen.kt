@@ -1,5 +1,12 @@
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.ui.platform.LocalConfiguration
 import com.cloudit24.stillpoint.data.EdgeStyle
@@ -157,10 +164,9 @@ fun HomeScreen(vm: LauncherViewModel) {
     val edge = edgeSpan?.let { sp ->
         val iqamaAt = if (sp.current.isPrayer) sp.currentAt + s.iqamaMin(sp.current) * 60_000L else 0L
         EdgeInfo(
-            left = if (!sp.current.isPrayer) null
-            else (1f - (now - sp.currentAt).toFloat() / (sp.endsAt - sp.currentAt).coerceAtLeast(1)).coerceIn(0f, 1f),
+            progress = ((now - sp.currentAt).toFloat() / (sp.nextAt - sp.currentAt).coerceAtLeast(1)).coerceIn(0f, 1f),
+            inPrayer = sp.current.isPrayer,
             ending = sp.current.isPrayer && sp.endsAt - now <= s.edgeWarnMin * 60_000L,
-            right = ((now - sp.currentAt).toFloat() / (sp.nextAt - sp.currentAt).coerceAtLeast(1)).coerceIn(0f, 1f),
             starting = sp.nextAt - now <= 10 * 60_000L,
             started = now < iqamaAt,
         )
@@ -184,7 +190,7 @@ fun HomeScreen(vm: LauncherViewModel) {
             .fillMaxSize()
             .drawWithContent {
                 drawContent()
-                if (edge != null) drawEdges(edge, s.edgeStyle, EDGE_BRIGHTNESS[s.edgeBright.coerceIn(1, 3) - 1], edgeGrow.value, edgePhase, accent)
+                if (edge != null) drawEdges(edge, s.edgeStyle, s.edgeRight, EDGE_BRIGHTNESS[s.edgeBright.coerceIn(1, 3) - 1], edgeGrow.value, edgePhase, accent)
             }
             .drawBehind {
                 drawRect(Brush.radialGradient(
@@ -334,11 +340,23 @@ fun HomeScreen(vm: LauncherViewModel) {
             }
         }
 
-        Row(Modifier.fillMaxWidth().padding(top = 16.dp)) {
+        Row(Modifier.fillMaxWidth().padding(top = 16.dp), verticalAlignment = Alignment.CenterVertically) {
             val left = s.gesture(GestureSlot.SHORTCUT_LEFT)
             val right = s.gesture(GestureSlot.SHORTCUT_RIGHT)
             vm.targetLabel(left)?.let { label ->
                 Text(label, color = Muted, modifier = Modifier.clickable { runTarget(vm, context, left) }.padding(vertical = 10.dp))
+            }
+            Spacer(Modifier.weight(1f))
+            // Search straight from home: opens the app list with the keyboard up.
+            Row(
+                Modifier.clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = 0.06f))
+                    .border(0.5.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(50))
+                    .clickable { vm.openSearch = true; vm.screen = Screen.DRAWER }
+                    .padding(horizontal = 18.dp, vertical = 9.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Outlined.Search, contentDescription = null, tint = Muted, modifier = Modifier.size(18.dp))
+                Text("Search", color = Muted, fontSize = 14.sp, modifier = Modifier.padding(start = 8.dp))
             }
             Spacer(Modifier.weight(1f))
             vm.targetLabel(right)?.let { label ->
@@ -592,56 +610,55 @@ fun TasksBlock(vm: LauncherViewModel) {
     }
 }
 
-private class EdgeInfo(val left: Float?, val ending: Boolean, val right: Float, val starting: Boolean, val started: Boolean)
-
-private val EdgeCalm = Color(0xFF8FC4A8)
-private val EdgeRed = Color(0xFFE5484D)
+private class EdgeInfo(val progress: Float, val inPrayer: Boolean, val ending: Boolean, val starting: Boolean, val started: Boolean)
 
 private val EDGE_BRIGHTNESS = floatArrayOf(0.45f, 0.75f, 1f)
 
-/** Each side is a track from "empty" to "full": up the sides, or from the outside towards the middle at the bottom. */
-private fun DrawScope.drawEdges(e: EdgeInfo, style: EdgeStyle, bright: Float, grow: Float, phase: Float, accent: Color) {
+/**
+ * One line in the accent colour. The bright part is the next prayer, growing from the start and pushing the dim part,
+ * what's left of the current prayer, out of the far end. The dim part blinks before the prayer ends, a spark runs
+ * along the bright part in the last 10 minutes, and the whole line glows from the adhan to the iqama.
+ */
+private fun DrawScope.drawEdges(e: EdgeInfo, style: EdgeStyle, right: Boolean, bright: Float, grow: Float, phase: Float, accent: Color) {
     val w = size.width
     val h = size.height
-    val (lFrom, lTo, rFrom, rTo) = when (style) {
+    val (from, to) = when (style) {
         EdgeStyle.BOTTOM -> {
             val y = h - 4.dp.toPx()
-            val gap = 10.dp.toPx()
-            val pad = 28.dp.toPx()
-            listOf(Offset(pad, y), Offset(w / 2 - gap, y), Offset(w - pad, y), Offset(w / 2 + gap, y))
+            Offset(28.dp.toPx(), y) to Offset(w - 28.dp.toPx(), y)
         }
         EdgeStyle.FLAT -> {
-            val x = 6.dp.toPx()
-            val m = 56.dp.toPx()
-            listOf(Offset(x, h - m), Offset(x, m), Offset(w - x, h - m), Offset(w - x, m))
+            val x = if (right) w - 6.dp.toPx() else 6.dp.toPx()
+            Offset(x, h - 56.dp.toPx()) to Offset(x, 56.dp.toPx())
         }
         else -> {
-            val x = 1.dp.toPx()
-            listOf(Offset(x, h), Offset(x, 0f), Offset(w - x, h), Offset(w - x, 0f))
+            val x = if (right) w - 1.dp.toPx() else 1.dp.toPx()
+            Offset(x, h) to Offset(x, 0f)
         }
     }
     val line = 2.dp.toPx()
-    drawLine(Color.White.copy(alpha = 0.05f), lFrom, lTo, line, cap = StrokeCap.Round)
-    drawLine(Color.White.copy(alpha = 0.05f), rFrom, rTo, line, cap = StrokeCap.Round)
+    drawLine(Color.White.copy(alpha = 0.05f), from, to, line, cap = StrokeCap.Round)
 
-    // Left: what's left of the current prayer.
-    e.left?.let { left ->
-        if (e.ending) edgeBeam(lFrom, lTo, left * grow, EdgeRed, bright * (0.25f + 0.75f * wave(phase, 1.2f)))
-        else edgeBeam(lFrom, lTo, left * grow, EdgeCalm, bright * 0.85f)
-    }
-
-    // Right: the next prayer coming, or the one that just began.
     if (e.started) {
-        edgeBeam(rFrom, rTo, grow, accent, bright * (0.4f + 0.6f * wave(phase, 3f)))
-    } else {
-        edgeBeam(rFrom, rTo, e.right * grow, accent, bright)
-        if (e.starting && e.right > 0f) {
-            val t = (phase % 1.8f) / 1.8f
-            val at = lerp(rFrom, lerp(rFrom, rTo, e.right * grow), t)
-            val fade = sin(t * PI.toFloat())
-            drawCircle(accent.copy(alpha = 0.35f * fade * bright), 12.dp.toPx(), at)
-            drawCircle(Color.White.copy(alpha = 0.9f * fade * bright), 2.5.dp.toPx(), at)
-        }
+        edgeBeam(from, to, grow, accent, bright * (0.4f + 0.6f * wave(phase, 3f)))
+        return
+    }
+    val split = lerp(from, to, e.progress * grow)
+    // Old: the current prayer, being pushed out.
+    val old = when {
+        !e.inPrayer -> 0.15f
+        e.ending -> 0.15f + 0.75f * wave(phase, 1.2f)
+        else -> 0.35f
+    }
+    if ((to - split).getDistance() > 1f) drawLine(accent.copy(alpha = old * bright), split, to, line, cap = StrokeCap.Round)
+    // New: the next prayer, pushing in.
+    edgeBeam(from, to, e.progress * grow, accent, bright)
+    if (e.starting && e.progress > 0f) {
+        val t = (phase % 1.8f) / 1.8f
+        val at = lerp(from, split, t)
+        val fade = sin(t * PI.toFloat())
+        drawCircle(accent.copy(alpha = 0.35f * fade * bright), 12.dp.toPx(), at)
+        drawCircle(Color.White.copy(alpha = 0.9f * fade * bright), 2.5.dp.toPx(), at)
     }
 }
 

@@ -57,6 +57,7 @@ class Prefs(context: Context) {
             edgeBright = sp.getInt(K_EDGE_BRIGHT, d.edgeBright),
             edgeWarnMin = sp.getInt(K_EDGE_WARN, d.edgeWarnMin),
             edgeMotion = sp.getBoolean(K_EDGE_MOTION, d.edgeMotion),
+            edgeRight = sp.getBoolean(K_EDGE_RIGHT, d.edgeRight),
             iconTint = runCatching { IconTint.valueOf(sp.getString(K_ICON_TINT, null)!!) }.getOrDefault(d.iconTint),
             compassHaptics = sp.getBoolean(K_COMPASS_HAPTICS, d.compassHaptics),
             // Before 0.11, a connected hub was used for tasks and the home card: keep that on upgrade.
@@ -127,6 +128,7 @@ class Prefs(context: Context) {
             .putInt(K_EDGE_BRIGHT, s.edgeBright)
             .putInt(K_EDGE_WARN, s.edgeWarnMin)
             .putBoolean(K_EDGE_MOTION, s.edgeMotion)
+            .putBoolean(K_EDGE_RIGHT, s.edgeRight)
             .putString(K_ICON_TINT, s.iconTint.name)
             .putBoolean(K_COMPASS_HAPTICS, s.compassHaptics)
             .putString(K_TASKS_SRC, s.tasksSource.name)
@@ -353,6 +355,7 @@ class Prefs(context: Context) {
         const val K_EDGE_BRIGHT = "edge_bright"
         const val K_EDGE_WARN = "edge_warn"
         const val K_EDGE_MOTION = "edge_motion"
+        const val K_EDGE_RIGHT = "edge_right"
         const val K_ICON_TINT = "icon_tint"
         const val K_COMPASS_HAPTICS = "compass_haptics"
         const val K_TASKS_SRC = "tasks_source"

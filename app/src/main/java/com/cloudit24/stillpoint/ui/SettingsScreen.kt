@@ -433,6 +433,11 @@ fun SettingsScreen(vm: LauncherViewModel) {
                 SettingsPage.EDGE -> {
                     Group("Edge light") {
                         ActionRow("Style", s.edgeStyle.label) { dialog = SettingsDialog.EDGE_STYLE }
+                        if (s.edgeStyle == EdgeStyle.CURVED || s.edgeStyle == EdgeStyle.FLAT) {
+                            ActionRow("Side", if (s.edgeRight) "Right" else "Left") {
+                                vm.updateSettings { it.copy(edgeRight = !it.edgeRight) }
+                            }
+                        }
                     }
                     Note(s.edgeStyle.detail)
                     if (s.edgeStyle != EdgeStyle.OFF) {
@@ -440,14 +445,15 @@ fun SettingsScreen(vm: LauncherViewModel) {
                             ActionRow("Brightness", listOf("Low", "Medium", "High")[s.edgeBright.coerceIn(1, 3) - 1]) {
                                 vm.updateSettings { it.copy(edgeBright = it.edgeBright % 3 + 1) }
                             }
-                            Stepper("Red warning before a prayer ends", "${s.edgeWarnMin} min",
+                            Stepper("Blink before a prayer ends", "${s.edgeWarnMin} min",
                                 onMinus = { vm.updateSettings { it.copy(edgeWarnMin = (it.edgeWarnMin - 5).coerceAtLeast(5)) } },
                                 onPlus = { vm.updateSettings { it.copy(edgeWarnMin = (it.edgeWarnMin + 5).coerceAtMost(60)) } })
                             ToggleRow("Animations", s.edgeMotion) { on -> vm.updateSettings { it.copy(edgeMotion = on) } }
                         }
-                        Note("Left: time left in the current prayer. Green, it shrinks as time passes, then turns red " +
-                            "and blinks before the prayer ends. Right: the next prayer coming. It grows towards prayer time, " +
-                            "a spark runs along it in the last 10 minutes, and it glows from the adhan to the iqama.")
+                        Note("One line in your accent colour. The bright part is the next prayer: it grows from the bottom " +
+                            "and pushes out the dim part, what's left of the current prayer. The dim part blinks before the " +
+                            "prayer ends, a spark runs along the bright part in the last 10 minutes, and the whole line " +
+                            "glows from the adhan to the iqama.")
                         Note("Light on battery: it's still and redrawn once a minute. Animations run only in those last " +
                             "minutes, at a low frame rate, and stop when home isn't on screen. Turn Animations off to keep it still.")
                         if (!s.prayerOn || s.city == null) {

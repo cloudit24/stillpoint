@@ -101,7 +101,7 @@ private sealed interface DrawerDialog {
 @Composable
 fun DrawerScreen(vm: LauncherViewModel) {
     var query by rememberSaveable { mutableStateOf("") }
-    var searching by rememberSaveable { mutableStateOf(false) }
+    var searching by rememberSaveable { mutableStateOf(vm.openSearch.also { vm.openSearch = false }) }
     var menuFor by remember { mutableStateOf<String?>(null) }
     var dialog by remember { mutableStateOf<DrawerDialog?>(null) }
     val tabs = DrawerTab.entries

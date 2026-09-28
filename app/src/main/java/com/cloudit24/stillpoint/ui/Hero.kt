@@ -1,5 +1,14 @@
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import kotlin.math.cos
+import kotlin.math.sin
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.ui.Alignment
 import com.cloudit24.stillpoint.data.Prayer
@@ -116,7 +125,10 @@ fun HeroHeader(vm: LauncherViewModel, s: LauncherSettings, now: Long) {
     }
     val current = index % cards.size
 
+    val prayerShown = s.prayerOn && s.city != null
     Column(Modifier.fillMaxWidth()) {
+      Row(verticalAlignment = Alignment.CenterVertically) {
+       Column(Modifier.weight(1f)) {
         Text(dayLine, color = Accent, fontSize = 12.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.6.sp)
         FlipCard(
             key = current,
@@ -134,7 +146,9 @@ fun HeroHeader(vm: LauncherViewModel, s: LauncherSettings, now: Long) {
                 }
             }
         }
-        val prayerShown = s.prayerOn && s.city != null
+       }
+       if (prayerShown) DayDial(vm, s, now, Modifier.padding(start = 12.dp).size(96.dp))
+      }
         if (prayerShown) PrayerNowPanel(vm, s, now, Modifier.padding(top = 24.dp))
         if (s.showStats || s.showLocalIp || s.publicIpOn) {
             StatsStrip(vm, s, Modifier.padding(top = if (prayerShown) 10.dp else 24.dp))
@@ -167,6 +181,61 @@ private fun FlipCard(key: Int, card: HeroCard, modifier: Modifier) {
             maxLines = 1, overflow = TextOverflow.Ellipsis)
         Text(display.subtitle, color = Muted, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(top = 2.dp))
+    }
+}
+
+/**
+ * The day as a ring: midnight at the top, a dot for each prayer (the next one larger), the time since the current
+ * prayer as an arc up to "now", and the countdown to the next prayer in the middle. Redrawn once a minute.
+ */
+@Composable
+private fun DayDial(vm: LauncherViewModel, s: LauncherSettings, now: Long, modifier: Modifier) {
+    val city = s.city ?: return
+    val today = LocalDate.now()
+    val midnight = remember(today) { today.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli() }
+    val times = remember(today, city, s.prayerMethod, s.asrHanafi) {
+        PrayerTimes.forDate(today, city.lat, city.lon, s.prayerMethod, s.asrHanafi)
+    }
+    val span = remember(now, city, s.prayerMethod, s.asrHanafi) {
+        PrayerTimes.span(now, city.lat, city.lon, s.prayerMethod, s.asrHanafi)
+    }
+    val accent = Accent
+    fun angle(ms: Long) = (ms - midnight) / 86_400_000f * 360f - 90f
+    Box(modifier.clickable { vm.screen = Screen.PRAYER }, contentAlignment = Alignment.Center) {
+        Canvas(Modifier.fillMaxSize()) {
+            val stroke = 3.dp.toPx()
+            val r = size.minDimension / 2 - 6.dp.toPx()
+            drawCircle(Color.White.copy(alpha = 0.08f), r, style = Stroke(stroke))
+            fun at(ms: Long): Offset {
+                val a = Math.toRadians(angle(ms).toDouble())
+                return Offset(center.x + r * cos(a).toFloat(), center.y + r * sin(a).toFloat())
+            }
+            span?.let { sp ->
+                val sweep = ((angle(now) - angle(sp.currentAt)) % 360f + 360f) % 360f
+                drawArc(accent, angle(sp.currentAt), sweep, useCenter = false,
+                    topLeft = Offset(center.x - r, center.y - r), size = Size(r * 2, r * 2),
+                    style = Stroke(stroke, cap = StrokeCap.Round))
+            }
+            times.forEach { (p, t) ->
+                val next = span?.next == p
+                drawCircle(
+                    when {
+                        next -> accent
+                        p.isPrayer -> Color.White.copy(alpha = 0.6f)
+                        else -> Color.White.copy(alpha = 0.3f)
+                    },
+                    if (next) 4.5.dp.toPx() else 2.5.dp.toPx(), at(t),
+                )
+            }
+            drawCircle(accent.copy(alpha = 0.3f), 8.dp.toPx(), at(now))
+            drawCircle(Color.White, 3.5.dp.toPx(), at(now))
+        }
+        span?.let { sp ->
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(formatDuration(sp.nextAt - now), color = Ink, fontSize = 16.sp, fontWeight = FontWeight.Light, maxLines = 1)
+                Text("to ${sp.next.label}", color = Muted, fontSize = 10.sp, maxLines = 1)
+            }
+        }
     }
 }
 
