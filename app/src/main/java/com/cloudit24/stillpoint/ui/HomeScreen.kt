@@ -1,5 +1,6 @@
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -90,7 +91,7 @@ fun HomeScreen(vm: LauncherViewModel) {
     val s = vm.settings
     val now by rememberTicker(60_000L)
     val focusActive = s.focusEndsAt > now
-    val dateFmt = remember { DateTimeFormatter.ofPattern("EEEE, d MMMM", Locale.getDefault()) }
+    val dateFmt = remember { DateTimeFormatter.ofPattern("EEE, d MMM", Locale.getDefault()) }
     val homeApps = vm.homeApps()
     // Gesture handlers are installed once; read the newest settings through this.
     val latest by rememberUpdatedState(s)
@@ -165,24 +166,26 @@ fun HomeScreen(vm: LauncherViewModel) {
             }
             .padding(horizontal = 28.dp, vertical = 24.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.weight(1f)) { Clock(s.clockStyle, now) }
-            if (s.weatherOn) WeatherBadge(vm, s, onSetup = { vm.screen = Screen.SETTINGS })
-        }
+        // Clock on the left; dates and live system info stacked on the right.
         val today = LocalDate.now()
-        Text(dateFmt.format(today), color = Ink.copy(alpha = 0.85f), fontSize = 18.sp, fontWeight = FontWeight.Light)
         val hijri = if (s.hijriOn) remember(today, s.hijriAdjust) { Calendars.hijri(today, s.hijriAdjust) } else null
         val tamil = if (s.tamilOn) remember(today) { Calendars.tamil(today) } else null
-        RotatingLine(listOfNotNull(hijri, tamil))
-        // At-a-glance lines, one accent bar on the left to hold them together.
-        if (s.prayerOn || s.goldOn || s.showStats || s.showLocalIp || s.publicIpOn) {
-            Row(Modifier.padding(top = 14.dp).height(IntrinsicSize.Min)) {
+        Row(verticalAlignment = Alignment.Top) {
+            Clock(s.clockStyle, now)
+            Column(Modifier.weight(1f).padding(start = 12.dp, top = 4.dp), horizontalAlignment = Alignment.End) {
+                Text(dateFmt.format(today), color = Ink, fontSize = 16.sp, textAlign = TextAlign.End)
+                RotatingLine(listOfNotNull(hijri, tamil))
+                if (s.showStats) SystemStatsLine(onClick = { vm.screen = Screen.DATA })
+                if (s.showLocalIp || s.publicIpOn) IpLine(vm, s)
+            }
+        }
+        // Prayer and gold under the header, held together by a thin accent bar.
+        if (s.prayerOn || s.goldOn) {
+            Row(Modifier.padding(top = 16.dp).height(IntrinsicSize.Min)) {
                 Box(Modifier.width(2.dp).fillMaxHeight().background(Accent))
                 Column(Modifier.padding(start = 12.dp)) {
                     if (s.prayerOn) PrayerLine(vm, s, now)
                     if (s.goldOn) GoldLine(vm, s)
-                    if (s.showStats) SystemStatsLine(onClick = { vm.screen = Screen.DATA })
-                    if (s.showLocalIp || s.publicIpOn) IpLine(vm, s)
                 }
             }
         }
@@ -262,12 +265,13 @@ private fun RotatingLine(lines: List<String>) {
     }
     AnimatedContent(
         targetState = lines[index % lines.size],
+        contentAlignment = Alignment.TopEnd,
         transitionSpec = {
             (slideInVertically(tween(350)) { it } + fadeIn(tween(350))) togetherWith
                 (slideOutVertically(tween(350)) { -it } + fadeOut(tween(250)))
         },
         label = "dates",
-    ) { Text(it, color = Muted, fontSize = 15.sp, modifier = Modifier.padding(top = 2.dp)) }
+    ) { Text(it, color = Muted, fontSize = 13.sp, textAlign = TextAlign.End, modifier = Modifier.padding(top = 2.dp)) }
 }
 
 /** Windows Phone start screen: square accent tiles, three across. Long-press shows the full name. */

@@ -36,7 +36,7 @@ class Prefs(context: Context) {
             hijriOn = sp.getBoolean(K_HIJRI_ON, d.hijriOn),
             hijriAdjust = sp.getInt(K_HIJRI_ADJUST, d.hijriAdjust),
             tamilOn = sp.getBoolean(K_TAMIL_ON, d.tamilOn),
-            weatherOn = sp.getBoolean(K_WEATHER_ON, d.weatherOn),
+            weatherOn = false, // Weather was removed from home in 0.7.1.
             city = sp.getString(K_CITY, null)?.let { raw ->
                 runCatching {
                     val o = JSONObject(raw)

@@ -41,22 +41,22 @@ fun Clock(style: ClockStyle, now: Long) {
 
     when (style) {
         ClockStyle.MINIMAL ->
-            Text(formatClock(context, now), fontSize = 68.sp, fontWeight = FontWeight.ExtraLight, letterSpacing = (-2).sp)
+            Text(formatClock(context, now), fontSize = 54.sp, fontWeight = FontWeight.ExtraLight, letterSpacing = (-2).sp)
         ClockStyle.BOLD ->
-            Text(formatClock(context, now), fontSize = 64.sp, fontWeight = FontWeight.Black, letterSpacing = (-3).sp)
+            Text(formatClock(context, now), fontSize = 50.sp, fontWeight = FontWeight.Black, letterSpacing = (-3).sp)
         ClockStyle.SERIF ->
-            Text(formatClock(context, now), fontSize = 62.sp, fontFamily = FontFamily.Serif, fontWeight = FontWeight.Light)
+            Text(formatClock(context, now), fontSize = 50.sp, fontFamily = FontFamily.Serif, fontWeight = FontWeight.Light)
         ClockStyle.FLIP -> Row(verticalAlignment = Alignment.CenterVertically) {
             FlipCard(hh)
-            Text(":", fontSize = 40.sp, color = Muted, modifier = Modifier.padding(horizontal = 4.dp))
+            Text(":", fontSize = 30.sp, color = Muted, modifier = Modifier.padding(horizontal = 4.dp))
             FlipCard(mm)
             amPm?.let { Text(it, fontSize = 14.sp, color = Muted, modifier = Modifier.padding(start = 8.dp)) }
         }
         ClockStyle.LCD -> Row(verticalAlignment = Alignment.Bottom) {
             Box {
                 // Unlit segments behind the digits, like an old LCD.
-                Text("88:88", fontSize = 58.sp, fontFamily = FontFamily.Monospace, color = Amber.copy(alpha = 0.10f))
-                Text(hh.padStart(2, ' ') + ":" + mm, fontSize = 58.sp, fontFamily = FontFamily.Monospace, color = Amber)
+                Text("88:88", fontSize = 44.sp, fontFamily = FontFamily.Monospace, color = Amber.copy(alpha = 0.10f))
+                Text(hh.padStart(2, ' ') + ":" + mm, fontSize = 44.sp, fontFamily = FontFamily.Monospace, color = Amber)
             }
             amPm?.let { Text(it, fontSize = 14.sp, fontFamily = FontFamily.Monospace, color = Amber, modifier = Modifier.padding(start = 6.dp, bottom = 12.dp)) }
         }
@@ -70,7 +70,7 @@ private fun FlipCard(digits: String) {
         Modifier.background(FlipCard, RoundedCornerShape(10.dp)).padding(horizontal = 10.dp, vertical = 2.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(digits, fontSize = 54.sp, fontWeight = FontWeight.Medium, color = Ink)
+        Text(digits, fontSize = 40.sp, fontWeight = FontWeight.Medium, color = Ink)
         // The hinge line across the middle of a flip card.
         Canvas(Modifier.matchParentSize()) {
             drawLine(Color.Black, Offset(0f, size.height / 2), Offset(size.width, size.height / 2), strokeWidth = 2.dp.toPx())
@@ -80,7 +80,7 @@ private fun FlipCard(digits: String) {
 
 @Composable
 private fun AnalogClock(hour24: Int, minute: Int) {
-    Canvas(Modifier.size(104.dp)) {
+    Canvas(Modifier.size(84.dp)) {
         val r = size.minDimension / 2
         val c = center
         drawCircle(Muted, r - 1.dp.toPx(), c, style = Stroke(1.5.dp.toPx()))

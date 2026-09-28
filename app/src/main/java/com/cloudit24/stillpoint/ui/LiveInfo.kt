@@ -1,5 +1,6 @@
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.ui.text.style.TextAlign
 import android.app.ActivityManager
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -114,13 +115,13 @@ fun SystemStatsLine(onClick: () -> Unit) {
                 }
                 am.getMemoryInfo(mem)
                 val usedPct = ((1 - mem.availMem.toDouble() / mem.totalMem) * 100).roundToInt()
-                text = "$net  ·  RAM $usedPct% of ${(mem.totalMem / 1_073_741_824.0).roundToInt()} GB"
+                text = "$net\nRAM $usedPct% of ${(mem.totalMem / 1_073_741_824.0).roundToInt()} GB"
                 lastRx = rx; lastTx = tx; lastT = t
             }
         }
     }
     // Monospace so the line doesn't jitter as numbers change every second.
-    Text(text, color = Muted, fontSize = 12.sp, fontFamily = FontFamily.Monospace,
+    Text(text, color = Muted, fontSize = 11.sp, fontFamily = FontFamily.Monospace, textAlign = TextAlign.End,
         modifier = Modifier.padding(top = 6.dp).clickable(onClick = onClick))
 }
 
@@ -150,7 +151,7 @@ fun IpLine(vm: LauncherViewModel, s: LauncherSettings) {
         if (s.publicIpOn && (l != null || !s.showLocalIp)) "Public ${vm.publicIp ?: "…"}" else null,
     )
     Text(
-        parts.joinToString("  ·  "), color = Muted, fontSize = 12.sp, fontFamily = FontFamily.Monospace,
+        parts.joinToString("\n"), color = Muted, fontSize = 11.sp, fontFamily = FontFamily.Monospace, textAlign = TextAlign.End,
         modifier = Modifier.padding(top = 4.dp).clickable {
             val copy = listOfNotNull(l?.address, vm.publicIp).joinToString("\n")
             if (copy.isNotEmpty()) {

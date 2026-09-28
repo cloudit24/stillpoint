@@ -79,7 +79,6 @@ private enum class SettingsPage(val title: String, val summary: String) {
     APPEARANCE("appearance", "accent colour, clock style, app icons"),
     HOME("home screen", "apps on home, size, style, screen time"),
     INFO("info on home", "network speed, RAM, IP address, calendar"),
-    WEATHER("weather", "city, units, animation"),
     PRAYER("prayer & calendars", "prayer times, Qibla, Hijri and Tamil dates"),
     GOLD("gold price", "source, currency, karat"),
     APPS("app list", "start tab, hidden apps"),
@@ -174,18 +173,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         if (on && !granted) calendarPermission.launch(Manifest.permission.READ_CALENDAR)
                         else { vm.updateSettings { it.copy(showAgenda = on) }; vm.refresh() }
                     }
-                    Note("Weather, gold and prayer times have their own pages.")
-                }
-
-                SettingsPage.WEATHER -> {
-                    ToggleRow("Show weather next to the clock", s.weatherOn) { on ->
-                        if (on && s.city == null) dialog = SettingsDialog.CITY
-                        else { vm.updateSettings { it.copy(weatherOn = on) }; if (on) vm.refreshLive(force = true) }
-                    }
-                    ActionRow("City", s.city?.let { "${it.name}, ${it.country}" } ?: "Not set") { dialog = SettingsDialog.CITY }
-                    ToggleRow("Fahrenheit", s.fahrenheit) { on -> vm.updateSettings { it.copy(fahrenheit = on) } }
-                    ToggleRow("Animate weather", s.animateWeather) { on -> vm.updateSettings { it.copy(animateWeather = on) } }
-                    Note("Weather data by Open-Meteo.com (CC BY 4.0). Only the city's approximate location is sent. No GPS.")
+                    Note("Dates, network and IP show on the right of the clock. Gold and prayer times have their own pages.")
                 }
 
                 SettingsPage.PRAYER -> {
@@ -194,7 +182,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         if (on && s.city == null) dialog = SettingsDialog.PRAYER_CITY
                         else vm.updateSettings { it.copy(prayerOn = on) }
                     }
-                    ActionRow("City", s.city?.let { "${it.name}, ${it.country} (shared with weather)" } ?: "Not set") {
+                    ActionRow("City", s.city?.let { "${it.name}, ${it.country}" } ?: "Not set") {
                         dialog = SettingsDialog.PRAYER_CITY
                     }
                     ActionRow("Calculation method", s.prayerMethod.label) { dialog = SettingsDialog.PRAYER_METHOD }
@@ -273,7 +261,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
                     Text("Stillpoint ${BuildConfig.VERSION_NAME}", fontSize = 18.sp)
                     Note("Open source (GPL-3.0): github.com/cloudit24/stillpoint")
                     Note("No analytics, no accounts. The network is used only for features you switch on: " +
-                        "weather, gold price, public IP" + if (Updater.AVAILABLE) " and the update check." else ".")
+                        "gold price, public IP, city search" + if (Updater.AVAILABLE) " and the update check." else ".")
                     Note("Prayer times, Qibla, Hijri and Tamil dates are calculated on the phone.")
                 }
             }
