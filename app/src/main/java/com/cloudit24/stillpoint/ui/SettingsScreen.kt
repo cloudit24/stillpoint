@@ -298,9 +298,8 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         "Hijri follows the Umm al-Qura calendar; adjust if your moon sighting differs. " +
                         "Tamil date is the solar calendar at Chennai sunset.")
                     Group("Under the headline") {
-                        InfoPanel.entries.forEach { panel ->
-                            ToggleRow(if (panel == InfoPanel.PRAYER) "Prayer card with moon phase" else panel.label,
-                                panel in s.infoPanels) { on ->
+                        InfoPanel.entries.filter { it != InfoPanel.PRAYER }.forEach { panel ->
+                            ToggleRow(panel.label, panel in s.infoPanels) { on ->
                                 vm.updateSettings { it.copy(infoPanels = if (on) it.infoPanels + panel else it.infoPanels - panel) }
                                 if (on && panel == InfoPanel.AGENDA) vm.refresh()
                             }
@@ -374,7 +373,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
 
                 SettingsPage.PRAYER -> {
                     Group("Prayer times") {
-                        ToggleRow("Prayer ring by the headline", s.dialMode == DialMode.PRAYER) { on ->
+                        ToggleRow("Prayer ring on home", s.dialMode == DialMode.PRAYER) { on ->
                             vm.updateSettings { it.copy(dialMode = if (on) DialMode.PRAYER else DialMode.OFF) }
                         }
                         ToggleRow("Prayer times", s.prayerOn) { on ->
