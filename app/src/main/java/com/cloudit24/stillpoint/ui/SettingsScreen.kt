@@ -1,5 +1,6 @@
 package com.cloudit24.stillpoint.ui
 
+import com.cloudit24.stillpoint.data.DialMode
 import com.cloudit24.stillpoint.data.InfoPanel
 import com.cloudit24.stillpoint.data.IconTint
 import com.cloudit24.stillpoint.CrashLog
@@ -267,6 +268,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
                     }
                     Note("Pinned apps are shown when most-used is off, or before usage data exists. Pin from the app list by long-pressing.")
                     Group("Under the headline") {
+                        ActionRow("Ring by the headline", s.dialMode.label) { dialog = SettingsDialog.DIAL_MODE }
                         InfoPanel.entries.forEach { panel ->
                             ToggleRow(panel.label, panel in s.infoPanels) { on ->
                                 vm.updateSettings { it.copy(infoPanels = if (on) it.infoPanels + panel else it.infoPanels - panel) }
@@ -279,7 +281,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         "with a city. Next on your calendar uses the source chosen under Calendar. " +
                         "Recently used apps need usage access.")
                     Group("Extras") {
-                        ToggleRow("Screen time today", s.showUsage) { on -> vm.updateSettings { it.copy(showUsage = on) } }
+                        ToggleRow("Screen time card in the headline", s.showUsage) { on -> vm.updateSettings { it.copy(showUsage = on) } }
                     }
                 }
 
@@ -336,6 +338,9 @@ fun SettingsScreen(vm: LauncherViewModel) {
 
                 SettingsPage.PRAYER -> {
                     Group("Prayer times") {
+                        ToggleRow("Prayer ring by the headline", s.dialMode == DialMode.PRAYER) { on ->
+                            vm.updateSettings { it.copy(dialMode = if (on) DialMode.PRAYER else DialMode.OFF) }
+                        }
                         ToggleRow("Prayer times", s.prayerOn) { on ->
                             if (on && s.city == null) dialog = SettingsDialog.PRAYER_CITY
                             else vm.updateSettings { it.copy(prayerOn = on) }
@@ -688,6 +693,9 @@ fun SettingsScreen(vm: LauncherViewModel) {
         SettingsDialog.ICON_TINT -> ChoiceDialog("Icon colours", IconTint.entries, { it.label }, onDismiss = { dialog = null }) { t ->
             vm.updateSettings { it.copy(iconTint = t) }
         }
+        SettingsDialog.DIAL_MODE -> ChoiceDialog("Ring by the headline", DialMode.entries, { it.label }, onDismiss = { dialog = null }) { m ->
+            vm.updateSettings { it.copy(dialMode = m) }
+        }
         SettingsDialog.ICS_URL -> IcsDialog(vm.icsUrl().orEmpty(), onDismiss = { dialog = null }) { vm.setIcsUrl(it) }
         null -> Unit
     }
@@ -699,7 +707,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
 
 private enum class SettingsDialog {
     ACCENT, HOME_STYLE, DRAWER_START, CLOCK, GOLD_SOURCE, CURRENCY, KARAT, CITY, PRAYER_CITY, PRAYER_METHOD, HUB,
-    SYNC_TASKS, SYNC_CALENDAR, SYNC_PROJECTS, ICS_URL, EDGE_STYLE, ICON_TINT,
+    SYNC_TASKS, SYNC_CALENDAR, SYNC_PROJECTS, ICS_URL, EDGE_STYLE, ICON_TINT, DIAL_MODE,
 }
 
 /** Type in the hub address and app key (from the hub's "Connect phone" page). Tested before it's saved. */

@@ -63,6 +63,7 @@ class Prefs(context: Context) {
                 ?.split(",")?.mapNotNull { n -> runCatching { InfoPanel.valueOf(n) }.getOrNull() }?.toSet()
                 ?: d.infoPanels,
             showRecent = sp.getBoolean(K_SHOW_RECENT, d.showRecent),
+            dialMode = runCatching { DialMode.valueOf(sp.getString(K_DIAL, null)!!) }.getOrDefault(d.dialMode),
             compassHaptics = sp.getBoolean(K_COMPASS_HAPTICS, d.compassHaptics),
             // Before 0.11, a connected hub was used for tasks and the home card: keep that on upgrade.
             tasksSource = runCatching { TaskSource.valueOf(sp.getString(K_TASKS_SRC, null)!!) }
@@ -136,6 +137,7 @@ class Prefs(context: Context) {
             .putString(K_ICON_TINT, s.iconTint.name)
             .putString(K_INFO_PANELS, s.infoPanels.joinToString(",") { it.name })
             .putBoolean(K_SHOW_RECENT, s.showRecent)
+            .putString(K_DIAL, s.dialMode.name)
             .putBoolean(K_COMPASS_HAPTICS, s.compassHaptics)
             .putString(K_TASKS_SRC, s.tasksSource.name)
             .putString(K_CAL_SRC, s.calendarSource.name)
@@ -366,6 +368,7 @@ class Prefs(context: Context) {
         const val K_INFO_PANEL = "info_panel"
         const val K_INFO_PANELS = "info_panels"
         const val K_SHOW_RECENT = "show_recent"
+        const val K_DIAL = "dial_mode"
         const val K_COMPASS_HAPTICS = "compass_haptics"
         const val K_TASKS_SRC = "tasks_source"
         const val K_CAL_SRC = "calendar_source"

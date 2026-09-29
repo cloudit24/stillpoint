@@ -254,12 +254,8 @@ fun HomeScreen(vm: LauncherViewModel) {
         HeroHeader(vm, s, now)
 
         if (s.showUsage) {
-            if (vm.hasUsageAccess) {
-                Text(
-                    "${formatDuration(vm.totalUsage)} on screen today",
-                    color = Muted, fontSize = 14.sp, modifier = Modifier.padding(top = 16.dp),
-                )
-            } else {
+            // Screen time itself is one of the flipping headline cards.
+            if (!vm.hasUsageAccess) {
                 Text(
                     "Allow usage access to show screen time",
                     color = Accent, fontSize = 14.sp,

@@ -1,5 +1,6 @@
 package com.cloudit24.stillpoint.ui
 
+import com.cloudit24.stillpoint.data.DialMode
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.runtime.mutableFloatStateOf
@@ -109,6 +110,9 @@ fun HeroHeader(vm: LauncherViewModel, s: LauncherSettings, now: Long) {
             else -> "Good night"
         }
         add(HeroCard(greeting, "It's ${formatClock(context, now)}", Ink))
+        if (s.showUsage && vm.hasUsageAccess && vm.totalUsage > 0) {
+            add(HeroCard(formatDuration(vm.totalUsage), "on screen today", Ink))
+        }
         val w = vm.weather
         if (s.weatherOn && w != null) {
             val t = if (s.fahrenheit) w.tempC * 9 / 5 + 32 else w.tempC
@@ -156,7 +160,7 @@ fun HeroHeader(vm: LauncherViewModel, s: LauncherSettings, now: Long) {
             }
         }
        }
-       DayDial(vm, s, now, Modifier.padding(start = 12.dp).size(96.dp))
+       if (s.dialMode != DialMode.OFF) DayDial(vm, s, now, Modifier.padding(start = 12.dp).size(96.dp))
       }
         InfoSlot(vm, s, now, Modifier.padding(top = 30.dp))
         if (s.showStats || s.showLocalIp || s.publicIpOn) {
@@ -197,13 +201,15 @@ private fun FlipCard(key: Int, card: HeroCard, modifier: Modifier) {
 }
 
 /**
- * The day as a ring: midnight at the top, a dot for each prayer (the next one larger), the time since the current
- * prayer as an arc up to "now", and the countdown to the next prayer in the middle. Redrawn once a minute.
+ * The ring beside the headline. Next prayer: midnight at the top, a dot per prayer (the next one larger and pulsing),
+ * an arc from the current prayer to now, the countdown in the middle. Battery: the arc is the charge.
+ * Time left today: the arc is the day so far, the middle says how much is left.
  */
 @Composable
 private fun DayDial(vm: LauncherViewModel, s: LauncherSettings, now: Long, modifier: Modifier) {
-    // Without prayer times it's a plain day ring: midnight to now.
-    val city = if (s.prayerOn) s.city else null
+    val context = LocalContext.current
+    val city = if (s.prayerOn && s.dialMode == DialMode.PRAYER) s.city else null
+    val mode = if (s.dialMode == DialMode.PRAYER && city == null) DialMode.DAY else s.dialMode
     val today = LocalDate.now()
     val midnight = remember(today) { today.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli() }
     val times = remember(today, city, s.prayerMethod, s.asrHanafi) {
@@ -212,9 +218,10 @@ private fun DayDial(vm: LauncherViewModel, s: LauncherSettings, now: Long, modif
     val span = remember(now, city, s.prayerMethod, s.asrHanafi) {
         if (city == null) null else PrayerTimes.span(now, city.lat, city.lon, s.prayerMethod, s.asrHanafi)
     }
+    val (charge, charging) = remember(now) { battery(context) }
     val accent = Accent
     fun angle(ms: Long) = (ms - midnight) / 86_400_000f * 360f - 90f
-    // The arc sweeps in when home opens; a soft ring pulses from the dot the arc is heading for.
+    // The arc sweeps in when home opens; a soft ring pulses at the point the arc is heading for.
     // ~20 frames a second, only while home is on screen; off with Edge light > Animations.
     val intro = remember { Animatable(0f) }
     LaunchedEffect(Unit) { intro.animateTo(1f, tween(1100, easing = FastOutSlowInEasing)) }
@@ -235,16 +242,20 @@ private fun DayDial(vm: LauncherViewModel, s: LauncherSettings, now: Long, modif
             // Finishing rings: a hairline outside, a fainter one inside.
             drawCircle(Color.White.copy(alpha = 0.07f), r + 5.dp.toPx(), style = Stroke(0.5.dp.toPx()))
             drawCircle(accent.copy(alpha = 0.10f), r - 9.dp.toPx(), style = Stroke(0.5.dp.toPx()))
-            fun at(ms: Long): Offset {
-                val a = Math.toRadians(angle(ms).toDouble())
+            fun atAngle(deg: Float): Offset {
+                val a = Math.toRadians(deg.toDouble())
                 return Offset(center.x + r * cos(a).toFloat(), center.y + r * sin(a).toFloat())
             }
-            (span?.currentAt ?: midnight).let { from ->
-                val sweep = ((angle(now) - angle(from)) % 360f + 360f) % 360f * intro.value
-                drawArc(accent, angle(from), sweep, useCenter = false,
-                    topLeft = Offset(center.x - r, center.y - r), size = Size(r * 2, r * 2),
-                    style = Stroke(stroke, cap = StrokeCap.Round))
+            val (start, full) = if (mode == DialMode.BATTERY) {
+                -90f to 360f * charge.coerceIn(0, 100) / 100f
+            } else {
+                val from = span?.currentAt ?: midnight
+                angle(from) to ((angle(now) - angle(from)) % 360f + 360f) % 360f
             }
+            val sweep = full * intro.value
+            drawArc(accent, start, sweep, useCenter = false,
+                topLeft = Offset(center.x - r, center.y - r), size = Size(r * 2, r * 2),
+                style = Stroke(stroke, cap = StrokeCap.Round))
             times.forEach { (p, t) ->
                 val next = span?.next == p
                 drawCircle(
@@ -253,31 +264,29 @@ private fun DayDial(vm: LauncherViewModel, s: LauncherSettings, now: Long, modif
                         p.isPrayer -> Color.White.copy(alpha = 0.6f)
                         else -> Color.White.copy(alpha = 0.3f)
                     },
-                    if (next) 4.5.dp.toPx() else 2.5.dp.toPx(), at(t),
+                    if (next) 4.5.dp.toPx() else 2.5.dp.toPx(), atAngle(angle(t)),
                 )
                 if (next && pulse >= 0f) {
-                    drawCircle(accent.copy(alpha = 0.6f * (1f - pulse)), 4.5.dp.toPx() + 9.dp.toPx() * pulse, at(t),
+                    drawCircle(accent.copy(alpha = 0.6f * (1f - pulse)), 4.5.dp.toPx() + 9.dp.toPx() * pulse, atAngle(angle(t)),
                         style = Stroke(1.5.dp.toPx()))
                 }
             }
-            drawCircle(accent.copy(alpha = 0.3f * intro.value), 8.dp.toPx(), at(now))
-            drawCircle(Color.White.copy(alpha = intro.value), 3.5.dp.toPx(), at(now))
+            val tip = atAngle(start + sweep)
+            drawCircle(accent.copy(alpha = 0.3f * intro.value), 8.dp.toPx(), tip)
+            drawCircle(Color.White.copy(alpha = intro.value), 3.5.dp.toPx(), tip)
             if (span == null && pulse >= 0f) {
-                drawCircle(accent.copy(alpha = 0.5f * (1f - pulse)), 3.5.dp.toPx() + 9.dp.toPx() * pulse, at(now),
+                drawCircle(accent.copy(alpha = 0.5f * (1f - pulse)), 3.5.dp.toPx() + 9.dp.toPx() * pulse, tip,
                     style = Stroke(1.5.dp.toPx()))
             }
         }
-        span?.let { sp ->
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(formatDuration(sp.nextAt - now), color = Ink, fontSize = 16.sp, fontWeight = FontWeight.Light, maxLines = 1)
-                Text("to ${sp.next.label}", color = Muted, fontSize = 10.sp, maxLines = 1)
-            }
+        val (big, small) = when {
+            span != null -> formatDuration(span.nextAt - now) to "to ${span.next.label}"
+            mode == DialMode.BATTERY -> "$charge%" to (if (charging) "charging" else "battery")
+            else -> formatDuration((midnight + 86_400_000L - now).coerceAtLeast(0)) to "left today"
         }
-        if (span == null) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("${(now - midnight) * 100 / 86_400_000L}%", color = Ink, fontSize = 16.sp, fontWeight = FontWeight.Light)
-                Text("of today", color = Muted, fontSize = 10.sp)
-            }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(big, color = Ink, fontSize = 16.sp, fontWeight = FontWeight.Light, maxLines = 1)
+            Text(small, color = Muted, fontSize = 10.sp, maxLines = 1)
         }
     }
 }

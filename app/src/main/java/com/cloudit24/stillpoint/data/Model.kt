@@ -170,6 +170,7 @@ data class LauncherSettings(
     val iconTint: IconTint = IconTint.ORIGINAL,
     val infoPanels: Set<InfoPanel> = setOf(InfoPanel.PRAYER),
     val showRecent: Boolean = true,
+    val dialMode: DialMode = DialMode.PRAYER,
     val compassHaptics: Boolean = true,
     // Tasks, calendar and projects: where each comes from and how it syncs.
     val tasksSource: TaskSource = TaskSource.PHONE,
@@ -240,4 +241,12 @@ enum class InfoPanel(val label: String) {
     PRAYER("Prayer times"),
     AGENDA("Next on your calendar"),
     DAY("Day and battery"),
+}
+
+/** What the ring beside the headline shows. */
+enum class DialMode(val label: String) {
+    PRAYER("Next prayer"),
+    BATTERY("Battery"),
+    DAY("Time left today"),
+    OFF("Off"),
 }
