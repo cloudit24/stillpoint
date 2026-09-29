@@ -131,11 +131,12 @@ private enum class SettingsPage(val section: String, val title: String, val summ
     APPS("Personalization", "App list", "Starting tab, icons, hidden apps", Icons.Outlined.Menu),
     GESTURES("Personalization", "Gestures and shortcuts", "Swipes, double-tap, bottom shortcuts", Icons.Outlined.ThumbUp),
     INFO("Information", "System info", "Network speed, RAM, IP address, calendar", Icons.AutoMirrored.Outlined.List),
-    PRAYER("Information", "Prayer and calendars", "Prayer times, Qibla, Hijri and Tamil dates", Icons.Outlined.Place),
+    DATES("Information", "Dates", "Hijri and Tamil calendars", Icons.Outlined.DateRange),
     LOCK("Information", "Lock screen", "Next prayer and dates on the lock screen", Icons.Outlined.Notifications),
     TASKS("Productivity", "Tasks", "On this phone, Project Hub, Tasks.org or OpenTasks", Icons.Outlined.Done),
     CALENDAR("Productivity", "Calendar", "Phone calendar, Project Hub or a calendar link", Icons.Outlined.DateRange),
     PROJECTS("Productivity", "Projects", "On this phone or Project Hub", Icons.Outlined.Build),
+    PRAYER("Extras", "Islamic prayer", "Prayer times, alerts, iqama, Qibla", Icons.Outlined.Place),
     WEATHER("Extras", "Weather", "Headline card · uses Open-Meteo", Icons.Outlined.LocationOn),
     GOLD("Extras", "Gold price", "Home line and widget · uses outside websites", Icons.Outlined.Star),
     HUB("Extras", "Project Hub", "Connection to your own server", Icons.Outlined.CheckCircle),
@@ -266,12 +267,17 @@ fun SettingsScreen(vm: LauncherViewModel) {
                     }
                     Note("Pinned apps are shown when most-used is off, or before usage data exists. Pin from the app list by long-pressing.")
                     Group("Under the headline") {
-                        ActionRow("Main info", s.infoPanel.label) { dialog = SettingsDialog.INFO_PANEL }
+                        InfoPanel.entries.forEach { panel ->
+                            ToggleRow(panel.label, panel in s.infoPanels) { on ->
+                                vm.updateSettings { it.copy(infoPanels = if (on) it.infoPanels + panel else it.infoPanels - panel) }
+                                if (on && panel == InfoPanel.AGENDA) vm.refresh()
+                            }
+                        }
                         ToggleRow("Recently used apps (24 h)", s.showRecent) { on -> vm.updateSettings { it.copy(showRecent = on) } }
                     }
-                    Note("Main info is the one important thing under the headline. Prayer times need a city under " +
-                        "Prayer and calendars; without one, Day and battery is shown. Next on your calendar uses the " +
-                        "source chosen under Calendar. Recently used apps need usage access.")
+                    Note("Turn on any mix; they stack in this order. Prayer times need Islamic prayer (under Extras) " +
+                        "with a city. Next on your calendar uses the source chosen under Calendar. " +
+                        "Recently used apps need usage access.")
                     Group("Extras") {
                         ToggleRow("Screen time today", s.showUsage) { on -> vm.updateSettings { it.copy(showUsage = on) } }
                     }
@@ -330,7 +336,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
 
                 SettingsPage.PRAYER -> {
                     Group("Prayer times") {
-                        ToggleRow("Next prayer on home", s.prayerOn) { on ->
+                        ToggleRow("Prayer times", s.prayerOn) { on ->
                             if (on && s.city == null) dialog = SettingsDialog.PRAYER_CITY
                             else vm.updateSettings { it.copy(prayerOn = on) }
                         }
@@ -368,15 +374,6 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         }
                     }
                     Note("The compass ticks every 10°, clicks at N, E, S and W, and taps once when you face the Qibla.")
-                    Group("Dates") {
-                        ToggleRow("Hijri date", s.hijriOn) { on -> vm.updateSettings { it.copy(hijriOn = on) } }
-                        Stepper("Hijri adjustment (days)", if (s.hijriAdjust > 0) "+${s.hijriAdjust}" else "${s.hijriAdjust}",
-                            onMinus = { vm.updateSettings { it.copy(hijriAdjust = (it.hijriAdjust - 1).coerceAtLeast(-2)) } },
-                            onPlus = { vm.updateSettings { it.copy(hijriAdjust = (it.hijriAdjust + 1).coerceAtMost(2)) } })
-                        ToggleRow("Tamil date", s.tamilOn) { on -> vm.updateSettings { it.copy(tamilOn = on) } }
-                    }
-                    Note("With both on, they take turns every few seconds. Hijri follows the Umm al-Qura calendar; " +
-                        "adjust if your country's moon sighting differs. Tamil date is the solar calendar at Chennai sunset.")
                 }
 
                 SettingsPage.WEATHER -> {
@@ -433,6 +430,18 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         "else. Choose what uses it under Productivity: Tasks, Calendar and Projects. Use https unless the hub is on your home network.")
                 }
 
+                SettingsPage.DATES -> {
+                    Group("Dates") {
+                        ToggleRow("Hijri date", s.hijriOn) { on -> vm.updateSettings { it.copy(hijriOn = on) } }
+                        Stepper("Hijri adjustment (days)", if (s.hijriAdjust > 0) "+${s.hijriAdjust}" else "${s.hijriAdjust}",
+                            onMinus = { vm.updateSettings { it.copy(hijriAdjust = (it.hijriAdjust - 1).coerceAtLeast(-2)) } },
+                            onPlus = { vm.updateSettings { it.copy(hijriAdjust = (it.hijriAdjust + 1).coerceAtMost(2)) } })
+                        ToggleRow("Tamil date", s.tamilOn) { on -> vm.updateSettings { it.copy(tamilOn = on) } }
+                    }
+                    Note("With both on, they take turns every few seconds. Hijri follows the Umm al-Qura calendar; " +
+                        "adjust if your country's moon sighting differs. Tamil date is the solar calendar at Chennai sunset.")
+                }
+
                 SettingsPage.EDGE -> {
                     Group("Edge light") {
                         ActionRow("Style", s.edgeStyle.label) { dialog = SettingsDialog.EDGE_STYLE }
@@ -484,7 +493,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
                     Note("A silent notification that stays on the lock screen. The countdown is kept by Android, " +
                         "so nothing runs in the background. The gold price is never shown here. If it doesn't appear, " +
                         "check that your phone shows notifications on the lock screen. The prayer uses the city set " +
-                        "under Prayer and calendars.")
+                        "under Islamic prayer.")
                 }
 
                 SettingsPage.TASKS -> {
@@ -679,10 +688,6 @@ fun SettingsScreen(vm: LauncherViewModel) {
         SettingsDialog.ICON_TINT -> ChoiceDialog("Icon colours", IconTint.entries, { it.label }, onDismiss = { dialog = null }) { t ->
             vm.updateSettings { it.copy(iconTint = t) }
         }
-        SettingsDialog.INFO_PANEL -> ChoiceDialog("Main info", InfoPanel.entries, { it.label }, onDismiss = { dialog = null }) { i ->
-            vm.updateSettings { it.copy(infoPanel = i) }
-            vm.refresh()
-        }
         SettingsDialog.ICS_URL -> IcsDialog(vm.icsUrl().orEmpty(), onDismiss = { dialog = null }) { vm.setIcsUrl(it) }
         null -> Unit
     }
@@ -694,7 +699,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
 
 private enum class SettingsDialog {
     ACCENT, HOME_STYLE, DRAWER_START, CLOCK, GOLD_SOURCE, CURRENCY, KARAT, CITY, PRAYER_CITY, PRAYER_METHOD, HUB,
-    SYNC_TASKS, SYNC_CALENDAR, SYNC_PROJECTS, ICS_URL, EDGE_STYLE, ICON_TINT, INFO_PANEL,
+    SYNC_TASKS, SYNC_CALENDAR, SYNC_PROJECTS, ICS_URL, EDGE_STYLE, ICON_TINT,
 }
 
 /** Type in the hub address and app key (from the hub's "Connect phone" page). Tested before it's saved. */

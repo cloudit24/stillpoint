@@ -370,7 +370,7 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Today's remaining events from the chosen calendar source. */
     private suspend fun loadAgenda(): List<AgendaItem> {
-        if (!settings.showAgenda && settings.infoPanel != InfoPanel.AGENDA) return emptyList()
+        if (!settings.showAgenda && InfoPanel.AGENDA !in settings.infoPanels) return emptyList()
         return when (settings.calendarSource) {
             CalendarSource.PHONE -> withContext(Dispatchers.IO) { runCatching { calendarRepo.today() }.getOrDefault(emptyList()) }
             CalendarSource.HUB -> hubAgenda()

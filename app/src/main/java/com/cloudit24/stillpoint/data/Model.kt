@@ -168,7 +168,7 @@ data class LauncherSettings(
     val edgeMotion: Boolean = true,
     val edgeRight: Boolean = true,
     val iconTint: IconTint = IconTint.ORIGINAL,
-    val infoPanel: InfoPanel = InfoPanel.PRAYER,
+    val infoPanels: Set<InfoPanel> = setOf(InfoPanel.PRAYER),
     val showRecent: Boolean = true,
     val compassHaptics: Boolean = true,
     // Tasks, calendar and projects: where each comes from and how it syncs.
@@ -240,5 +240,4 @@ enum class InfoPanel(val label: String) {
     PRAYER("Prayer times"),
     AGENDA("Next on your calendar"),
     DAY("Day and battery"),
-    OFF("Nothing"),
 }

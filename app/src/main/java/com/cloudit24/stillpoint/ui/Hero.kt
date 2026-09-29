@@ -185,9 +185,12 @@ private fun FlipCard(key: Int, card: HeroCard, modifier: Modifier) {
         rotationX = rot.value
         cameraDistance = 14f * density
     }) {
-        Text(display.title, color = display.color, fontSize = if (display.small) 30.sp else 40.sp, lineHeight = 46.sp,
-            fontWeight = FontWeight.Light,
-            maxLines = 1, overflow = TextOverflow.Ellipsis)
+        // Shrinks until the whole line fits next to the dial (down to 22 sp) instead of cutting it off.
+        var size by remember(display.title) { mutableFloatStateOf(if (display.small) 30f else 40f) }
+        Text(display.title, color = display.color, fontSize = size.sp, lineHeight = 46.sp,
+            fontWeight = FontWeight.Light, maxLines = 1, softWrap = false,
+            overflow = if (size > 22f) TextOverflow.Clip else TextOverflow.Ellipsis,
+            onTextLayout = { if (it.hasVisualOverflow && size > 22f) size -= 2f })
         Text(display.subtitle, color = Muted, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(top = 2.dp))
     }
@@ -282,12 +285,18 @@ private fun DayDial(vm: LauncherViewModel, s: LauncherSettings, now: Long, modif
 /** The one "important info" slot under the headline: prayer times, the next calendar event, or the day and battery. */
 @Composable
 private fun InfoSlot(vm: LauncherViewModel, s: LauncherSettings, now: Long, modifier: Modifier) {
-    val panel = if (s.infoPanel == InfoPanel.PRAYER && (!s.prayerOn || s.city == null)) InfoPanel.DAY else s.infoPanel
-    when (panel) {
-        InfoPanel.PRAYER -> PrayerTimeline(vm, s, now, modifier)
-        InfoPanel.AGENDA -> AgendaInfo(vm, now, modifier)
-        InfoPanel.DAY -> DayInfo(now, modifier)
-        InfoPanel.OFF -> Unit
+    // Prayer needs Islamic prayer switched on with a city; if it was the only choice, show the day instead.
+    val prayerReady = s.prayerOn && s.city != null
+    val shown = InfoPanel.entries.filter { it in s.infoPanels && (it != InfoPanel.PRAYER || prayerReady) }
+        .ifEmpty { if (s.infoPanels.isNotEmpty()) listOf(InfoPanel.DAY) else emptyList() }
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(28.dp)) {
+        shown.forEach { panel ->
+            when (panel) {
+                InfoPanel.PRAYER -> PrayerTimeline(vm, s, now, Modifier)
+                InfoPanel.AGENDA -> AgendaInfo(vm, now, Modifier)
+                InfoPanel.DAY -> DayInfo(now, Modifier)
+            }
+        }
     }
 }
 
