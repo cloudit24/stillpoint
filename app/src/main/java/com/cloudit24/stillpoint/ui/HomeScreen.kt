@@ -359,8 +359,6 @@ private fun RotatingLine(lines: List<String>) {
     ) { Text(it, color = Muted, fontSize = 13.sp, lineHeight = 18.sp, textAlign = TextAlign.End, minLines = 2) }
 }
 
-/** Windows Phone start screen: square accent tiles, three across. Long-press shows the full name. */
-@OptIn(ExperimentalFoundationApi::class)
 /** Apps opened in the last 24 hours, newest first, as a quiet row of icons. */
 @Composable
 private fun RecentStrip(vm: LauncherViewModel, apps: List<AppEntry>) {
@@ -374,6 +372,7 @@ private fun RecentStrip(vm: LauncherViewModel, apps: List<AppEntry>) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 private fun HomeIcons(vm: LauncherViewModel, apps: List<AppEntry>, size: Dp) {
     val context = LocalContext.current
