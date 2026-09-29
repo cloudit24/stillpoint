@@ -46,6 +46,8 @@ object Updater {
     suspend fun downloadAndInstall(context: Context, apkUrl: String, onProgress: (Int) -> Unit): String? =
         withContext(Dispatchers.IO) {
             runCatching {
+                // Only this project's release files; Android also refuses any APK not signed with our key.
+                require(apkUrl.startsWith("https://github.com/$REPO/releases/download/")) { "unexpected download address" }
                 val installer = context.packageManager.packageInstaller
                 val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL)
                 val sessionId = installer.createSession(params)

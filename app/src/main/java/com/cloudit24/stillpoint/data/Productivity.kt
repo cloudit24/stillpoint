@@ -130,6 +130,7 @@ object Ics {
     /** Call off the main thread. Throws IOException with a message fit to show. */
     fun fetch(raw: String): String {
         val url = raw.trim().replaceFirst(Regex("^webcal://", RegexOption.IGNORE_CASE), "https://")
+        if (!url.startsWith("https://", true) && !url.startsWith("http://", true)) throw IOException("Use a web (https) link.")
         val conn = (URL(url).openConnection() as HttpURLConnection).apply {
             connectTimeout = 15_000
             readTimeout = 30_000
@@ -138,7 +139,17 @@ object Ics {
         try {
             val code = conn.responseCode
             if (code != 200) throw IOException("The calendar link answered $code.")
-            val body = conn.inputStream.bufferedReader().use { it.readText() }
+            val body = conn.inputStream.bufferedReader().use { r ->
+                val sb = StringBuilder()
+                val buf = CharArray(8192)
+                while (true) {
+                    val n = r.read(buf)
+                    if (n < 0) break
+                    sb.append(buf, 0, n)
+                    if (sb.length > 5_000_000) throw IOException("The calendar is too large (over 5 MB).")
+                }
+                sb.toString()
+            }
             if (!body.contains("BEGIN:VCALENDAR")) throw IOException("That link isn't a calendar (.ics) file.")
             return body
         } finally {
