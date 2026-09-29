@@ -1,5 +1,6 @@
 package com.cloudit24.stillpoint.ui
 
+import com.cloudit24.stillpoint.data.InfoPanel
 import com.cloudit24.stillpoint.data.IconTint
 import com.cloudit24.stillpoint.CrashLog
 import androidx.compose.material.icons.outlined.LocationOn
@@ -124,7 +125,7 @@ import kotlinx.coroutines.launch
 
 /** Settings pages, grouped on the main screen under [section]. */
 private enum class SettingsPage(val section: String, val title: String, val summary: String, val icon: ImageVector) {
-    APPEARANCE("Personalization", "Appearance", "Accent colour and clock style", Icons.Outlined.Face),
+    APPEARANCE("Personalization", "Appearance", "Accent colour and icons", Icons.Outlined.Face),
     HOME("Personalization", "Home screen", "Layout, app count and size", Icons.Outlined.Home),
     EDGE("Personalization", "Edge light", "Prayer light on the screen edges", Icons.Outlined.PlayArrow),
     APPS("Personalization", "App list", "Starting tab, icons, hidden apps", Icons.Outlined.Menu),
@@ -246,7 +247,6 @@ fun SettingsScreen(vm: LauncherViewModel) {
                             }
                             Box(Modifier.size(28.dp).clip(CircleShape).background(Color(s.accent)))
                         }
-                        ActionRow("Clock style", s.clockStyle.label) { dialog = SettingsDialog.CLOCK }
                         ActionRow("Icon colours", s.iconTint.label) { dialog = SettingsDialog.ICON_TINT }
                     }
                 }
@@ -265,6 +265,13 @@ fun SettingsScreen(vm: LauncherViewModel) {
                             onPlus = { vm.updateSettings { it.copy(homeSize = (it.homeSize + 2).coerceAtMost(40)) } })
                     }
                     Note("Pinned apps are shown when most-used is off, or before usage data exists. Pin from the app list by long-pressing.")
+                    Group("Under the headline") {
+                        ActionRow("Main info", s.infoPanel.label) { dialog = SettingsDialog.INFO_PANEL }
+                        ToggleRow("Recently used apps (24 h)", s.showRecent) { on -> vm.updateSettings { it.copy(showRecent = on) } }
+                    }
+                    Note("Main info is the one important thing under the headline. Prayer times need a city under " +
+                        "Prayer and calendars; without one, Day and battery is shown. Next on your calendar uses the " +
+                        "source chosen under Calendar. Recently used apps need usage access.")
                     Group("Extras") {
                         ToggleRow("Screen time today", s.showUsage) { on -> vm.updateSettings { it.copy(showUsage = on) } }
                     }
@@ -390,10 +397,6 @@ fun SettingsScreen(vm: LauncherViewModel) {
 
                 SettingsPage.GOLD -> {
                     Group("Gold price") {
-                        ToggleRow("Line on home (not with Headline)", s.goldOn) { on ->
-                            vm.updateSettings { it.copy(goldOn = on) }
-                            if (on) vm.refreshLive(force = true)
-                        }
                         ActionRow("Source", s.goldSource.label) { dialog = SettingsDialog.GOLD_SOURCE }
                         ActionRow("Currency", s.goldCurrency) { dialog = SettingsDialog.CURRENCY }
                         ActionRow("Karat", "${s.goldKarat}K") { dialog = SettingsDialog.KARAT }
@@ -676,6 +679,10 @@ fun SettingsScreen(vm: LauncherViewModel) {
         SettingsDialog.ICON_TINT -> ChoiceDialog("Icon colours", IconTint.entries, { it.label }, onDismiss = { dialog = null }) { t ->
             vm.updateSettings { it.copy(iconTint = t) }
         }
+        SettingsDialog.INFO_PANEL -> ChoiceDialog("Main info", InfoPanel.entries, { it.label }, onDismiss = { dialog = null }) { i ->
+            vm.updateSettings { it.copy(infoPanel = i) }
+            vm.refresh()
+        }
         SettingsDialog.ICS_URL -> IcsDialog(vm.icsUrl().orEmpty(), onDismiss = { dialog = null }) { vm.setIcsUrl(it) }
         null -> Unit
     }
@@ -687,7 +694,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
 
 private enum class SettingsDialog {
     ACCENT, HOME_STYLE, DRAWER_START, CLOCK, GOLD_SOURCE, CURRENCY, KARAT, CITY, PRAYER_CITY, PRAYER_METHOD, HUB,
-    SYNC_TASKS, SYNC_CALENDAR, SYNC_PROJECTS, ICS_URL, EDGE_STYLE, ICON_TINT,
+    SYNC_TASKS, SYNC_CALENDAR, SYNC_PROJECTS, ICS_URL, EDGE_STYLE, ICON_TINT, INFO_PANEL,
 }
 
 /** Type in the hub address and app key (from the hub's "Connect phone" page). Tested before it's saved. */

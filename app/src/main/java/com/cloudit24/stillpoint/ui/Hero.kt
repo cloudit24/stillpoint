@@ -1,5 +1,11 @@
 package com.cloudit24.stillpoint.ui
 
+import com.cloudit24.stillpoint.data.InfoPanel
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.ui.text.style.TextAlign
+import android.os.BatteryManager
+import android.content.Context
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
@@ -147,11 +153,11 @@ fun HeroHeader(vm: LauncherViewModel, s: LauncherSettings, now: Long) {
             }
         }
        }
-       if (prayerShown) DayDial(vm, s, now, Modifier.padding(start = 12.dp).size(96.dp))
+       DayDial(vm, s, now, Modifier.padding(start = 12.dp).size(96.dp))
       }
-        if (prayerShown) PrayerNowPanel(vm, s, now, Modifier.padding(top = 24.dp))
+        InfoSlot(vm, s, now, Modifier.padding(top = 30.dp))
         if (s.showStats || s.showLocalIp || s.publicIpOn) {
-            StatsStrip(vm, s, Modifier.padding(top = if (prayerShown) 10.dp else 24.dp))
+            StatsStrip(vm, s, Modifier.padding(top = 26.dp))
         }
     }
 }
@@ -190,18 +196,19 @@ private fun FlipCard(key: Int, card: HeroCard, modifier: Modifier) {
  */
 @Composable
 private fun DayDial(vm: LauncherViewModel, s: LauncherSettings, now: Long, modifier: Modifier) {
-    val city = s.city ?: return
+    // Without prayer times it's a plain day ring: midnight to now.
+    val city = if (s.prayerOn) s.city else null
     val today = LocalDate.now()
     val midnight = remember(today) { today.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli() }
     val times = remember(today, city, s.prayerMethod, s.asrHanafi) {
-        PrayerTimes.forDate(today, city.lat, city.lon, s.prayerMethod, s.asrHanafi)
+        if (city == null) emptyMap() else PrayerTimes.forDate(today, city.lat, city.lon, s.prayerMethod, s.asrHanafi)
     }
     val span = remember(now, city, s.prayerMethod, s.asrHanafi) {
-        PrayerTimes.span(now, city.lat, city.lon, s.prayerMethod, s.asrHanafi)
+        if (city == null) null else PrayerTimes.span(now, city.lat, city.lon, s.prayerMethod, s.asrHanafi)
     }
     val accent = Accent
     fun angle(ms: Long) = (ms - midnight) / 86_400_000f * 360f - 90f
-    Box(modifier.clickable { vm.screen = Screen.PRAYER }, contentAlignment = Alignment.Center) {
+    Box(modifier.clickable(enabled = span != null) { vm.screen = Screen.PRAYER }, contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
             val stroke = 3.dp.toPx()
             val r = size.minDimension / 2 - 6.dp.toPx()
@@ -210,9 +217,9 @@ private fun DayDial(vm: LauncherViewModel, s: LauncherSettings, now: Long, modif
                 val a = Math.toRadians(angle(ms).toDouble())
                 return Offset(center.x + r * cos(a).toFloat(), center.y + r * sin(a).toFloat())
             }
-            span?.let { sp ->
-                val sweep = ((angle(now) - angle(sp.currentAt)) % 360f + 360f) % 360f
-                drawArc(accent, angle(sp.currentAt), sweep, useCenter = false,
+            (span?.currentAt ?: midnight).let { from ->
+                val sweep = ((angle(now) - angle(from)) % 360f + 360f) % 360f
+                drawArc(accent, angle(from), sweep, useCenter = false,
                     topLeft = Offset(center.x - r, center.y - r), size = Size(r * 2, r * 2),
                     style = Stroke(stroke, cap = StrokeCap.Round))
             }
@@ -236,54 +243,197 @@ private fun DayDial(vm: LauncherViewModel, s: LauncherSettings, now: Long, modif
                 Text("to ${sp.next.label}", color = Muted, fontSize = 10.sp, maxLines = 1)
             }
         }
+        if (span == null) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("${(now - midnight) * 100 / 86_400_000L}%", color = Ink, fontSize = 16.sp, fontWeight = FontWeight.Light)
+                Text("of today", color = Muted, fontSize = 10.sp)
+            }
+        }
     }
 }
 
-/** Glass panel: the prayer time we're in (with iqama countdown) and the next one, with progress between them. */
+/** The one "important info" slot under the headline: prayer times, the next calendar event, or the day and battery. */
 @Composable
-private fun PrayerNowPanel(vm: LauncherViewModel, s: LauncherSettings, now: Long, modifier: Modifier) {
+private fun InfoSlot(vm: LauncherViewModel, s: LauncherSettings, now: Long, modifier: Modifier) {
+    val panel = if (s.infoPanel == InfoPanel.PRAYER && (!s.prayerOn || s.city == null)) InfoPanel.DAY else s.infoPanel
+    when (panel) {
+        InfoPanel.PRAYER -> PrayerTimeline(vm, s, now, modifier)
+        InfoPanel.AGENDA -> AgendaInfo(vm, now, modifier)
+        InfoPanel.DAY -> DayInfo(now, modifier)
+        InfoPanel.OFF -> Unit
+    }
+}
+
+private val TIMELINE = listOf(Prayer.FAJR, Prayer.DHUHR, Prayer.ASR, Prayer.MAGHRIB, Prayer.ISHA)
+
+/** Now and next in words, then the five prayers as a line of stops with "now" moving between them. */
+@Composable
+private fun PrayerTimeline(vm: LauncherViewModel, s: LauncherSettings, now: Long, modifier: Modifier) {
     val context = LocalContext.current
     val city = s.city ?: return
     val span = remember(now, city, s.prayerMethod, s.asrHanafi) {
         PrayerTimes.span(now, city.lat, city.lon, s.prayerMethod, s.asrHanafi)
     } ?: return
     val iqamaAt = if (span.current.isPrayer) span.currentAt + s.iqamaMin(span.current) * 60_000L else 0L
-    val nowLine = when {
+    val sub = when {
         now < iqamaAt -> "Iqama in ${formatDuration(iqamaAt - now)}"
         span.current == Prayer.FAJR -> "until sunrise ${formatClock(context, span.endsAt)}"
+        span.current == Prayer.SUNRISE -> "Fajr has ended"
         else -> "since ${formatClock(context, span.currentAt)}"
     }
-    val progress = ((now - span.currentAt).toFloat() / (span.nextAt - span.currentAt).coerceAtLeast(1)).coerceIn(0f, 1f)
-    val shape = RoundedCornerShape(18.dp)
-    Column(
-        modifier.fillMaxWidth().clip(shape).background(Color.White.copy(alpha = 0.05f))
-            .border(0.5.dp, Color.White.copy(alpha = 0.09f), shape)
-            .clickable { vm.screen = Screen.PRAYER }
-            .padding(vertical = 14.dp),
-    ) {
-        Row {
-            PrayerCell("NOW", span.current, nowLine, HeroPrayer, Modifier.weight(1f))
-            PrayerCell("NEXT", span.next, "${formatClock(context, span.nextAt)} · in ${formatDuration(span.nextAt - now)}", Ink,
-                Modifier.weight(1f))
+    val idx = TIMELINE.indexOf(if (span.current == Prayer.SUNRISE) Prayer.FAJR else span.current)
+    val p = ((now - span.currentAt).toFloat() / (span.nextAt - span.currentAt).coerceAtLeast(1)).coerceIn(0f, 1f)
+    val nextIdx = TIMELINE.indexOf(span.next)
+    InfoLayout(
+        title = span.current.label,
+        titleExtra = span.current.arabic,
+        sub = sub,
+        right = "${span.next.label} ${formatClock(context, span.nextAt)}",
+        rightSub = "in ${formatDuration(span.nextAt - now)}",
+        labels = TIMELINE.mapIndexed { i, pr -> pr.label to (i == idx) },
+        onClick = { vm.screen = Screen.PRAYER },
+        modifier = modifier,
+    ) { accent ->
+        val y = size.height / 2
+        val n = TIMELINE.size
+        fun x(i: Float) = (i + 0.5f) / n * size.width
+        // After Isha the line runs on to the end, towards tomorrow's Fajr.
+        val pos = if (idx == n - 1) idx + p * 0.5f else idx + p
+        drawLine(Color.White.copy(alpha = 0.08f), Offset(0f, y), Offset(size.width, y), 2.dp.toPx(), cap = StrokeCap.Round)
+        drawLine(accent.copy(alpha = 0.35f), Offset(0f, y), Offset(x(idx.toFloat()), y), 2.dp.toPx(), cap = StrokeCap.Round)
+        drawLine(accent, Offset(x(idx.toFloat()), y), Offset(x(pos), y), 3.dp.toPx(), cap = StrokeCap.Round)
+        for (i in 0 until n) {
+            val c = Offset(x(i.toFloat()), y)
+            when {
+                i == idx -> {
+                    drawCircle(accent.copy(alpha = 0.25f), 8.dp.toPx(), c)
+                    drawCircle(accent, 4.dp.toPx(), c)
+                }
+                i == nextIdx -> drawCircle(accent, 4.dp.toPx(), c, style = Stroke(1.5.dp.toPx()))
+                i < idx -> drawCircle(accent.copy(alpha = 0.5f), 3.dp.toPx(), c)
+                else -> drawCircle(Color.White.copy(alpha = 0.25f), 3.dp.toPx(), c)
+            }
         }
-        Box(
-            Modifier.padding(start = 14.dp, end = 14.dp, top = 12.dp).fillMaxWidth().height(3.dp)
-                .clip(RoundedCornerShape(2.dp)).background(Color.White.copy(alpha = 0.08f)),
-        ) {
-            Box(Modifier.fillMaxWidth(progress).fillMaxHeight().background(HeroPrayer))
-        }
+        drawCircle(Color.White, 2.5.dp.toPx(), Offset(x(pos), y))
     }
 }
 
+/** The next event today, with where it sits in the day. */
 @Composable
-private fun PrayerCell(label: String, p: Prayer, line: String, color: Color, modifier: Modifier) {
-    Column(modifier.padding(horizontal = 14.dp)) {
-        Text(label, color = Accent, fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp, maxLines = 1)
-        Row(Modifier.padding(top = 2.dp), verticalAlignment = Alignment.Bottom) {
-            Text(p.label, color = color, fontSize = 22.sp, fontWeight = FontWeight.Light, maxLines = 1)
-            Text(p.arabic, color = Muted, fontSize = 13.sp, maxLines = 1, modifier = Modifier.padding(start = 8.dp, bottom = 3.dp))
+private fun AgendaInfo(vm: LauncherViewModel, now: Long, modifier: Modifier) {
+    val context = LocalContext.current
+    val midnight = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+    fun frac(ms: Long) = ((ms - midnight) / 86_400_000f).coerceIn(0f, 1f)
+    val next = vm.agenda.firstOrNull { it.allDay || it.end > now }
+    if (next == null) {
+        InfoLayout("Free", null, "Nothing else on your calendar today", "", "", modifier = modifier) { accent ->
+            barTrack(accent, frac(now), null)
         }
-        Text(line, color = Muted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        return
+    }
+    val sub = when {
+        next.allDay -> "All day"
+        next.begin <= now -> "Now · until ${formatClock(context, next.end)}"
+        else -> "${formatClock(context, next.begin)} – ${formatClock(context, next.end)}"
+    }
+    InfoLayout(
+        title = next.title,
+        titleExtra = null,
+        sub = sub,
+        right = "",
+        rightSub = if (next.allDay || next.begin <= now) "now" else "in ${formatDuration(next.begin - now)}",
+        modifier = modifier,
+    ) { accent ->
+        barTrack(accent, frac(now), if (next.allDay) null else frac(next.begin)..frac(next.end))
+    }
+}
+
+/** How much of today is left, and the battery. */
+@Composable
+private fun DayInfo(now: Long, modifier: Modifier) {
+    val context = LocalContext.current
+    val midnight = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+    val left = (midnight + 86_400_000L - now).coerceAtLeast(0)
+    val (pct, charging) = remember(now) { battery(context) }
+    InfoLayout(
+        title = "${formatDuration(left)} left",
+        titleExtra = null,
+        sub = "of today",
+        right = if (pct >= 0) "Battery $pct%" else "",
+        rightSub = if (charging) "charging" else "",
+        modifier = modifier,
+    ) { accent ->
+        barTrack(accent, ((now - midnight) / 86_400_000f).coerceIn(0f, 1f), null)
+    }
+}
+
+private fun battery(context: Context): Pair<Int, Boolean> {
+    val bm = context.getSystemService(BatteryManager::class.java) ?: return -1 to false
+    return bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) to bm.isCharging
+}
+
+/** A day line: done part, ticks at 6, 12 and 18, an optional block (an event), and "now". */
+private fun DrawScope.barTrack(accent: Color, now: Float, block: ClosedFloatingPointRange<Float>?) {
+    val y = size.height / 2
+    val w = size.width
+    drawLine(Color.White.copy(alpha = 0.08f), Offset(0f, y), Offset(w, y), 2.dp.toPx(), cap = StrokeCap.Round)
+    for (t in listOf(0.25f, 0.5f, 0.75f)) {
+        drawLine(Color.White.copy(alpha = 0.2f), Offset(w * t, y - 4.dp.toPx()), Offset(w * t, y + 4.dp.toPx()), 1.dp.toPx())
+    }
+    block?.let { drawLine(accent.copy(alpha = 0.4f), Offset(w * it.start, y), Offset(w * it.endInclusive, y), 7.dp.toPx(), cap = StrokeCap.Round) }
+    drawLine(accent, Offset(0f, y), Offset(w * now, y), 3.dp.toPx(), cap = StrokeCap.Round)
+    drawCircle(accent.copy(alpha = 0.25f), 8.dp.toPx(), Offset(w * now, y))
+    drawCircle(Color.White, 3.dp.toPx(), Offset(w * now, y))
+}
+
+/** Big line on the left, short line on the right, a quiet second line under each, then a track. No box. */
+@Composable
+private fun InfoLayout(
+    title: String,
+    titleExtra: String?,
+    sub: String,
+    right: String,
+    rightSub: String,
+    modifier: Modifier,
+    labels: List<Pair<String, Boolean>> = emptyList(),
+    onClick: (() -> Unit)? = null,
+    track: DrawScope.(Color) -> Unit,
+) {
+    val accent = Accent
+    Column(
+        modifier.fillMaxWidth().then(
+            if (onClick != null) Modifier.clickable(
+                interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClick,
+            ) else Modifier,
+        ),
+    ) {
+        Row(verticalAlignment = Alignment.Bottom) {
+            Row(Modifier.weight(1f), verticalAlignment = Alignment.Bottom) {
+                Text(title, color = accent, fontSize = 28.sp, fontWeight = FontWeight.Light, maxLines = 1,
+                    overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                titleExtra?.let {
+                    Text(it, color = Muted, fontSize = 14.sp, maxLines = 1, modifier = Modifier.padding(start = 10.dp, bottom = 5.dp))
+                }
+            }
+            if (right.isNotEmpty()) {
+                Text(right, color = Ink, fontSize = 15.sp, maxLines = 1, modifier = Modifier.padding(start = 12.dp, bottom = 4.dp))
+            }
+        }
+        Row(Modifier.padding(top = 2.dp)) {
+            Text(sub, color = Muted, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            if (rightSub.isNotEmpty()) {
+                Text(rightSub, color = accent, fontSize = 13.sp, maxLines = 1, modifier = Modifier.padding(start = 12.dp))
+            }
+        }
+        Canvas(Modifier.padding(top = 16.dp).fillMaxWidth().height(16.dp)) { track(accent) }
+        if (labels.isNotEmpty()) {
+            Row(Modifier.fillMaxWidth().padding(top = 4.dp)) {
+                labels.forEach { (text, on) ->
+                    Text(text, color = if (on) accent else Muted.copy(alpha = 0.7f), fontSize = 10.sp, maxLines = 1,
+                        textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
+                }
+            }
+        }
     }
 }
 
@@ -330,16 +480,15 @@ private fun StatsStrip(vm: LauncherViewModel, s: LauncherSettings, modifier: Mod
         }
     }
 
-    val shape = RoundedCornerShape(18.dp)
-    Row(
-        modifier.fillMaxWidth().clip(shape).background(Color.White.copy(alpha = 0.05f))
-            .border(0.5.dp, Color.White.copy(alpha = 0.09f), shape).padding(vertical = 12.dp),
-    ) {
+    // Quiet footer: no box, hairlines between the cells.
+    Row(modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
         if (s.showStats) {
             StatCell("NETWORK", "↓ $down", "↑ $up", Modifier.weight(1f).clickable { vm.screen = Screen.DATA })
+            StatRule()
             StatCell("MEMORY", "$ramPct%", "of $ramTotal GB", Modifier.weight(0.8f).clickable { vm.screen = Screen.DATA })
         }
         if (s.showLocalIp || s.publicIpOn) {
+            if (s.showStats) StatRule()
             val l = local
             val first = if (s.showLocalIp) l?.address ?: "Offline" else vm.publicIp ?: "…"
             val second = when {
@@ -363,11 +512,18 @@ private fun StatsStrip(vm: LauncherViewModel, s: LauncherSettings, modifier: Mod
 
 @Composable
 private fun StatCell(label: String, first: String, second: String, modifier: Modifier) {
-    Column(modifier.padding(horizontal = 14.dp)) {
-        Text(label, color = Accent, fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp, maxLines = 1)
-        Text(first, color = Ink, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
-        Text(second, color = Muted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    Column(modifier.padding(end = 12.dp)) {
+        Text(label, color = Muted, fontSize = 9.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.4.sp, maxLines = 1)
+        Text(first, color = Ink, fontSize = 14.sp, fontWeight = FontWeight.Light, maxLines = 1,
+            overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
+        Text(second, color = Muted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
+}
+
+@Composable
+private fun StatRule() {
+    Box(Modifier.padding(end = 12.dp, top = 2.dp, bottom = 2.dp).width(0.5.dp).fillMaxHeight()
+        .background(Color.White.copy(alpha = 0.12f)))
 }
 
 private fun speed(bytesPerSec: Double): String {

@@ -27,8 +27,7 @@ class Prefs(context: Context) {
             drawerStart = runCatching { DrawerTab.valueOf(sp.getString(K_DRAWER_START, d.drawerStart.name)!!) }
                 .getOrDefault(d.drawerStart),
             accent = sp.getLong(K_ACCENT, d.accent),
-            clockStyle = runCatching { ClockStyle.valueOf(sp.getString(K_CLOCK, d.clockStyle.name)!!) }
-                .getOrDefault(d.clockStyle),
+            clockStyle = ClockStyle.HEADLINE,
             showStats = sp.getBoolean(K_SHOW_STATS, d.showStats),
             showLocalIp = sp.getBoolean(K_LOCAL_IP, d.showLocalIp),
             publicIpOn = sp.getBoolean(K_PUBLIC_IP, d.publicIpOn),
@@ -59,6 +58,8 @@ class Prefs(context: Context) {
             edgeMotion = sp.getBoolean(K_EDGE_MOTION, d.edgeMotion),
             edgeRight = sp.getBoolean(K_EDGE_RIGHT, d.edgeRight),
             iconTint = runCatching { IconTint.valueOf(sp.getString(K_ICON_TINT, null)!!) }.getOrDefault(d.iconTint),
+            infoPanel = runCatching { InfoPanel.valueOf(sp.getString(K_INFO_PANEL, null)!!) }.getOrDefault(d.infoPanel),
+            showRecent = sp.getBoolean(K_SHOW_RECENT, d.showRecent),
             compassHaptics = sp.getBoolean(K_COMPASS_HAPTICS, d.compassHaptics),
             // Before 0.11, a connected hub was used for tasks and the home card: keep that on upgrade.
             tasksSource = runCatching { TaskSource.valueOf(sp.getString(K_TASKS_SRC, null)!!) }
@@ -130,6 +131,8 @@ class Prefs(context: Context) {
             .putBoolean(K_EDGE_MOTION, s.edgeMotion)
             .putBoolean(K_EDGE_RIGHT, s.edgeRight)
             .putString(K_ICON_TINT, s.iconTint.name)
+            .putString(K_INFO_PANEL, s.infoPanel.name)
+            .putBoolean(K_SHOW_RECENT, s.showRecent)
             .putBoolean(K_COMPASS_HAPTICS, s.compassHaptics)
             .putString(K_TASKS_SRC, s.tasksSource.name)
             .putString(K_CAL_SRC, s.calendarSource.name)
@@ -357,6 +360,8 @@ class Prefs(context: Context) {
         const val K_EDGE_MOTION = "edge_motion"
         const val K_EDGE_RIGHT = "edge_right"
         const val K_ICON_TINT = "icon_tint"
+        const val K_INFO_PANEL = "info_panel"
+        const val K_SHOW_RECENT = "show_recent"
         const val K_COMPASS_HAPTICS = "compass_haptics"
         const val K_TASKS_SRC = "tasks_source"
         const val K_CAL_SRC = "calendar_source"

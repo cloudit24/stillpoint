@@ -74,4 +74,21 @@ class UsageRepository(private val context: Context) {
         totals.remove(context.packageName)
         return totals.filterValues { it > 0 }
     }
+
+    /** packageName -> when it was last opened, for apps used in the last 24 hours. Excludes this launcher. */
+    @Suppress("DEPRECATION")
+    fun lastUsed24h(): Map<String, Long> {
+        if (!hasPermission()) return emptyMap()
+        val end = System.currentTimeMillis()
+        val events = runCatching { usm.queryEvents(end - 24 * 3_600_000L, end) }.getOrNull() ?: return emptyMap()
+        val event = UsageEvents.Event()
+        val last = HashMap<String, Long>()
+        while (events.hasNextEvent()) {
+            events.getNextEvent(event)
+            val pkg = event.packageName ?: continue
+            if (event.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND) last[pkg] = event.timeStamp
+        }
+        last.remove(context.packageName)
+        return last
+    }
 }

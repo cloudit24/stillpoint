@@ -251,39 +251,7 @@ fun HomeScreen(vm: LauncherViewModel) {
             }
             .padding(horizontal = 28.dp, vertical = 24.dp),
     ) {
-        // Clock on the left; dates and live system info stacked on the right.
-        val today = LocalDate.now()
-        val hijri = if (s.hijriOn) remember(today, s.hijriAdjust) { Calendars.hijri(today, s.hijriAdjust) } else null
-        val tamil = if (s.tamilOn) remember(today) { Calendars.tamil(today) } else null
-        if (s.clockStyle == ClockStyle.HEADLINE) HeroHeader(vm, s, now)
-        else Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-            Column {
-                Clock(s.clockStyle, now)
-                if (s.prayerOn || s.goldOn) {
-                    // Thin accent bar in the margin holds the two together.
-                    Row(Modifier.padding(top = 10.dp).offset(x = (-14).dp).height(IntrinsicSize.Min)) {
-                        Box(Modifier.width(2.dp).fillMaxHeight().background(Accent))
-                        Column(Modifier.padding(start = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            if (s.prayerOn) PrayerLine(vm, s, now, compact = true)
-                            if (s.goldOn) GoldLine(vm, s, compact = true)
-                        }
-                    }
-                }
-            }
-            Column(
-                Modifier.weight(1f).padding(start = 16.dp),
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Text(dateFmt.format(today), color = Ink, fontSize = 16.sp, textAlign = TextAlign.End)
-                RotatingLine(listOfNotNull(
-                    hijri?.replace(Regex(" (\\d+ AH)$"), "\n$1"),
-                    tamil?.replaceFirst(" · ", "\n"),
-                ))
-                if (s.showStats) SystemStatsLine(onClick = { vm.screen = Screen.DATA })
-                if (s.showLocalIp || s.publicIpOn) IpLine(vm, s)
-            }
-        }
+        HeroHeader(vm, s, now)
 
         if (s.showUsage) {
             if (vm.hasUsageAccess) {
@@ -319,13 +287,15 @@ fun HomeScreen(vm: LauncherViewModel) {
         if (homeApps.isEmpty()) {
             Text("Swipe left for apps, right for widgets. Long-press for settings.", color = Muted, fontSize = 14.sp)
         }
+        if (s.showRecent) {
+            val recent = vm.recentlyUsed(6)
+            if (recent.isNotEmpty()) RecentStrip(vm, recent)
+        }
         // Past 7 apps the list gets a little smaller; past half the screen it scrolls.
         val listScale = if (homeApps.size > 7) (7f / homeApps.size).coerceAtLeast(0.75f) else 1f
         val maxListHeight = (LocalConfiguration.current.screenHeightDp * 0.5f).dp
         Column(Modifier.heightIn(max = maxListHeight).verticalScroll(rememberScrollState())) {
-            if (s.homeStyle == HomeStyle.TILES) {
-                HomeTiles(vm, homeApps)
-            } else if (s.homeStyle == HomeStyle.ICONS) {
+            if (s.homeStyle == HomeStyle.ICONS) {
                 HomeIcons(vm, homeApps, (s.homeSize * 2).dp)
             } else {
                 homeApps.forEach { app ->
@@ -391,33 +361,19 @@ private fun RotatingLine(lines: List<String>) {
 
 /** Windows Phone start screen: square accent tiles, three across. Long-press shows the full name. */
 @OptIn(ExperimentalFoundationApi::class)
+/** Apps opened in the last 24 hours, newest first, as a quiet row of icons. */
 @Composable
-private fun HomeTiles(vm: LauncherViewModel, apps: List<AppEntry>) {
-    val context = LocalContext.current
-    val accent = Accent
-    Column(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        apps.chunked(3).forEach { rowApps ->
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                rowApps.forEach { app ->
-                    Box(
-                        Modifier.weight(1f).aspectRatio(1f).background(accent).combinedClickable(
-                            onClick = { vm.launch(app) },
-                            onLongClick = { Toast.makeText(context, app.label, Toast.LENGTH_SHORT).show() },
-                        ),
-                    ) {
-                        Box(Modifier.align(Alignment.Center)) { AppIcon(vm, app, 40.dp) }
-                        Text(app.label, color = Color.White, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.align(Alignment.BottomStart).padding(horizontal = 8.dp, vertical = 6.dp))
-                    }
-                }
-                repeat(3 - rowApps.size) { Spacer(Modifier.weight(1f)) }
+private fun RecentStrip(vm: LauncherViewModel, apps: List<AppEntry>) {
+    Column(Modifier.padding(bottom = 16.dp)) {
+        Text("RECENT", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.4.sp)
+        Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            apps.forEach { app ->
+                Box(Modifier.clip(RoundedCornerShape(10.dp)).clickable { vm.launch(app) }) { AppIcon(vm, app, 34.dp) }
             }
         }
     }
 }
 
-/** Icons-only home row. Long-press shows the app name. */
-@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 private fun HomeIcons(vm: LauncherViewModel, apps: List<AppEntry>, size: Dp) {
     val context = LocalContext.current

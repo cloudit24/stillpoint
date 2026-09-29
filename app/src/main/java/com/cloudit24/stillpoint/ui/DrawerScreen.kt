@@ -2,6 +2,10 @@
 
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.unit.Velocity
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.Canvas
@@ -117,6 +121,29 @@ fun DrawerScreen(vm: LauncherViewModel) {
 
     BackHandler(enabled = searching) { searching = false; query = "" }
 
+    // Swipe right past the first tab, or pull down at the top of a list, to go back home.
+    val backThreshold = with(LocalDensity.current) { 96.dp.toPx() }
+    val backToHome = remember(pager) {
+        object : NestedScrollConnection {
+            var pull = 0f
+            override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+                if (source != NestedScrollSource.UserInput) return Offset.Zero
+                if (available.x > 0f && pager.currentPage == 0) pull += available.x
+                if (available.y > 0f) pull += available.y
+                if (pull > backThreshold) {
+                    pull = 0f
+                    vm.screen = Screen.HOME
+                }
+                return Offset.Zero
+            }
+
+            override suspend fun onPreFling(available: Velocity): Velocity {
+                pull = 0f
+                return Velocity.Zero
+            }
+        }
+    }
+
     // One row renderer for every tab so the long-press menu is identical everywhere.
     val row: @Composable (AppEntry, String?, String) -> Unit = { app, trailing, keyPrefix ->
         val id = keyPrefix + app.key
@@ -147,12 +174,15 @@ fun DrawerScreen(vm: LauncherViewModel) {
                     Text("Focus is on. Only allowed apps are listed.", color = Accent, fontSize = 13.sp,
                         modifier = Modifier.padding(start = 28.dp, bottom = 4.dp))
                 }
-                HorizontalPager(state = pager, modifier = Modifier.weight(1f)) { page ->
+                HorizontalPager(state = pager, modifier = Modifier.weight(1f).nestedScroll(backToHome)) { page ->
                     Box(Modifier.fillMaxSize().padding(start = 28.dp, end = 12.dp)) {
                         when (tabs[page]) {
                             DrawerTab.MOST -> MostUsedTab(vm, row)
                             DrawerTab.RECENT -> LazyColumn(Modifier.fillMaxSize().padding(end = 16.dp), contentPadding = ListBottom) {
-                                items(vm.recentApps(), key = { it.key }) { row(it, formatAge(it.installedAt), "") }
+                                // Used in the last 24 hours; newly installed apps when there's no usage access yet.
+                                val used = vm.recentlyUsed()
+                                if (used.isNotEmpty()) items(used, key = { it.key }) { row(it, usedAgo(vm.lastUsed[it.packageName] ?: 0L), "") }
+                                else items(vm.recentApps(), key = { it.key }) { row(it, formatAge(it.installedAt), "") }
                             }
                             DrawerTab.ALL -> AlphabetList(apps) { row(it, null, "") }
                             DrawerTab.FAVORITES -> FavoritesTab(
@@ -606,4 +636,13 @@ private fun NameDialog(title: String, initial: String, onDone: (String?) -> Unit
         title = { Text(title) },
         text = { OutlinedTextField(value = name, onValueChange = { name = it }, singleLine = true, placeholder = { Text("Name") }) },
     )
+}
+
+private fun usedAgo(ms: Long): String {
+    val min = (System.currentTimeMillis() - ms) / 60_000L
+    return when {
+        min < 1 -> "now"
+        min < 60 -> "${min}m ago"
+        else -> "${min / 60}h ago"
+    }
 }

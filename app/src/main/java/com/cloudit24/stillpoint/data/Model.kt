@@ -23,7 +23,7 @@ data class FavFolder(val id: Long, val name: String, val apps: List<String>)
 
 enum class HomeMode { AUTO, PINNED }
 
-enum class HomeStyle(val label: String) { LIST("List"), ICONS("Icons only"), TILES("Tiles (Windows Phone)") }
+enum class HomeStyle(val label: String) { LIST("List"), ICONS("Icons only") }
 
 /** App list tabs, in pivot order. */
 enum class DrawerTab(val label: String) { MOST("most used"), RECENT("recent"), ALL("all"), FAVORITES("favorites") }
@@ -168,6 +168,8 @@ data class LauncherSettings(
     val edgeMotion: Boolean = true,
     val edgeRight: Boolean = true,
     val iconTint: IconTint = IconTint.ORIGINAL,
+    val infoPanel: InfoPanel = InfoPanel.PRAYER,
+    val showRecent: Boolean = true,
     val compassHaptics: Boolean = true,
     // Tasks, calendar and projects: where each comes from and how it syncs.
     val tasksSource: TaskSource = TaskSource.PHONE,
@@ -231,4 +233,12 @@ enum class IconTint(val label: String) {
     GREY("Grey"),
     DIM("Dim grey"),
     ACCENT("Accent colour"),
+}
+
+/** What the important-info slot under the headline shows. */
+enum class InfoPanel(val label: String) {
+    PRAYER("Prayer times"),
+    AGENDA("Next on your calendar"),
+    DAY("Day and battery"),
+    OFF("Nothing"),
 }

@@ -1,5 +1,6 @@
 package com.cloudit24.stillpoint
 
+import com.cloudit24.stillpoint.data.InfoPanel
 import com.cloudit24.stillpoint.data.CalendarSource
 import com.cloudit24.stillpoint.data.Ics
 import com.cloudit24.stillpoint.data.LocalProject
@@ -71,6 +72,8 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     var apps by mutableStateOf<List<AppEntry>>(emptyList())
         private set
     var usage by mutableStateOf<Map<String, Long>>(emptyMap())
+    /** packageName -> last opened, for the last 24 hours. */
+    var lastUsed by mutableStateOf<Map<String, Long>>(emptyMap())
         private set
     /** packageName -> foreground ms over the last 7 days. Drives the "Most used" tab. */
     var weekUsage by mutableStateOf<Map<String, Long>>(emptyMap())
@@ -367,9 +370,9 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Today's remaining events from the chosen calendar source. */
     private suspend fun loadAgenda(): List<AgendaItem> {
-        if (!settings.showAgenda) return emptyList()
+        if (!settings.showAgenda && settings.infoPanel != InfoPanel.AGENDA) return emptyList()
         return when (settings.calendarSource) {
-            CalendarSource.PHONE -> withContext(Dispatchers.IO) { calendarRepo.today() }
+            CalendarSource.PHONE -> withContext(Dispatchers.IO) { runCatching { calendarRepo.today() }.getOrDefault(emptyList()) }
             CalendarSource.HUB -> hubAgenda()
             CalendarSource.ICS -> withContext(Dispatchers.IO) {
                 val f = Sync.icsFile(getApplication())
@@ -494,12 +497,14 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
                     usageAccess = usageRepo.hasPermission(),
                     usage = usageRepo.todayUsage(),
                     weekUsage = usageRepo.weekUsage(),
+                    lastUsed = usageRepo.lastUsed24h(),
                 )
             }
             apps = loaded.apps
             hasUsageAccess = loaded.usageAccess
             usage = loaded.usage
             weekUsage = loaded.weekUsage
+            lastUsed = loaded.lastUsed
             agenda = loadAgenda()
             refreshLive()
             refreshHub()
@@ -521,6 +526,7 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         val usageAccess: Boolean,
         val usage: Map<String, Long>,
         val weekUsage: Map<String, Long>,
+        val lastUsed: Map<String, Long>,
     )
 
     private companion object {
@@ -562,6 +568,13 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         .sortedByDescending { weekUsage[it.packageName] ?: 0L }
         .distinctBy { it.packageName }
         .take(LIST_LIMIT)
+
+    /** Apps opened in the last 24 hours, newest first. */
+    fun recentlyUsed(limit: Int = LIST_LIMIT): List<AppEntry> = visibleApps()
+        .filter { it.packageName in lastUsed }
+        .sortedByDescending { lastUsed[it.packageName] ?: 0L }
+        .distinctBy { it.packageName }
+        .take(limit)
 
     fun recentApps(): List<AppEntry> = visibleApps()
         .sortedByDescending { it.installedAt }
