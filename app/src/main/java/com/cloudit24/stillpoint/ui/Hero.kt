@@ -1,5 +1,8 @@
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.runtime.withFrameMillis
+import androidx.compose.runtime.mutableFloatStateOf
 import com.cloudit24.stillpoint.data.InfoPanel
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -208,17 +211,33 @@ private fun DayDial(vm: LauncherViewModel, s: LauncherSettings, now: Long, modif
     }
     val accent = Accent
     fun angle(ms: Long) = (ms - midnight) / 86_400_000f * 360f - 90f
+    // The arc sweeps in when home opens; a soft ring pulses from the dot the arc is heading for.
+    // ~20 frames a second, only while home is on screen; off with Edge light > Animations.
+    val intro = remember { Animatable(0f) }
+    LaunchedEffect(Unit) { intro.animateTo(1f, tween(1100, easing = FastOutSlowInEasing)) }
+    var pulse by remember { mutableFloatStateOf(-1f) }
+    LaunchedEffect(s.edgeMotion) {
+        if (!s.edgeMotion) { pulse = -1f; return@LaunchedEffect }
+        val start = withFrameMillis { it }
+        while (true) {
+            withFrameMillis { pulse = ((it - start) % 2400L) / 2400f }
+            delay(50)
+        }
+    }
     Box(modifier.clickable(enabled = span != null) { vm.screen = Screen.PRAYER }, contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
             val stroke = 3.dp.toPx()
             val r = size.minDimension / 2 - 6.dp.toPx()
             drawCircle(Color.White.copy(alpha = 0.08f), r, style = Stroke(stroke))
+            // Finishing rings: a hairline outside, a fainter one inside.
+            drawCircle(Color.White.copy(alpha = 0.07f), r + 5.dp.toPx(), style = Stroke(0.5.dp.toPx()))
+            drawCircle(accent.copy(alpha = 0.10f), r - 9.dp.toPx(), style = Stroke(0.5.dp.toPx()))
             fun at(ms: Long): Offset {
                 val a = Math.toRadians(angle(ms).toDouble())
                 return Offset(center.x + r * cos(a).toFloat(), center.y + r * sin(a).toFloat())
             }
             (span?.currentAt ?: midnight).let { from ->
-                val sweep = ((angle(now) - angle(from)) % 360f + 360f) % 360f
+                val sweep = ((angle(now) - angle(from)) % 360f + 360f) % 360f * intro.value
                 drawArc(accent, angle(from), sweep, useCenter = false,
                     topLeft = Offset(center.x - r, center.y - r), size = Size(r * 2, r * 2),
                     style = Stroke(stroke, cap = StrokeCap.Round))
@@ -233,9 +252,17 @@ private fun DayDial(vm: LauncherViewModel, s: LauncherSettings, now: Long, modif
                     },
                     if (next) 4.5.dp.toPx() else 2.5.dp.toPx(), at(t),
                 )
+                if (next && pulse >= 0f) {
+                    drawCircle(accent.copy(alpha = 0.6f * (1f - pulse)), 4.5.dp.toPx() + 9.dp.toPx() * pulse, at(t),
+                        style = Stroke(1.5.dp.toPx()))
+                }
             }
-            drawCircle(accent.copy(alpha = 0.3f), 8.dp.toPx(), at(now))
-            drawCircle(Color.White, 3.5.dp.toPx(), at(now))
+            drawCircle(accent.copy(alpha = 0.3f * intro.value), 8.dp.toPx(), at(now))
+            drawCircle(Color.White.copy(alpha = intro.value), 3.5.dp.toPx(), at(now))
+            if (span == null && pulse >= 0f) {
+                drawCircle(accent.copy(alpha = 0.5f * (1f - pulse)), 3.5.dp.toPx() + 9.dp.toPx() * pulse, at(now),
+                    style = Stroke(1.5.dp.toPx()))
+            }
         }
         span?.let { sp ->
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
