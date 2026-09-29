@@ -126,14 +126,11 @@ import kotlinx.coroutines.launch
 
 /** Settings pages, grouped on the main screen under [section]. */
 private enum class SettingsPage(val section: String, val title: String, val summary: String, val icon: ImageVector) {
-    APPEARANCE("Personalization", "Appearance", "Accent colour and icons", Icons.Outlined.Face),
-    HOME("Personalization", "Home screen", "Layout, app count and size", Icons.Outlined.Home),
-    EDGE("Personalization", "Edge light", "Prayer light on the screen edges", Icons.Outlined.PlayArrow),
-    APPS("Personalization", "App list", "Starting tab, icons, hidden apps", Icons.Outlined.Menu),
+    APPEARANCE("Personalization", "Appearance", "Accent, icons, app style and size, edge light", Icons.Outlined.Face),
+    HOME("Personalization", "Home screen", "Headline, ring, prayer and info, apps, footer", Icons.Outlined.Home),
+    APPS("Personalization", "App list", "Starting tab, hidden apps", Icons.Outlined.Menu),
     GESTURES("Personalization", "Gestures and shortcuts", "Swipes, double-tap, bottom shortcuts", Icons.Outlined.ThumbUp),
-    INFO("Information", "System info", "Network speed, RAM, IP address, calendar", Icons.AutoMirrored.Outlined.List),
-    DATES("Information", "Dates", "Hijri and Tamil calendars", Icons.Outlined.DateRange),
-    LOCK("Information", "Lock screen", "Next prayer and dates on the lock screen", Icons.Outlined.Notifications),
+    LOCK("Personalization", "Lock screen", "Next prayer and dates on the lock screen", Icons.Outlined.Notifications),
     TASKS("Productivity", "Tasks", "On this phone, Project Hub, Tasks.org or OpenTasks", Icons.Outlined.Done),
     CALENDAR("Productivity", "Calendar", "Phone calendar, Project Hub or a calendar link", Icons.Outlined.DateRange),
     PROJECTS("Productivity", "Projects", "On this phone or Project Hub", Icons.Outlined.Build),
@@ -251,37 +248,87 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         }
                         ActionRow("Icon colours", s.iconTint.label) { dialog = SettingsDialog.ICON_TINT }
                     }
+                    Group("Apps") {
+                        ActionRow("Home apps as", s.homeStyle.label) { dialog = SettingsDialog.HOME_STYLE }
+                        Stepper("App size on home", "${s.homeSize}",
+                            onMinus = { vm.updateSettings { it.copy(homeSize = (it.homeSize - 2).coerceAtLeast(16)) } },
+                            onPlus = { vm.updateSettings { it.copy(homeSize = (it.homeSize + 2).coerceAtMost(40)) } })
+                        ToggleRow("Icons in lists", s.showIcons) { on -> vm.updateSettings { it.copy(showIcons = on) } }
+                    }
+                    Group("Edge light") {
+                        ActionRow("Style", s.edgeStyle.label) { dialog = SettingsDialog.EDGE_STYLE }
+                        if (s.edgeStyle == EdgeStyle.CURVED || s.edgeStyle == EdgeStyle.FLAT) {
+                            ActionRow("Side", if (s.edgeRight) "Right" else "Left") {
+                                vm.updateSettings { it.copy(edgeRight = !it.edgeRight) }
+                            }
+                        }
+                        if (s.edgeStyle != EdgeStyle.OFF) {
+                            ActionRow("Brightness", listOf("Low", "Medium", "High")[s.edgeBright.coerceIn(1, 3) - 1]) {
+                                vm.updateSettings { it.copy(edgeBright = it.edgeBright % 3 + 1) }
+                            }
+                            Stepper("Blink before a prayer ends", "${s.edgeWarnMin} min",
+                                onMinus = { vm.updateSettings { it.copy(edgeWarnMin = (it.edgeWarnMin - 5).coerceAtLeast(5)) } },
+                                onPlus = { vm.updateSettings { it.copy(edgeWarnMin = (it.edgeWarnMin + 5).coerceAtMost(60)) } })
+                        }
+                    }
+                    Note(s.edgeStyle.detail + if (s.edgeStyle == EdgeStyle.OFF) "" else " One line in your accent colour: the " +
+                        "bright part is the next prayer, growing and pushing out the dim part, what's left of the current " +
+                        "prayer. It blinks before a prayer ends and glows from the adhan to the iqama." +
+                        if (!s.prayerOn || s.city == null) " Needs Islamic prayer (Extras) with a city." else "")
+                    Group("Motion") {
+                        ToggleRow("Animations", s.edgeMotion) { on -> vm.updateSettings { it.copy(edgeMotion = on) } }
+                    }
+                    Note("The edge light's spark and blink and the ring's pulse. They run only while home is on screen, " +
+                        "at a low frame rate. Turn off to keep everything still.")
                 }
 
                 SettingsPage.HOME -> {
-                    Group("Layout") {
-                        ActionRow("Home style", s.homeStyle.label) { dialog = SettingsDialog.HOME_STYLE }
-                        ToggleRow("Show most-used apps", s.homeMode == HomeMode.AUTO) { on ->
+                    Group("Headline") {
+                        ToggleRow("Screen time card", s.showUsage) { on -> vm.updateSettings { it.copy(showUsage = on) } }
+                        ToggleRow("Hijri date card", s.hijriOn) { on -> vm.updateSettings { it.copy(hijriOn = on) } }
+                        if (s.hijriOn) {
+                            Stepper("Hijri adjustment (days)", if (s.hijriAdjust > 0) "+${s.hijriAdjust}" else "${s.hijriAdjust}",
+                                onMinus = { vm.updateSettings { it.copy(hijriAdjust = (it.hijriAdjust - 1).coerceAtLeast(-2)) } },
+                                onPlus = { vm.updateSettings { it.copy(hijriAdjust = (it.hijriAdjust + 1).coerceAtMost(2)) } })
+                        }
+                        ToggleRow("Tamil date card", s.tamilOn) { on -> vm.updateSettings { it.copy(tamilOn = on) } }
+                        ActionRow("Ring beside it", s.dialMode.label) { dialog = SettingsDialog.DIAL_MODE }
+                    }
+                    Note("The headline flips between a greeting and the cards you turn on here (weather is under Extras). " +
+                        "Hijri follows the Umm al-Qura calendar; adjust if your moon sighting differs. " +
+                        "Tamil date is the solar calendar at Chennai sunset.")
+                    Group("Under the headline") {
+                        InfoPanel.entries.forEach { panel ->
+                            ToggleRow(if (panel == InfoPanel.PRAYER) "Prayer card with moon phase" else panel.label,
+                                panel in s.infoPanels) { on ->
+                                vm.updateSettings { it.copy(infoPanels = if (on) it.infoPanels + panel else it.infoPanels - panel) }
+                                if (on && panel == InfoPanel.AGENDA) vm.refresh()
+                            }
+                        }
+                    }
+                    Group("Footer") {
+                        ToggleRow("Network speed and memory", s.showStats) { on -> vm.updateSettings { it.copy(showStats = on) } }
+                        ToggleRow("Local IP address", s.showLocalIp) { on -> vm.updateSettings { it.copy(showLocalIp = on) } }
+                        ToggleRow("Public IP address", s.publicIpOn) { on -> vm.updateSettings { it.copy(publicIpOn = on) } }
+                    }
+                    Note("The public IP comes from api.ipify.org (open source), only when your network changes. " +
+                        "Tap the network figures for data usage per app.")
+                    Group("Apps") {
+                        ToggleRow("Recently used (24 h)", s.showRecent) { on -> vm.updateSettings { it.copy(showRecent = on) } }
+                        ToggleRow("Most used today", s.homeMode == HomeMode.AUTO) { on ->
                             vm.updateSettings { it.copy(homeMode = if (on) HomeMode.AUTO else HomeMode.PINNED) }
                         }
                         Stepper("Apps on home", "${s.homeCount}",
                             onMinus = { vm.updateSettings { it.copy(homeCount = (it.homeCount - 1).coerceAtLeast(3)) } },
                             onPlus = { vm.updateSettings { it.copy(homeCount = (it.homeCount + 1).coerceAtMost(9)) } })
-                        Stepper("App size", "${s.homeSize}",
-                            onMinus = { vm.updateSettings { it.copy(homeSize = (it.homeSize - 2).coerceAtLeast(16)) } },
-                            onPlus = { vm.updateSettings { it.copy(homeSize = (it.homeSize + 2).coerceAtMost(40)) } })
                     }
-                    Note("Pinned apps are shown when most-used is off, or before usage data exists. Pin from the app list by long-pressing.")
-                    Group("Under the headline") {
-                        ActionRow("Ring by the headline", s.dialMode.label) { dialog = SettingsDialog.DIAL_MODE }
-                        InfoPanel.entries.forEach { panel ->
-                            ToggleRow(panel.label, panel in s.infoPanels) { on ->
-                                vm.updateSettings { it.copy(infoPanels = if (on) it.infoPanels + panel else it.infoPanels - panel) }
-                                if (on && panel == InfoPanel.AGENDA) vm.refresh()
-                            }
-                        }
-                        ToggleRow("Recently used apps (24 h)", s.showRecent) { on -> vm.updateSettings { it.copy(showRecent = on) } }
-                    }
-                    Note("Turn on any mix; they stack in this order. Prayer times need Islamic prayer (under Extras) " +
-                        "with a city. Next on your calendar uses the source chosen under Calendar. " +
-                        "Recently used apps need usage access.")
-                    Group("Extras") {
-                        ToggleRow("Screen time card in the headline", s.showUsage) { on -> vm.updateSettings { it.copy(showUsage = on) } }
+                    Note("Pinned apps show when Most used is off, or before usage data exists. Pin from the app list by " +
+                        "long-pressing. Recently used and Most used need usage access.")
+                    Group("Widgets") {
+                        Text("Swipe right on home for the widget page. Stillpoint's own widgets: Stillpoint Widget " +
+                            "(clock and dates), Stillpoint Prayer (times, countdown, moon) and Stillpoint Gold. " +
+                            "They work in any launcher too.", color = Muted, fontSize = 14.sp,
+                            modifier = Modifier.padding(vertical = 12.dp))
                     }
                 }
 
@@ -290,7 +337,6 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         ActionRow("Open the app list on", s.drawerStart.label.replaceFirstChar { it.uppercase() }) {
                             dialog = SettingsDialog.DRAWER_START
                         }
-                        ToggleRow("Show app icons", s.showIcons) { on -> vm.updateSettings { it.copy(showIcons = on) } }
                     }
                     Group("Hidden apps") {
                         val hidden = vm.apps.filter { it.key in s.hidden }
@@ -324,16 +370,6 @@ fun SettingsScreen(vm: LauncherViewModel) {
                                 "App info, menu, Allow restricted settings.",
                         ) { ctx.safeStart(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
                     }
-                }
-
-                SettingsPage.INFO -> {
-                    Group("Right of the clock") {
-                        ToggleRow("Network speed and RAM", s.showStats) { on -> vm.updateSettings { it.copy(showStats = on) } }
-                        ToggleRow("Local IP address", s.showLocalIp) { on -> vm.updateSettings { it.copy(showLocalIp = on) } }
-                        ToggleRow("Public IP address", s.publicIpOn) { on -> vm.updateSettings { it.copy(publicIpOn = on) } }
-                    }
-                    Note("The public IP is asked from api.ipify.org (open source) only when your network changes. " +
-                        "Tap the network line for per-app data usage.")
                 }
 
                 SettingsPage.PRAYER -> {
@@ -373,7 +409,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         "To use an adhan recording, pick it as the sound in Android settings. On Motorola, turn on " +
                         "Edge lighting for Stillpoint in the Moto app and the curved edges light up with each alert.")
                     Group("Feel") {
-                        ActionRow("Edge light", s.edgeStyle.label) { page = SettingsPage.EDGE }
+                        ActionRow("Edge light", s.edgeStyle.label) { page = SettingsPage.APPEARANCE }
                         ToggleRow("Vibrate on the Qibla compass", s.compassHaptics) { on ->
                             vm.updateSettings { it.copy(compassHaptics = on) }
                         }
@@ -433,52 +469,6 @@ fun SettingsScreen(vm: LauncherViewModel) {
                     }
                     Note("Project Hub is a server you run yourself. Stillpoint talks only to the address you enter and nothing " +
                         "else. Choose what uses it under Productivity: Tasks, Calendar and Projects. Use https unless the hub is on your home network.")
-                }
-
-                SettingsPage.DATES -> {
-                    Group("Dates") {
-                        ToggleRow("Hijri date", s.hijriOn) { on -> vm.updateSettings { it.copy(hijriOn = on) } }
-                        Stepper("Hijri adjustment (days)", if (s.hijriAdjust > 0) "+${s.hijriAdjust}" else "${s.hijriAdjust}",
-                            onMinus = { vm.updateSettings { it.copy(hijriAdjust = (it.hijriAdjust - 1).coerceAtLeast(-2)) } },
-                            onPlus = { vm.updateSettings { it.copy(hijriAdjust = (it.hijriAdjust + 1).coerceAtMost(2)) } })
-                        ToggleRow("Tamil date", s.tamilOn) { on -> vm.updateSettings { it.copy(tamilOn = on) } }
-                    }
-                    Note("With both on, they take turns every few seconds. Hijri follows the Umm al-Qura calendar; " +
-                        "adjust if your country's moon sighting differs. Tamil date is the solar calendar at Chennai sunset.")
-                }
-
-                SettingsPage.EDGE -> {
-                    Group("Edge light") {
-                        ActionRow("Style", s.edgeStyle.label) { dialog = SettingsDialog.EDGE_STYLE }
-                        if (s.edgeStyle == EdgeStyle.CURVED || s.edgeStyle == EdgeStyle.FLAT) {
-                            ActionRow("Side", if (s.edgeRight) "Right" else "Left") {
-                                vm.updateSettings { it.copy(edgeRight = !it.edgeRight) }
-                            }
-                        }
-                    }
-                    Note(s.edgeStyle.detail)
-                    if (s.edgeStyle != EdgeStyle.OFF) {
-                        Group("Adjust") {
-                            ActionRow("Brightness", listOf("Low", "Medium", "High")[s.edgeBright.coerceIn(1, 3) - 1]) {
-                                vm.updateSettings { it.copy(edgeBright = it.edgeBright % 3 + 1) }
-                            }
-                            Stepper("Blink before a prayer ends", "${s.edgeWarnMin} min",
-                                onMinus = { vm.updateSettings { it.copy(edgeWarnMin = (it.edgeWarnMin - 5).coerceAtLeast(5)) } },
-                                onPlus = { vm.updateSettings { it.copy(edgeWarnMin = (it.edgeWarnMin + 5).coerceAtMost(60)) } })
-                            ToggleRow("Animations", s.edgeMotion) { on -> vm.updateSettings { it.copy(edgeMotion = on) } }
-                        }
-                        Note("One line in your accent colour. The bright part is the next prayer: it grows from the bottom " +
-                            "and pushes out the dim part, what's left of the current prayer. The dim part blinks before the " +
-                            "prayer ends, a spark runs along the bright part in the last 10 minutes, and the whole line " +
-                            "glows from the adhan to the iqama.")
-                        Note("Light on battery: it's still and redrawn once a minute. Animations run only in those last " +
-                            "minutes, at a low frame rate, and stop when home isn't on screen. Turn Animations off to keep it still.")
-                        if (!s.prayerOn || s.city == null) {
-                            Group("Needs prayer times") {
-                                ActionRow("Set up prayer times") { page = SettingsPage.PRAYER }
-                            }
-                        }
-                    }
                 }
 
                 SettingsPage.LOCK -> {

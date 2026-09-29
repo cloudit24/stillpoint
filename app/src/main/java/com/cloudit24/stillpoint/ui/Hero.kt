@@ -1,5 +1,9 @@
 package com.cloudit24.stillpoint.ui
 
+import com.cloudit24.stillpoint.data.Moon
+import androidx.compose.ui.graphics.asComposePath
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.unit.Dp
 import com.cloudit24.stillpoint.data.DialMode
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.runtime.withFrameMillis
@@ -311,11 +315,18 @@ private fun InfoSlot(vm: LauncherViewModel, s: LauncherSettings, now: Long, modi
 
 private val TIMELINE = listOf(Prayer.FAJR, Prayer.DHUHR, Prayer.ASR, Prayer.MAGHRIB, Prayer.ISHA)
 
-/** Now and next in words, then the five prayers as a line of stops with "now" moving between them. */
+/**
+ * Prayer card: tonight's moon beside the prayer we're in and the next one, then all five times in a row
+ * (now in the accent, next in white, past ones faded). Tap for the Qibla compass.
+ */
 @Composable
 private fun PrayerTimeline(vm: LauncherViewModel, s: LauncherSettings, now: Long, modifier: Modifier) {
     val context = LocalContext.current
     val city = s.city ?: return
+    val today = LocalDate.now()
+    val times = remember(today, city, s.prayerMethod, s.asrHanafi) {
+        PrayerTimes.forDate(today, city.lat, city.lon, s.prayerMethod, s.asrHanafi)
+    }
     val span = remember(now, city, s.prayerMethod, s.asrHanafi) {
         PrayerTimes.span(now, city.lat, city.lon, s.prayerMethod, s.asrHanafi)
     } ?: return
@@ -326,40 +337,77 @@ private fun PrayerTimeline(vm: LauncherViewModel, s: LauncherSettings, now: Long
         span.current == Prayer.SUNRISE -> "Fajr has ended"
         else -> "since ${formatClock(context, span.currentAt)}"
     }
-    val idx = TIMELINE.indexOf(if (span.current == Prayer.SUNRISE) Prayer.FAJR else span.current)
-    val p = ((now - span.currentAt).toFloat() / (span.nextAt - span.currentAt).coerceAtLeast(1)).coerceIn(0f, 1f)
-    val nextIdx = TIMELINE.indexOf(span.next)
-    InfoLayout(
-        title = span.current.label,
-        titleExtra = span.current.arabic,
-        sub = sub,
-        right = "${span.next.label} ${formatClock(context, span.nextAt)}",
-        rightSub = "in ${formatDuration(span.nextAt - now)}",
-        labels = TIMELINE.mapIndexed { i, pr -> pr.label to (i == idx) },
-        onClick = { vm.screen = Screen.PRAYER },
-        modifier = modifier,
-    ) { accent ->
-        val y = size.height / 2
-        val n = TIMELINE.size
-        fun x(i: Float) = (i + 0.5f) / n * size.width
-        // After Isha the line runs on to the end, towards tomorrow's Fajr.
-        val pos = if (idx == n - 1) idx + p * 0.5f else idx + p
-        drawLine(Color.White.copy(alpha = 0.08f), Offset(0f, y), Offset(size.width, y), 2.dp.toPx(), cap = StrokeCap.Round)
-        drawLine(accent.copy(alpha = 0.35f), Offset(0f, y), Offset(x(idx.toFloat()), y), 2.dp.toPx(), cap = StrokeCap.Round)
-        drawLine(accent, Offset(x(idx.toFloat()), y), Offset(x(pos), y), 3.dp.toPx(), cap = StrokeCap.Round)
-        for (i in 0 until n) {
-            val c = Offset(x(i.toFloat()), y)
-            when {
-                i == idx -> {
-                    drawCircle(accent.copy(alpha = 0.25f), 8.dp.toPx(), c)
-                    drawCircle(accent, 4.dp.toPx(), c)
+    val age = Moon.age(now)
+    val hijri = remember(today, s.hijriAdjust) { Calendars.hijri(today, s.hijriAdjust).replace(Regex(" \\d+ AH$"), "") }
+    val accent = Accent
+    Column(
+        modifier.fillMaxWidth().clickable(
+            interactionSource = remember { MutableInteractionSource() }, indication = null,
+        ) { vm.screen = Screen.PRAYER },
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            MoonIcon(age, 60.dp)
+            Column(Modifier.weight(1f).padding(start = 14.dp)) {
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(span.current.label, color = accent, fontSize = 28.sp, fontWeight = FontWeight.Light, maxLines = 1)
+                    Text(span.current.arabic, color = Muted, fontSize = 14.sp, maxLines = 1,
+                        modifier = Modifier.padding(start = 8.dp, bottom = 5.dp))
                 }
-                i == nextIdx -> drawCircle(accent, 4.dp.toPx(), c, style = Stroke(1.5.dp.toPx()))
-                i < idx -> drawCircle(accent.copy(alpha = 0.5f), 3.dp.toPx(), c)
-                else -> drawCircle(Color.White.copy(alpha = 0.25f), 3.dp.toPx(), c)
+                Text(sub, color = Muted, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            Column(horizontalAlignment = Alignment.End, modifier = Modifier.padding(start = 8.dp)) {
+                Text("NEXT", color = Muted, fontSize = 9.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.4.sp)
+                Text("${span.next.label} ${formatClock(context, span.nextAt)}", color = Ink, fontSize = 15.sp, maxLines = 1)
+                Text("in ${formatDuration(span.nextAt - now)}", color = accent, fontSize = 13.sp, maxLines = 1)
             }
         }
-        drawCircle(Color.White, 2.5.dp.toPx(), Offset(x(pos), y))
+        Text(
+            "${Moon.name(age)} · ${(Moon.illumination(age) * 100).roundToInt()}% lit · $hijri",
+            color = Muted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(top = 10.dp),
+        )
+        Row(Modifier.fillMaxWidth().padding(top = 16.dp)) {
+            TIMELINE.forEach { p ->
+                val at = times[p]
+                val isNow = p == span.current
+                val isNext = p == span.next
+                val past = at != null && at < now && !isNow
+                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(p.label, color = if (isNow) accent else Muted.copy(alpha = if (past) 0.5f else 0.85f),
+                        fontSize = 10.sp, letterSpacing = 0.5.sp, maxLines = 1)
+                    Text(at?.let { formatClock(context, it) } ?: "—", maxLines = 1, fontSize = 14.sp,
+                        modifier = Modifier.padding(top = 2.dp),
+                        color = when {
+                            isNow -> accent
+                            isNext -> Ink
+                            past -> Muted.copy(alpha = 0.5f)
+                            else -> Muted
+                        })
+                    Box(Modifier.padding(top = 6.dp).height(2.dp).width(18.dp).clip(RoundedCornerShape(1.dp)).background(
+                        when {
+                            isNow -> accent
+                            isNext -> Ink.copy(alpha = 0.35f)
+                            else -> Color.Transparent
+                        }))
+                }
+            }
+        }
+    }
+}
+
+/** The moon as it looks tonight: dark disc, lit part, a faint halo that grows towards full moon. */
+@Composable
+private fun MoonIcon(age: Double, size: Dp) {
+    val lit = Moon.illumination(age).toFloat()
+    Canvas(Modifier.size(size)) {
+        val c = center
+        val r = this.size.minDimension / 2 * 0.78f
+        drawCircle(
+            Brush.radialGradient(listOf(Ink.copy(alpha = 0.06f + 0.14f * lit), Color.Transparent), c, r * 1.28f),
+            r * 1.28f, c,
+        )
+        drawCircle(Color(0xFF2A2A28), r, c)
+        drawPath(Moon.litPath(age, c.x, c.y, r).asComposePath(), Ink)
     }
 }
 

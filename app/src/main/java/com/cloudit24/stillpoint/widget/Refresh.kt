@@ -18,6 +18,7 @@ object Refresh {
     fun all(context: Context) {
         runCatching { StillpointWidget.updateAll(context) }
         runCatching { GoldWidget.updateAll(context) }
+        runCatching { PrayerWidget.updateAll(context) }
         runCatching { LockNotification.update(context) }
         runCatching { PrayerAlerts.schedule(context) }
         schedule(context)
