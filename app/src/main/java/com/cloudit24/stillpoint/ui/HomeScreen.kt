@@ -287,9 +287,9 @@ fun HomeScreen(vm: LauncherViewModel) {
             val recent = vm.recentlyUsed(6)
             if (recent.isNotEmpty()) RecentStrip(vm, recent)
         }
-        // Past 7 apps the list gets a little smaller; past half the screen it scrolls.
-        val listScale = if (homeApps.size > 7) (7f / homeApps.size).coerceAtLeast(0.75f) else 1f
-        val maxListHeight = (LocalConfiguration.current.screenHeightDp * 0.5f).dp
+        // A set space for the apps (about a third of the screen); more apps scroll inside it.
+        val listScale = 1f
+        val maxListHeight = (LocalConfiguration.current.screenHeightDp * 0.34f).dp
         Column(Modifier.heightIn(max = maxListHeight).verticalScroll(rememberScrollState())) {
             if (s.homeStyle == HomeStyle.ICONS) {
                 HomeIcons(vm, homeApps, (s.homeSize * 2).dp)
@@ -301,6 +301,7 @@ fun HomeScreen(vm: LauncherViewModel) {
                         fontSize = (s.homeSize * listScale).sp,
                         onClick = { vm.launch(app) },
                         icon = appIcon(vm, app, (s.homeSize * 1.4f * listScale).dp),
+                        rowPadding = 5.dp,
                     )
                 }
             }

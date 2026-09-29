@@ -1,5 +1,6 @@
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.foundation.layout.BoxWithConstraints
 import com.cloudit24.stillpoint.data.Moon
 import androidx.compose.ui.graphics.asComposePath
 import androidx.compose.ui.graphics.Brush
@@ -164,7 +165,7 @@ fun HeroHeader(vm: LauncherViewModel, s: LauncherSettings, now: Long) {
             }
         }
        }
-       if (s.dialMode != DialMode.OFF) DayDial(vm, s, now, Modifier.padding(start = 12.dp).size(96.dp))
+       if (s.dialMode != DialMode.OFF) DayDial(vm, s, now, Modifier.padding(start = 12.dp).size(104.dp))
       }
         InfoSlot(vm, s, now, Modifier.padding(top = 30.dp))
         if (s.showStats || s.showLocalIp || s.publicIpOn) {
@@ -242,7 +243,9 @@ private fun DayDial(vm: LauncherViewModel, s: LauncherSettings, now: Long, modif
     val intro = remember { Animatable(0f) }
     LaunchedEffect(Unit) { intro.animateTo(1f, tween(1100, easing = FastOutSlowInEasing)) }
 
-    Box(modifier.clickable(enabled = span != null) { vm.screen = Screen.PRAYER }, contentAlignment = Alignment.Center) {
+    BoxWithConstraints(modifier.clickable(enabled = span != null) { vm.screen = Screen.PRAYER }, contentAlignment = Alignment.Center) {
+        // The text may use only the middle of the circle; longer words (Maghrib, 23h 59m, charging) shrink to fit.
+        val textWidth = maxWidth * 0.62f
         Canvas(Modifier.fillMaxSize()) {
             val stroke = 4.dp.toPx()
             val r = size.minDimension / 2 - stroke
@@ -251,11 +254,20 @@ private fun DayDial(vm: LauncherViewModel, s: LauncherSettings, now: Long, modif
                 topLeft = Offset(center.x - r, center.y - r), size = Size(r * 2, r * 2),
                 style = Stroke(stroke, cap = StrokeCap.Round))
         }
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(big, color = Ink, fontSize = 18.sp, maxLines = 1)
-            Text(small, color = Muted, fontSize = 11.sp, maxLines = 1)
+        Column(Modifier.width(textWidth), horizontalAlignment = Alignment.CenterHorizontally) {
+            FitText(big, Ink, 18f, 10f)
+            FitText(small, Muted, 11f, 8f)
         }
     }
+}
+
+/** One line that steps its size down until it fits its width, never spilling out. */
+@Composable
+private fun FitText(text: String, color: Color, maxSp: Float, minSp: Float) {
+    var size by remember(text) { mutableFloatStateOf(maxSp) }
+    Text(text, color = color, fontSize = size.sp, maxLines = 1, softWrap = false,
+        overflow = if (size > minSp) TextOverflow.Clip else TextOverflow.Ellipsis,
+        onTextLayout = { if (it.hasVisualOverflow && size > minSp) size -= 1f })
 }
 
 /** The one "important info" slot under the headline: prayer times, the next calendar event, or the day and battery. */

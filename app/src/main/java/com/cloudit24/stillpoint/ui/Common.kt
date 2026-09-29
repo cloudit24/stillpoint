@@ -103,12 +103,13 @@ fun AppRow(
     icon: (@Composable () -> Unit)? = null,
     /** Replaces the usage figure on the right, e.g. "3d ago". */
     trailing: String? = null,
+    rowPadding: Dp = 10.dp,
 ) {
     Row(
         Modifier
             .fillMaxWidth()
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-            .padding(vertical = 10.dp),
+            .padding(vertical = rowPadding),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) {
