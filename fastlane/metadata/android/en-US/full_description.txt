@@ -1,28 +1,36 @@
-Stillpoint is a calm, minimal home screen. Black background, text first, no clutter.
+Stillpoint Launcher is a calm, minimal home screen. Black background, text first, one important thing at a time.
 
 <b>Home</b>
 <ul>
-<li>Clock in six styles, including retro flip and LCD</li>
-<li>Optional animated weather, gold price in your currency, live network speed and RAM</li>
-<li>Today's screen time and (optionally) today's calendar</li>
-<li>Your most used or pinned apps, as text or icons only, in the size you like</li>
-<li>Customizable gestures: swipe left, right, up, down and double-tap, plus two bottom shortcuts</li>
+<li>A headline that flips like a live tile: greeting, screen time, weather, Hijri and Tamil dates</li>
+<li>A ring beside it: countdown to the next prayer, battery, or time left today</li>
+<li>Under it, your choice of prayer times, the next calendar event, or the day and battery</li>
+<li>Recently used apps (24 hours) and your most used or pinned apps, as text or icons</li>
+<li>Edge light: a line on the screen edge that fills towards the next prayer. Made for curved screens, with styles for flat ones</li>
+<li>Gestures for every swipe and double-tap, a search button, accent colours and grey icons</li>
 </ul>
 
-<b>App list</b>
+<b>Islamic prayer (optional)</b>
 <ul>
-<li>Tabs: Most used, Recent, All, Favorites</li>
-<li>Alphabet bar for fast scrolling</li>
-<li>Favorites with your own folders</li>
-<li>Search that opens the first match on Enter</li>
+<li>Prayer times calculated on the phone, with ten methods and Hanafi Asr</li>
+<li>Prayer and iqama alerts, with iqama times you set per prayer</li>
+<li>Qibla compass that ticks as you turn and taps when you face the Qibla</li>
+<li>Lock screen countdown to the next prayer</li>
+</ul>
+
+<b>Productivity</b>
+<ul>
+<li>Tasks on the phone, from Tasks.org or OpenTasks, or from your own Project Hub</li>
+<li>Calendar from the phone, a calendar link (.ics) or Project Hub</li>
+<li>Focus mode that blocks chosen apps for a set time</li>
 </ul>
 
 <b>Also</b>
 <ul>
-<li>Widget page with your task list</li>
-<li>Focus mode that blocks chosen apps for a set time</li>
-<li>Hide apps, work profile support</li>
+<li>App list with pivot tabs, alphabet bar, favorites and folders</li>
+<li>Widget page, plus Stillpoint widgets for any launcher</li>
+<li>Data usage per app, hide apps, work profile support</li>
 </ul>
 
 <b>Privacy</b>
-No analytics, no ads, no Google Play Services. The app goes online only for features you switch on (weather from Open-Meteo, gold price, currency rates), and never sends anything about you.
+No analytics, no ads, no accounts, no Google Play Services. Settings never leave the phone. The app goes online only for features you switch on, and never sends anything about you.

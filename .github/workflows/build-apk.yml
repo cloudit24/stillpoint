@@ -66,4 +66,4 @@ jobs:
         run: |
           cp out/stillpoint-github.apk "out/stillpoint-${GITHUB_REF_NAME}.apk"
           gh release create "$GITHUB_REF_NAME" "out/stillpoint-${GITHUB_REF_NAME}.apk" \
-            --title "Stillpoint ${GITHUB_REF_NAME}" --generate-notes
+            --title "Stillpoint Launcher ${GITHUB_REF_NAME}" --generate-notes

@@ -235,7 +235,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
                                 }
                             }
                         }
-                    Text("Stillpoint ${BuildConfig.VERSION_NAME}", color = Muted, fontSize = 12.sp,
+                    Text("Stillpoint Launcher ${BuildConfig.VERSION_NAME}", color = Muted, fontSize = 12.sp,
                         modifier = Modifier.fillMaxWidth().padding(top = 24.dp), textAlign = TextAlign.Center)
                 }
 
@@ -608,7 +608,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
                 SettingsPage.UPDATES -> Group("GitHub releases") { UpdateSection() }
 
                 SettingsPage.ABOUT -> {
-                    Group("Stillpoint") {
+                    Group("Stillpoint Launcher") {
                         ActionRow("Version", BuildConfig.VERSION_NAME) {}
                         ActionRow("Source code", "github.com/cloudit24/stillpoint · GPL-3.0") {
                             ctx.safeStart(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/cloudit24/stillpoint")))

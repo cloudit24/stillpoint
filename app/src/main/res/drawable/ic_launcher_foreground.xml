@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Stillpoint Launcher logo: the still point in the middle of a day ring; the arc is the day so far, the dot is now. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path android:pathData="M54,30 A24,24 0 1,1 53.99,30 Z" android:strokeColor="#33E8E6E1" android:strokeWidth="2" android:fillColor="#00000000" />
+    <path android:pathData="M54,30 A24,24 0 1,1 31.45,62.21" android:strokeColor="#FF1BA1E2" android:strokeWidth="4.5"
+        android:strokeLineCap="round" android:fillColor="#00000000" />
+    <path android:pathData="M23.45,62.21 a8,8 0 1,0 16,0 a8,8 0 1,0 -16,0" android:fillColor="#401BA1E2" />
+    <path android:pathData="M27.25,62.21 a4.2,4.2 0 1,0 8.4,0 a4.2,4.2 0 1,0 -8.4,0" android:fillColor="#FFFFFFFF" />
+    <path android:pathData="M50.80,54.00 a3.2,3.2 0 1,0 6.4,0 a3.2,3.2 0 1,0 -6.4,0" android:fillColor="#FFE8E6E1" />
+</vector>

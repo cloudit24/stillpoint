@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Stillpoint</string>
+    <string name="app_name">Stillpoint Launcher</string>
     <string name="a11y_label">Stillpoint gestures</string>
     <string name="a11y_description">Locks the screen on double-tap and opens the notification shade on swipe-down. Reads no screen content and collects no data.</string>
     <string name="widget_name">Stillpoint Widget</string>

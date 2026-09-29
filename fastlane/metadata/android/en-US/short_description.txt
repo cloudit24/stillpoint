@@ -1,1 +1,1 @@
-Minimal, private launcher: text-first home, favorites, focus mode, widgets
+Calm, private launcher: headline home, prayer times, edge light, widgets

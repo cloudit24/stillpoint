@@ -1,6 +1,8 @@
-# Stillpoint
+<p align="center"><img src="docs/logo.png" width="128" alt="Stillpoint Launcher logo"></p>
 
-Minimal Android launcher. Kotlin + Jetpack Compose. No analytics, no Google Play Services.
+# Stillpoint Launcher
+
+Calm, minimal Android launcher. Kotlin + Jetpack Compose. No analytics, no Google Play Services.
 
 ## Two builds
 
