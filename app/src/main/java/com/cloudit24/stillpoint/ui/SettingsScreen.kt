@@ -154,6 +154,18 @@ fun SettingsScreen(vm: LauncherViewModel) {
     var page by rememberSaveable { mutableStateOf<SettingsPage?>(null) }
     var picking by remember { mutableStateOf<GestureSlot?>(null) }
     var dialog by remember { mutableStateOf<SettingsDialog?>(null) }
+    // Checks GitHub quietly when Settings opens (at most every 6 hours) so a new version shows at the top.
+    var available by remember { mutableStateOf(lastUpdate?.takeIf { System.currentTimeMillis() - it.first < 6 * 3_600_000L }?.second) }
+    LaunchedEffect(Unit) {
+        if (!Updater.AVAILABLE) return@LaunchedEffect
+        val last = lastUpdate
+        if (last != null && System.currentTimeMillis() - last.first < 6 * 3_600_000L) return@LaunchedEffect
+        val r = Updater.check(BuildConfig.VERSION_NAME)
+        if (r !is UpdateCheck.Failed) {
+            lastUpdate = System.currentTimeMillis() to (r as? UpdateCheck.Available)
+            available = r as? UpdateCheck.Available
+        }
+    }
 
     BackHandler(enabled = page != null) { page = null }
 
@@ -211,6 +223,20 @@ fun SettingsScreen(vm: LauncherViewModel) {
             if (current == null) {
                 Text("Settings", fontSize = 34.sp, fontWeight = FontWeight.Light,
                     modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 8.dp))
+                available?.let { a ->
+                    Row(
+                        Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 8.dp).clip(RoundedCornerShape(16.dp))
+                            .background(Accent.copy(alpha = 0.16f)).clickable { page = SettingsPage.UPDATES }
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(Icons.Outlined.Refresh, contentDescription = null, tint = Accent)
+                        Column(Modifier.weight(1f).padding(start = 14.dp)) {
+                            Text("Update available: ${a.version}", fontSize = 16.sp)
+                            Text("You have ${BuildConfig.VERSION_NAME}. Tap to install.", color = Muted, fontSize = 13.sp)
+                        }
+                    }
+                }
             } else {
                 Row(Modifier.padding(top = 4.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Ink,
@@ -232,7 +258,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
                                 }
                             }
                         }
-                    Text("Stillpoint Launcher ${BuildConfig.VERSION_NAME}", color = Muted, fontSize = 12.sp,
+                    Text("Stillpoint Launcher ${BuildConfig.VERSION_NAME} · by cloudit24", color = Muted, fontSize = 12.sp,
                         modifier = Modifier.fillMaxWidth().padding(top = 24.dp), textAlign = TextAlign.Center)
                 }
 
@@ -594,11 +620,14 @@ fun SettingsScreen(vm: LauncherViewModel) {
                     }
                 }
 
-                SettingsPage.UPDATES -> Group("GitHub releases") { UpdateSection() }
+                SettingsPage.UPDATES -> Group("GitHub releases") { UpdateSection(available) }
 
                 SettingsPage.ABOUT -> {
                     Group("Stillpoint Launcher") {
                         ActionRow("Version", BuildConfig.VERSION_NAME) {}
+                        ActionRow("Made by", "cloudit24 · github.com/cloudit24") {
+                            ctx.safeStart(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/cloudit24")))
+                        }
                         ActionRow("Source code", "github.com/cloudit24/stillpoint · GPL-3.0") {
                             ctx.safeStart(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/cloudit24/stillpoint")))
                         }
@@ -923,11 +952,11 @@ private fun TargetPicker(vm: LauncherViewModel, title: String, onPick: (String) 
 
 /** Check GitHub, then download and hand the APK to the system installer. */
 @Composable
-private fun UpdateSection() {
+private fun UpdateSection(initial: UpdateCheck? = null) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val current = BuildConfig.VERSION_NAME
-    var result by remember { mutableStateOf<UpdateCheck?>(null) }
+    var result by remember { mutableStateOf(initial) }
     var busy by remember { mutableStateOf(false) }
     var progress by remember { mutableIntStateOf(-1) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -1036,3 +1065,6 @@ private fun IcsDialog(initial: String, onDismiss: () -> Unit, onSave: (String) -
         },
     )
 }
+
+/** Last quiet update check this session: when, and the newer version if there was one. */
+private var lastUpdate: Pair<Long, UpdateCheck.Available?>? = null

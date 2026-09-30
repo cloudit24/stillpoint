@@ -2,7 +2,7 @@
 
 # Stillpoint Launcher
 
-Calm, minimal Android launcher. Kotlin + Jetpack Compose. No analytics, no Google Play Services.
+Calm, minimal Android launcher by [cloudit24](https://github.com/cloudit24). Kotlin + Jetpack Compose. No analytics, no Google Play Services.
 
 ## Two builds
 

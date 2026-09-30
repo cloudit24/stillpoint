@@ -232,6 +232,18 @@ class Prefs(context: Context) {
         sp.edit().putString(K_WIDGET_IDS, JSONArray(ids.map { it.toString() }).toString()).apply()
     }
 
+    /** Widget id -> (height in dp, full width) as chosen in Edit. Stored as "id:height:1,id:height:0". */
+    fun loadWidgetSizes(): Map<Int, Pair<Int, Boolean>> = (sp.getString("widget_sizes", null) ?: "")
+        .split(",").mapNotNull { part ->
+            val f = part.split(":")
+            if (f.size != 3) null else f[0].toIntOrNull()?.let { id -> f[1].toIntOrNull()?.let { h -> id to (h to (f[2] == "1")) } }
+        }.toMap()
+
+    fun saveWidgetSizes(sizes: Map<Int, Pair<Int, Boolean>>) {
+        sp.edit().putString("widget_sizes",
+            sizes.entries.joinToString(",") { (id, v) -> "$id:${v.first}:${if (v.second) 1 else 0}" }).apply()
+    }
+
     /** Last fetched values, so home shows something instantly after a restart. */
     fun loadWeather(): WeatherNow? = sp.getString(K_WEATHER_CACHE, null)?.let { raw ->
         runCatching {

@@ -98,14 +98,19 @@ class MainActivity : ComponentActivity() {
 
     private fun addWidget(provider: AppWidgetProviderInfo) {
         val id = vm.allocateWidgetId()
-        if (vm.widgetManager.bindAppWidgetIdIfAllowed(id, provider.profile, provider.provider, null)) {
+        // Say where the widget goes (home screen) so apps that check it agree to show.
+        val options = Bundle().apply {
+            putInt(AppWidgetManager.OPTION_APPWIDGET_HOST_CATEGORY, AppWidgetProviderInfo.WIDGET_CATEGORY_HOME_SCREEN)
+        }
+        if (vm.widgetManager.bindAppWidgetIdIfAllowed(id, provider.profile, provider.provider, options)) {
             configureOrCommitWidget()
         } else {
             bindWidget.launch(
                 Intent(AppWidgetManager.ACTION_APPWIDGET_BIND)
                     .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
                     .putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER, provider.provider)
-                    .putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER_PROFILE, provider.profile),
+                    .putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER_PROFILE, provider.profile)
+                    .putExtra(AppWidgetManager.EXTRA_APPWIDGET_OPTIONS, options),
             )
         }
     }

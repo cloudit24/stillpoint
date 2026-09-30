@@ -34,3 +34,5 @@ Stillpoint Launcher is a calm, minimal home screen. Black background, text first
 
 <b>Privacy</b>
 No analytics, no ads, no accounts, no Google Play Services. Settings never leave the phone. The app goes online only for features you switch on, and never sends anything about you.
+
+Made by cloudit24 (github.com/cloudit24). Free and open source under GPL-3.0.

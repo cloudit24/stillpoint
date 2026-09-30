@@ -1,5 +1,11 @@
 package com.cloudit24.stillpoint.ui
 
+import android.appwidget.AppWidgetManager
+import android.util.SizeF
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.rememberNestedScrollInteropConnection
 import android.os.Build
 import android.os.Bundle
 import android.appwidget.AppWidgetHostView
@@ -115,6 +121,7 @@ fun WidgetsScreen(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderInfo) ->
 @Composable
 private fun WidgetItem(vm: LauncherViewModel, id: Int, editing: Boolean) {
     val context = LocalContext.current
+    val density = LocalDensity.current
     val info = remember(id) { vm.widgetManager.getAppWidgetInfo(id) }
 
     Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
@@ -125,22 +132,74 @@ private fun WidgetItem(vm: LauncherViewModel, id: Int, editing: Boolean) {
                 Text("Remove", color = Accent, modifier = Modifier.clickable { vm.removeWidget(id) }.padding(8.dp))
             }
         }
-        if (info != null) {
-            // minHeight is already in pixels. Widgets that ask for more rows get about 76 dp per row.
-            val density = LocalDensity.current
-            val minHeight = with(density) { info.minHeight.toDp() }
-            val rows = if (Build.VERSION.SDK_INT >= 31) info.targetCellHeight else 0
+        if (info == null) return@Column
+        val natural = remember(info) { naturalSize(info, density.density) }
+        val saved = vm.widgetSizes[id]
+        val heightDp = saved?.first ?: natural.height
+        val full = saved?.second ?: natural.fullWidth
+        if (editing) {
+            // Resize like on any home screen: height in steps, and full width or the widget's own width.
+            Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("Height", color = Muted, fontSize = 13.sp)
+                Text("−", fontSize = 20.sp, modifier = Modifier.clip(CircleShape)
+                    .clickable { vm.setWidgetSize(id, (heightDp - 20).coerceAtLeast(natural.minHeight), full) }
+                    .padding(horizontal = 12.dp))
+                Text("$heightDp", fontSize = 14.sp)
+                Text("+", fontSize = 20.sp, modifier = Modifier.clip(CircleShape)
+                    .clickable { vm.setWidgetSize(id, (heightDp + 20).coerceAtMost(natural.maxHeight), full) }
+                    .padding(horizontal = 12.dp))
+                Spacer(Modifier.weight(1f))
+                Text(if (full) "Full width" else "Own width", color = Accent, fontSize = 13.sp,
+                    modifier = Modifier.clickable { vm.setWidgetSize(id, heightDp, !full) }.padding(8.dp))
+            }
+        }
+        BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            val width = if (full) maxWidth else minOf(maxWidth, natural.width.dp)
             var hostView by remember { mutableStateOf<AppWidgetHostView?>(null) }
             AndroidView(
                 factory = { ctx -> vm.widgetHost.createView(ctx, id, info).also { hostView = it } },
-                modifier = Modifier.fillMaxWidth().height(maxOf(minHeight, 76.dp * rows, 72.dp)).onSizeChanged { size ->
-                    // Tell the widget its real size so it can lay itself out to fit.
-                    val w = (size.width / density.density).toInt()
-                    val h = (size.height / density.density).toInt()
-                    @Suppress("DEPRECATION")
-                    runCatching { hostView?.updateAppWidgetSize(Bundle(), w, h, w, h) }
-                },
+                modifier = Modifier
+                    .width(width)
+                    .height(heightDp.dp)
+                    // Lets lists inside widgets (mail, calendar, notes) scroll instead of the page.
+                    .nestedScroll(rememberNestedScrollInteropConnection())
+                    .onSizeChanged { size -> hostView?.let { reportSize(it, size.width / density.density, size.height / density.density) } },
             )
+        }
+    }
+}
+
+private class NaturalSize(val width: Int, val height: Int, val minHeight: Int, val maxHeight: Int, val fullWidth: Boolean)
+
+/**
+ * The size a widget asks for, in dp. Uses its target cells (Android 12+) or the classic
+ * "70 dp per cell minus 30" rule, with about 96 x 88 dp per home-screen cell.
+ */
+private fun naturalSize(info: AppWidgetProviderInfo, density: Float): NaturalSize {
+    val minW = (info.minWidth / density).toInt()
+    val minH = (info.minHeight / density).toInt()
+    val cellsW = if (Build.VERSION.SDK_INT >= 31 && info.targetCellWidth > 0) info.targetCellWidth
+    else ((minW + 30) / 70f).let { kotlin.math.ceil(it).toInt() }.coerceAtLeast(1)
+    val cellsH = if (Build.VERSION.SDK_INT >= 31 && info.targetCellHeight > 0) info.targetCellHeight
+    else ((minH + 30) / 70f).let { kotlin.math.ceil(it).toInt() }.coerceAtLeast(1)
+    val width = maxOf(minW, cellsW * 96)
+    val height = maxOf(minH, cellsH * 88, 56)
+    val resizeMin = (info.minResizeHeight / density).toInt().takeIf { it > 0 } ?: minH
+    val resizeMax = if (Build.VERSION.SDK_INT >= 31 && info.maxResizeHeight > 0) (info.maxResizeHeight / density).toInt() else 640
+    return NaturalSize(width, height, resizeMin.coerceAtLeast(40), maxOf(resizeMax, height), fullWidth = cellsW >= 4 || minW >= 250)
+}
+
+/** Tells the widget the exact space it has, the way launchers do, so it picks the layout that fits. */
+private fun reportSize(view: AppWidgetHostView, wDp: Float, hDp: Float) {
+    val options = Bundle().apply {
+        putInt(AppWidgetManager.OPTION_APPWIDGET_HOST_CATEGORY, AppWidgetProviderInfo.WIDGET_CATEGORY_HOME_SCREEN)
+    }
+    runCatching {
+        if (Build.VERSION.SDK_INT >= 31) {
+            view.updateAppWidgetSize(options, listOf(SizeF(wDp, hDp)))
+        } else {
+            @Suppress("DEPRECATION")
+            view.updateAppWidgetSize(options, wDp.toInt(), hDp.toInt(), wDp.toInt(), hDp.toInt())
         }
     }
 }

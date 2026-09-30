@@ -473,6 +473,16 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         runCatching { widgetHost.deleteAppWidgetId(id) }
         widgetIds = widgetIds - id
         prefs.saveWidgetIds(widgetIds)
+        widgetSizes = widgetSizes - id
+        prefs.saveWidgetSizes(widgetSizes)
+    }
+
+    var widgetSizes by mutableStateOf(prefs.loadWidgetSizes())
+        private set
+
+    fun setWidgetSize(id: Int, heightDp: Int, fullWidth: Boolean) {
+        widgetSizes = widgetSizes + (id to (heightDp to fullWidth))
+        prefs.saveWidgetSizes(widgetSizes)
     }
 
     // ---- Icons ----
