@@ -227,6 +227,26 @@ class Prefs(context: Context) {
     }
 
     /** Widget ids in page order. Ids belong to the system widget host, so they live apart from settings. */
+    /** Addresses you replaced (Settings, System, Online sources) and your own gold source. */
+    fun loadSources(): SourceConfig = SourceConfig(
+        urls = SourceKey.entries.mapNotNull { k -> sp.getString("src_${k.name}", null)?.takeIf { it.isNotBlank() }?.let { k to it } }.toMap(),
+        gold = CustomGold(
+            url = sp.getString("gold_custom_url", "") ?: "",
+            path = sp.getString("gold_custom_path", "") ?: "",
+            perGram = sp.getBoolean("gold_custom_gram", false),
+            currency = sp.getString("gold_custom_cur", "USD") ?: "USD",
+        ),
+    )
+
+    fun saveSource(k: SourceKey, url: String?) {
+        sp.edit().putString("src_${k.name}", url?.trim()?.takeIf { it.isNotEmpty() }).apply()
+    }
+
+    fun saveCustomGold(g: CustomGold) {
+        sp.edit().putString("gold_custom_url", g.url.trim()).putString("gold_custom_path", g.path.trim())
+            .putBoolean("gold_custom_gram", g.perGram).putString("gold_custom_cur", g.currency).apply()
+    }
+
     fun loadNotes(): List<Note> = runCatching {
         val a = JSONArray(sp.getString("notes", "[]"))
         (0 until a.length()).map { i -> a.getJSONObject(i).let { Note(it.getLong("id"), it.getString("text")) } }

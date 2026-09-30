@@ -1,5 +1,8 @@
 package com.cloudit24.stillpoint
 
+import com.cloudit24.stillpoint.data.SourceKey
+import com.cloudit24.stillpoint.data.CustomGold
+import com.cloudit24.stillpoint.data.GoldSource
 import com.cloudit24.stillpoint.update.UpdateNotice
 import com.cloudit24.stillpoint.data.Note
 import com.cloudit24.stillpoint.data.InfoPanel
@@ -62,7 +65,31 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     private val usageRepo = UsageRepository(app)
     private val calendarRepo = CalendarRepository(app)
     private val prefs = Prefs(app)
-    private val live = LiveRepository()
+    /** Built on each use so a changed source takes effect at once. */
+    private val live get() = LiveRepository(prefs.loadSources())
+    var sources by mutableStateOf(prefs.loadSources())
+        private set
+
+    fun setSource(k: SourceKey, url: String?) {
+        prefs.saveSource(k, url)
+        sources = prefs.loadSources()
+        weather = null
+        refreshLive(force = true)
+    }
+
+    fun setCustomGold(g: CustomGold) {
+        prefs.saveCustomGold(g)
+        sources = prefs.loadSources()
+        if (settings.goldSource == GoldSource.CUSTOM) refreshLive(force = true)
+    }
+
+    /** What your own gold address gives right now, in words. */
+    suspend fun testCustomGold(): String = withContext(Dispatchers.IO) {
+        val c = sources.gold
+        if (c.url.isBlank()) return@withContext "Set the address first."
+        val v = live.readCustom(c) ?: return@withContext "Couldn't find a number there. Check the address and the path."
+        "Read ${String.format(java.util.Locale.US, "%,.2f", v)} ${c.currency} per ${if (c.perGram) "gram" else "ounce"} (24K)."
+    }
     private val dataRepo = DataUsageRepository(app)
     private val hubRepo = HubRepository()
 
@@ -481,6 +508,14 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
 
     var widgetSizes by mutableStateOf(prefs.loadWidgetSizes())
         private set
+
+    /** Puts a widget at [index] on the Shelf (drag to move). */
+    fun moveWidgetTo(id: Int, index: Int) {
+        val i = widgetIds.indexOf(id)
+        if (i < 0 || index < 0 || index > widgetIds.lastIndex || i == index) return
+        widgetIds = widgetIds.toMutableList().apply { add(index, removeAt(i)) }
+        prefs.saveWidgetIds(widgetIds)
+    }
 
     /** Moves a widget earlier (-1) or later (+1) on the Shelf. */
     fun moveWidget(id: Int, delta: Int) {

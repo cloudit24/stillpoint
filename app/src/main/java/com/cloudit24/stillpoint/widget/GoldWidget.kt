@@ -1,5 +1,6 @@
 package com.cloudit24.stillpoint.widget
 
+import com.cloudit24.stillpoint.data.GoldSource
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
@@ -41,7 +42,7 @@ class GoldWidget : AppWidgetProvider() {
         val pending = goAsync()
         Thread {
             try {
-                LiveRepository().gold(s.goldSource, s.goldCurrency)?.let { prefs.saveGold(it) }
+                LiveRepository(prefs.loadSources()).gold(s.goldSource, s.goldCurrency)?.let { prefs.saveGold(it) }
                 updateAll(context)
             } finally {
                 pending.finish()
@@ -69,7 +70,7 @@ class GoldWidget : AppWidgetProvider() {
                 views.setTextViewText(R.id.gold_price, "—")
                 views.setTextViewText(R.id.gold_meta, "Tap to load")
             } else {
-                views.setTextViewText(R.id.gold_label, "GOLD ${s.goldKarat}K · ${if (price.dubai) "DUBAI" else "SPOT"}")
+                views.setTextViewText(R.id.gold_label, "GOLD ${s.goldKarat}K · ${when { g.source == GoldSource.CUSTOM -> "YOUR SOURCE"; price.dubai -> "DUBAI"; else -> "SPOT" }}")
                 views.setTextViewText(R.id.gold_price, String.format(Locale.US, "%,.2f", price.value))
                 views.setTextViewText(R.id.gold_meta,
                     "${g.currency} per ${if (s.goldPerGram) "gram" else "ounce"} · " +

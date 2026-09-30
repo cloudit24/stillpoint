@@ -17,8 +17,8 @@ android {
         minSdk = 26
         targetSdk = 35
         // Bump both for every release. The GitHub tag must be "v" + versionName.
-        versionCode = 34
-        versionName = "0.25.0"
+        versionCode = 35
+        versionName = "0.26.0"
     }
 
     // github: in-app updates from GitHub Releases.

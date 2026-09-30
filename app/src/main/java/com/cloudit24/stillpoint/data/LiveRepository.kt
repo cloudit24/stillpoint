@@ -17,12 +17,12 @@ import kotlin.math.roundToInt
  *  - Public IP: ipify (open source, no logging), icanhazip as a fallback.
  * Call from a background thread.
  */
-class LiveRepository {
+class LiveRepository(private val src: SourceConfig = SourceConfig()) {
 
     fun searchCity(query: String): List<City> {
         val q = query.trim()
         if (q.length < 2) return emptyList()
-        val body = get("https://geocoding-api.open-meteo.com/v1/search?count=8&format=json&name=" +
+        val body = get("${src.url(SourceKey.CITY)}/v1/search?count=8&format=json&name=" +
             URLEncoder.encode(q, "UTF-8")) ?: return emptyList()
         return runCatching {
             val results = JSONObject(body).optJSONArray("results") ?: return emptyList()
@@ -41,7 +41,7 @@ class LiveRepository {
 
     fun weather(city: City): WeatherNow? {
         val body = get(
-            "https://api.open-meteo.com/v1/forecast?latitude=${round1(city.lat)}&longitude=${round1(city.lon)}" +
+            "${src.url(SourceKey.WEATHER)}/v1/forecast?latitude=${round1(city.lat)}&longitude=${round1(city.lon)}" +
                 "&current=temperature_2m,weather_code,is_day&timezone=auto",
         ) ?: return null
         return runCatching {
@@ -56,6 +56,15 @@ class LiveRepository {
     }
 
     fun gold(source: GoldSource, currency: String): GoldQuote? {
+        if (source == GoldSource.CUSTOM) {
+            // Your own price, taken as 24K, turned into USD per ounce so karat, unit and currency work as usual.
+            val c = src.gold
+            val value = readCustom(c) ?: return null
+            val perUnitUsd = value / (usdTo(c.currency) ?: return null)
+            val usdPerOz = if (c.perGram) perUnitUsd * GRAMS_PER_TROY_OUNCE else perUnitUsd
+            val fx = usdTo(currency) ?: return null
+            return GoldQuote(source, emptyMap(), usdPerOz, currency, fx, System.currentTimeMillis())
+        }
         val dubai = if (source == GoldSource.DUBAI) dubaiRates() else emptyMap()
         // Spot is needed for SPOT, and as the fallback when the Dubai page can't be read.
         val usd = if (source == GoldSource.SPOT || dubai.isEmpty()) goldUsdPerOz() else null
@@ -90,9 +99,17 @@ class LiveRepository {
         }.getOrNull()
     }
 
+    /** The number at your own gold address, or null when it can't be read. */
+    fun readCustom(c: CustomGold): Double? {
+        if (c.url.isBlank()) return null
+        val body = get(c.url.trim(), accept = "application/json, text/plain, text/html") ?: return null
+        return readNumber(body, c.path)?.takeIf { it > 0 }
+    }
+
     /** The address the internet sees for this phone. */
     fun publicIp(): String? {
-        val body = get("https://api.ipify.org", accept = "text/plain")
+        val body = if (src.isCustom(SourceKey.IP)) get(src.url(SourceKey.IP), accept = "text/plain") ?: return null
+        else get("https://api.ipify.org", accept = "text/plain")
             ?: get("https://icanhazip.com", accept = "text/plain")
             ?: return null
         return body.trim().takeIf { it.length in 3..45 && it.all { c -> c.isLetterOrDigit() || c == '.' || c == ':' } }
@@ -101,7 +118,8 @@ class LiveRepository {
     private fun usdTo(currency: String): Double? {
         PEGS[currency]?.let { return it }
         // Frankfurter moved to frankfurter.dev; the old host is kept as a fallback.
-        val body = get("https://api.frankfurter.dev/v1/latest?base=USD&symbols=$currency")
+        val body = if (src.isCustom(SourceKey.RATES)) get("${src.url(SourceKey.RATES)}/v1/latest?base=USD&symbols=$currency") ?: return null
+        else get("https://api.frankfurter.dev/v1/latest?base=USD&symbols=$currency")
             ?: get("https://api.frankfurter.app/latest?from=USD&to=$currency")
             ?: return null
         return runCatching { JSONObject(body).getJSONObject("rates").getDouble(currency) }.getOrNull()

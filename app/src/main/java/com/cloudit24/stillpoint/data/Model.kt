@@ -59,6 +59,7 @@ data class WeatherNow(val tempC: Double, val code: Int, val isDay: Boolean, val 
 enum class GoldSource(val label: String, val detail: String) {
     DUBAI("Dubai shop rate", "Dubai Gold & Jewellery Group board rate, as published by Dubai City of Gold"),
     SPOT("World market (spot)", "International spot price from Swissquote, converted to your karat"),
+    CUSTOM("Your own source", "A web address you choose"),
 }
 
 /**

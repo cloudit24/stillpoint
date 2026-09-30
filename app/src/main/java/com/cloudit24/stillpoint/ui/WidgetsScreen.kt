@@ -1,5 +1,10 @@
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.zIndex
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Arrangement
@@ -95,6 +100,7 @@ import com.cloudit24.stillpoint.Screen
 fun WidgetsScreen(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderInfo) -> Unit) {
     var picking by rememberSaveable { mutableStateOf(false) }
     var editing by rememberSaveable { mutableStateOf(false) }
+    val drag = remember { ShelfDrag() }
 
     if (picking) {
         BackHandler { picking = false }
@@ -145,7 +151,25 @@ fun WidgetsScreen(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderInfo) ->
             BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
                 val areaW = maxWidth
                 FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    vm.widgetIds.forEachIndexed { i, id -> key(id) { AppearIn(i) { WidgetItem(vm, id, editing, areaW) } } }
+                    vm.widgetIds.forEachIndexed { i, id ->
+                        key(id) {
+                            // The widget being moved floats above the others and follows the finger.
+                            val moving = drag.id == id
+                            Box(
+                                Modifier.zIndex(if (moving) 1f else 0f)
+                                    .onGloballyPositioned { drag.bounds[id] = it.boundsInRoot() }
+                                    .graphicsLayer {
+                                        val b = drag.bounds[id]
+                                        if (moving && b != null) {
+                                            translationX = drag.finger.x - drag.grab.x - b.left
+                                            translationY = drag.finger.y - drag.grab.y - b.top
+                                            scaleX = 1.03f
+                                            scaleY = 1.03f
+                                        }
+                                    },
+                            ) { AppearIn(i) { WidgetItem(vm, id, editing, areaW, drag) } }
+                        }
+                    }
                 }
             }
         }
@@ -159,7 +183,7 @@ fun WidgetsScreen(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderInfo) ->
 }
 
 @Composable
-private fun WidgetItem(vm: LauncherViewModel, id: Int, editing: Boolean, areaW: Dp) {
+private fun WidgetItem(vm: LauncherViewModel, id: Int, editing: Boolean, areaW: Dp, drag: ShelfDrag) {
     val context = LocalContext.current
     val density = LocalDensity.current
     val info = remember(id) { vm.widgetManager.getAppWidgetInfo(id) }
@@ -225,6 +249,46 @@ private fun WidgetItem(vm: LauncherViewModel, id: Int, editing: Boolean, areaW: 
             if (editing) {
                 val accent = Accent
                 Box(Modifier.matchParentSize().border(1.dp, accent.copy(alpha = 0.45f), RoundedCornerShape(22.dp)))
+                // Grip, top-left: drag to move. The others make room as it passes over them.
+                var gripAt by remember { mutableStateOf(Offset.Zero) }
+                Box(
+                    Modifier.align(Alignment.TopStart).size(40.dp)
+                        .onGloballyPositioned { gripAt = it.boundsInRoot().topLeft }
+                        .pointerInput(id) {
+                            detectDragGestures(
+                                onDragStart = { at ->
+                                    val b = drag.bounds[id]
+                                    if (b != null) {
+                                        drag.finger = gripAt + at
+                                        drag.grab = drag.finger - b.topLeft
+                                        drag.lastSwap = null
+                                        drag.id = id
+                                    }
+                                },
+                                onDragEnd = { drag.id = null },
+                                onDragCancel = { drag.id = null },
+                                onDrag = { change, amount ->
+                                    change.consume()
+                                    if (drag.id == id) {
+                                        drag.finger += amount
+                                        val over = drag.bounds.entries
+                                            .firstOrNull { it.key != id && it.key in vm.widgetIds && it.value.contains(drag.finger) }?.key
+                                        if (over == null) drag.lastSwap = null
+                                        else if (over != drag.lastSwap) {
+                                            vm.moveWidgetTo(id, vm.widgetIds.indexOf(over))
+                                            drag.lastSwap = over
+                                        }
+                                    }
+                                },
+                            )
+                        },
+                ) {
+                    Canvas(Modifier.fillMaxSize().padding(14.dp)) {
+                        for (r in 0..2) for (c in 0..1) {
+                            drawCircle(accent, 1.8.dp.toPx(), Offset(c * size.width, r * size.height / 2))
+                        }
+                    }
+                }
                 // Corner handle: drag to resize. Snaps to full width and to half (two side by side).
                 Box(
                     Modifier.align(Alignment.BottomEnd).size(40.dp).pointerInput(id, areaW) {
@@ -459,4 +523,13 @@ private fun ProjectDialog(initial: LocalProject?, onDismiss: () -> Unit, onSave:
             }
         },
     )
+}
+
+/** Drag-to-move on the Shelf: where every widget sits, which one is moving, and where the finger is. */
+private class ShelfDrag {
+    val bounds = mutableStateMapOf<Int, Rect>()
+    var id by mutableStateOf<Int?>(null)
+    var finger by mutableStateOf(Offset.Zero)
+    var grab = Offset.Zero
+    var lastSwap: Int? = null
 }

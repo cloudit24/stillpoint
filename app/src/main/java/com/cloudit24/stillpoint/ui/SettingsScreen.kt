@@ -1,5 +1,7 @@
 package com.cloudit24.stillpoint.ui
 
+import com.cloudit24.stillpoint.data.SourceKey
+import androidx.compose.material.icons.outlined.Share
 import com.cloudit24.stillpoint.update.UpdateNotice
 import androidx.compose.material.icons.outlined.Settings
 import kotlinx.coroutines.delay
@@ -144,6 +146,7 @@ private enum class SettingsPage(val section: String, val title: String, val summ
     HUB("Extras", "Project Hub", "Connection to your own server", Icons.Outlined.CheckCircle),
     PRIVACY("System", "Permissions and data", "Usage access, gesture service, data usage", Icons.Outlined.Lock),
     FOOTPRINT("System", "Battery and memory", "What Stillpoint itself uses", Icons.Outlined.Settings),
+    SOURCES("System", "Online sources", "Use your own server or another service for anything online", Icons.Outlined.Share),
     UPDATES("System", "Updates", "Download new versions from GitHub", Icons.Outlined.Refresh),
     ABOUT("System", "About", "Version, source code and privacy", Icons.Outlined.Info),
 }
@@ -159,6 +162,8 @@ fun SettingsScreen(vm: LauncherViewModel) {
     var page by rememberSaveable { mutableStateOf<SettingsPage?>(null) }
     var picking by remember { mutableStateOf<GestureSlot?>(null) }
     var dialog by remember { mutableStateOf<SettingsDialog?>(null) }
+    var textEdit by remember { mutableStateOf<TextEdit?>(null) }
+    val settingsScope = rememberCoroutineScope()
     // Checks GitHub quietly when Settings opens (at most every 6 hours) so a new version shows at the top.
     var available by remember { mutableStateOf(UpdateNotice.cached()) }
     LaunchedEffect(Unit) { UpdateNotice.check()?.let { available = it } }
@@ -458,11 +463,37 @@ fun SettingsScreen(vm: LauncherViewModel) {
                 SettingsPage.GOLD -> {
                     Group("Gold price") {
                         ActionRow("Source", s.goldSource.label) { dialog = SettingsDialog.GOLD_SOURCE }
-                        ActionRow("Currency", s.goldCurrency) { dialog = SettingsDialog.CURRENCY }
+                        ActionRow("Show in", s.goldCurrency) { dialog = SettingsDialog.CURRENCY }
                         ActionRow("Karat", "${s.goldKarat}K") { dialog = SettingsDialog.KARAT }
                         ActionRow("Unit", if (s.goldPerGram) "Per gram" else "Per troy ounce") {
                             vm.updateSettings { it.copy(goldPerGram = !it.goldPerGram) }
                         }
+                    }
+                    if (s.goldSource == GoldSource.CUSTOM) {
+                        val g = vm.sources.gold
+                        var test by remember { mutableStateOf<String?>(null) }
+                        Group("Your source") {
+                            ActionRow("Address", g.url.ifBlank { "Not set · tap to add" }) {
+                                textEdit = TextEdit("Gold price address",
+                                    "Any web address that shows a gold price: an API, a JSON file, or a page.",
+                                    g.url, "https://…") { vm.setCustomGold(g.copy(url = it)); test = null }
+                            }
+                            ActionRow("Where the price is", g.path.ifBlank { "The first number" }) {
+                                textEdit = TextEdit("Where the price is",
+                                    "For JSON, the path to the number, like data.price or rates.XAU or 0.price. " +
+                                        "Leave empty to use the first number in the answer.",
+                                    g.path, "data.price") { vm.setCustomGold(g.copy(path = it)); test = null }
+                            }
+                            ActionRow("The price is per", if (g.perGram) "Gram" else "Troy ounce") {
+                                vm.setCustomGold(g.copy(perGram = !g.perGram)); test = null
+                            }
+                            ActionRow("In currency", g.currency) { dialog = SettingsDialog.GOLD_CUSTOM_CURRENCY }
+                            ActionRow("Test", test ?: "Fetch it now and show what was read") {
+                                test = "Checking…"
+                                settingsScope.launch { test = vm.testCustomGold() }
+                            }
+                        }
+                        Note("The price is taken as 24K; karat, unit and the currency you show are worked out from it.")
                     }
                     Group("Widget") {
                         Text("Add \"Stillpoint Gold\" from the Shelf (swipe right on home, Add widget) " +
@@ -519,6 +550,26 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         "time is the best sign of battery use: Stillpoint works only while you look at it, and wakes " +
                         "briefly at prayer times, at midnight and for syncs you switched on. Memory includes app icons " +
                         "kept ready so lists open instantly; Android takes it back when another app needs it.")
+                }
+
+                SettingsPage.SOURCES -> {
+                    Group("Addresses") {
+                        SourceKey.entries.forEach { k ->
+                            val custom = vm.sources.isCustom(k)
+                            ActionRow(k.label, (if (custom) "Yours · " else "Default · ") +
+                                vm.sources.url(k).removePrefix("https://").removePrefix("http://")) {
+                                textEdit = TextEdit(k.label, k.help, if (custom) vm.sources.url(k) else "", k.default,
+                                    onReset = { vm.setSource(k, null) }) { vm.setSource(k, it) }
+                            }
+                        }
+                    }
+                    Group("Set on their own pages") {
+                        ActionRow("Gold price", s.goldSource.label) { page = SettingsPage.GOLD }
+                        ActionRow("Calendar link", vm.icsUrl()?.let { maskUrl(it) } ?: "Not set") { page = SettingsPage.CALENDAR }
+                        ActionRow("Project Hub", vm.hubUrl() ?: "Not connected") { page = SettingsPage.HUB }
+                    }
+                    Note("Leave an address empty (Default) to use the built-in service. Nothing else goes online: " +
+                        "prayer times, Qibla, moon phase and dates are calculated on the phone.")
                 }
 
                 SettingsPage.LOCK -> {
@@ -687,6 +738,10 @@ fun SettingsScreen(vm: LauncherViewModel) {
         }
     }
 
+    textEdit?.let { t ->
+        TextSettingDialog(t, onDismiss = { textEdit = null })
+    }
+
     when (dialog) {
         SettingsDialog.ACCENT -> AccentDialog(s.accent, onDismiss = { dialog = null }) { a ->
             vm.updateSettings { it.copy(accent = a) }
@@ -742,6 +797,9 @@ fun SettingsScreen(vm: LauncherViewModel) {
         SettingsDialog.FONT -> ChoiceDialog("Font", AppFont.entries, { it.label }, onDismiss = { dialog = null }) { f ->
             vm.updateSettings { it.copy(font = f) }
         }
+        SettingsDialog.GOLD_CUSTOM_CURRENCY -> ChoiceDialog("Your source's currency", GOLD_CURRENCIES, { it }, onDismiss = { dialog = null }) { c ->
+            vm.setCustomGold(vm.sources.gold.copy(currency = c))
+        }
         SettingsDialog.ICS_URL -> IcsDialog(vm.icsUrl().orEmpty(), onDismiss = { dialog = null }) { vm.setIcsUrl(it) }
         null -> Unit
     }
@@ -753,7 +811,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
 
 private enum class SettingsDialog {
     ACCENT, HOME_STYLE, DRAWER_START, CLOCK, GOLD_SOURCE, CURRENCY, KARAT, CITY, PRAYER_CITY, PRAYER_METHOD, HUB,
-    SYNC_TASKS, SYNC_CALENDAR, SYNC_PROJECTS, ICS_URL, EDGE_STYLE, ICON_TINT, DIAL_MODE, FONT,
+    SYNC_TASKS, SYNC_CALENDAR, SYNC_PROJECTS, ICS_URL, EDGE_STYLE, ICON_TINT, DIAL_MODE, FONT, GOLD_CUSTOM_CURRENCY,
 }
 
 /** Type in the hub address and app key (from the hub's "Connect phone" page). Tested before it's saved. */
@@ -1103,5 +1161,40 @@ private fun footprint(): Footprint {
         memMb = mi.totalPss / 1024,
         cpuMs = android.os.Process.getElapsedCpuTime(),
         upMs = android.os.SystemClock.elapsedRealtime() - android.os.Process.getStartElapsedRealtime(),
+    )
+}
+
+/** A one-line text setting: what it is, a short help line, and an optional way back to the default. */
+private class TextEdit(
+    val title: String,
+    val help: String,
+    val initial: String,
+    val placeholder: String,
+    val onReset: (() -> Unit)? = null,
+    val onSave: (String) -> Unit,
+)
+
+@Composable
+private fun TextSettingDialog(t: TextEdit, onDismiss: () -> Unit) {
+    var text by remember { mutableStateOf(t.initial) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = { TextButton(onClick = { t.onSave(text.trim()); onDismiss() }) { Text("Save") } },
+        dismissButton = {
+            Row {
+                t.onReset?.let { reset -> TextButton(onClick = { reset(); onDismiss() }) { Text("Default") } }
+                TextButton(onClick = onDismiss) { Text("Cancel") }
+            }
+        },
+        title = { Text(t.title) },
+        text = {
+            Column {
+                Text(t.help, color = Muted, fontSize = 13.sp)
+                OutlinedTextField(
+                    value = text, onValueChange = { text = it }, singleLine = true,
+                    placeholder = { Text(t.placeholder) }, modifier = Modifier.padding(top = 12.dp),
+                )
+            }
+        },
     )
 }
