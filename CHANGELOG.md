@@ -3,6 +3,15 @@
 Every version of Stillpoint Launcher, newest first. Each links to its APK.
 The newest is always at **[Download the latest APK](https://github.com/cloudit24/stillpoint/releases/latest/download/Stillpoint-Launcher.apk)**.
 
+## v0.27.1 · 30 Sep 2026
+- Shelf: swiping to home is paused while you arrange, so a drag can't throw you off the page.
+- Moving widgets is smooth: the others glide out of the way, the moved one lifts with a soft shadow,
+  and the page scrolls by itself when you drag near its top or bottom.
+- Cleaner edit controls: a grab bar at the top, a round remove button (it asks first), the resize corner,
+  and the size and look buttons underneath.
+
+[stillpoint-v0.27.1.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.27.1/stillpoint-v0.27.1.apk)
+
 ## v0.27.0 · 30 Sep 2026
 - Shelf: long-press any widget to arrange, then drag the widget itself to move it.
 - Each widget can have its own look: Plain, Glass or Glow; Square, Soft or Round corners; 100, 80 or 60% opacity.

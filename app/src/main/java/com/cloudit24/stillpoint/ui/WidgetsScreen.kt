@@ -1,5 +1,17 @@
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.ui.composed
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.layout.positionInParent
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.round
+import androidx.compose.animation.core.AnimationVector2D
+import androidx.compose.animation.core.VectorConverter
+import androidx.compose.foundation.layout.offset
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.withFrameMillis
+import androidx.compose.foundation.gestures.scrollBy
 import com.cloudit24.stillpoint.data.WidgetLook
 import com.cloudit24.stillpoint.widget.LongPressHostView
 import androidx.compose.ui.draw.drawBehind
@@ -104,10 +116,31 @@ import com.cloudit24.stillpoint.Screen
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun WidgetsScreen(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderInfo) -> Unit) {
+    val density = LocalDensity.current
     var picking by rememberSaveable { mutableStateOf(false) }
     var editing by rememberSaveable { mutableStateOf(false) }
     val drag = remember { ShelfDrag() }
     val shelfAccent = Accent
+    val shelfScroll = rememberScrollState()
+    var viewport by remember { mutableStateOf(Rect.Zero) }
+    // While a widget is dragged near the top or bottom, the page scrolls by itself (faster closer to the edge).
+    LaunchedEffect(drag.id) {
+        if (drag.id == null) return@LaunchedEffect
+        val edge = with(density) { 96.dp.toPx() }
+        while (true) {
+            val f = drag.finger
+            val speed = when {
+                f.y > viewport.bottom - edge -> ((f.y - (viewport.bottom - edge)) / edge).coerceAtMost(1f) * 22f
+                f.y < viewport.top + edge -> -((viewport.top + edge - f.y) / edge).coerceAtMost(1f) * 22f
+                else -> 0f
+            }
+            if (speed != 0f) {
+                shelfScroll.scrollBy(speed)
+                drag.id?.let { drag.trySwap(it, vm) }
+            }
+            withFrameMillis { }
+        }
+    }
 
     if (picking) {
         BackHandler { picking = false }
@@ -125,7 +158,8 @@ fun WidgetsScreen(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderInfo) ->
                     center = Offset(size.width * 0.9f, 0f), radius = size.width * 1.1f,
                 ))
             }
-            .pointerInput(Unit) {
+            .pointerInput(editing) {
+                if (editing) return@pointerInput // Arranging: a drag must never leave the page.
                 val threshold = 64.dp.toPx()
                 var total = 0f
                 detectHorizontalDragGestures(
@@ -148,7 +182,8 @@ fun WidgetsScreen(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderInfo) ->
         }
 
         // The Shelf: things to keep near but off the home screen. Notes, tasks, projects, then widgets.
-        Column(Modifier.weight(1f).padding(top = 16.dp).verticalScroll(rememberScrollState())) {
+        Column(Modifier.weight(1f).padding(top = 16.dp).onGloballyPositioned { viewport = it.boundsInRoot() }
+            .verticalScroll(shelfScroll, enabled = drag.id == null)) {
             Column(Modifier.padding(horizontal = 12.dp).padding(bottom = 20.dp)) { NotesBlock(vm) }
             if (vm.settings.showTasks) {
                 Column(Modifier.padding(horizontal = 12.dp).padding(bottom = 20.dp)) { TasksBlock(vm) }
@@ -173,13 +208,16 @@ fun WidgetsScreen(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderInfo) ->
                             Box(
                                 Modifier.zIndex(if (moving) 1f else 0f)
                                     .onGloballyPositioned { drag.bounds[id] = it.boundsInRoot() }
+                                    .animatePlacement(enabled = !moving)
                                     .graphicsLayer {
                                         val b = drag.bounds[id]
                                         if (moving && b != null) {
                                             translationX = drag.finger.x - drag.grab.x - b.left
                                             translationY = drag.finger.y - drag.grab.y - b.top
-                                            scaleX = 1.03f
-                                            scaleY = 1.03f
+                                            scaleX = 1.04f
+                                            scaleY = 1.04f
+                                            shadowElevation = 24.dp.toPx()
+                                            shape = RoundedCornerShape(24.dp)
                                         }
                                     },
                             ) { AppearIn(i) { WidgetItem(vm, id, editing, areaW, drag) { editing = true } } }
@@ -218,52 +256,28 @@ private fun WidgetItem(vm: LauncherViewModel, id: Int, editing: Boolean, areaW: 
     // While the corner is dragged the widget follows the finger; otherwise size changes glide.
     var dragW by remember { mutableStateOf<Dp?>(null) }
     var dragH by remember { mutableStateOf<Dp?>(null) }
-    val dragging = dragW != null
-    val w by animateDpAsState(dragW ?: targetW, if (dragging) snap<Dp>() else spring<Dp>(stiffness = Spring.StiffnessMediumLow), label = "w")
-    val h by animateDpAsState(dragH ?: heightDp.dp, if (dragging) snap<Dp>() else spring<Dp>(stiffness = Spring.StiffnessMediumLow), label = "h")
+    val resizing = dragW != null
+    val w by animateDpAsState(dragW ?: targetW, if (resizing) snap<Dp>() else spring<Dp>(stiffness = Spring.StiffnessMediumLow), label = "w")
+    val h by animateDpAsState(dragH ?: heightDp.dp, if (resizing) snap<Dp>() else spring<Dp>(stiffness = Spring.StiffnessMediumLow), label = "h")
     val curW by rememberUpdatedState(w)
     val curH by rememberUpdatedState(h)
     val look = vm.widgetLooks[id] ?: WidgetLook()
-    val lookAccent = Accent
+    val accent = Accent
     val latestArrange by rememberUpdatedState(onArrange)
+    var confirmRemove by remember { mutableStateOf(false) }
+    val label = info?.loadLabel(context.packageManager) ?: "Widget no longer available"
 
     Column(Modifier.width(w).padding(vertical = 6.dp)) {
         if (editing || info == null) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(info?.loadLabel(context.packageManager) ?: "Widget no longer available",
-                    color = Muted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                if (info != null) {
-                    Text("‹", fontSize = 20.sp, color = Muted, modifier = Modifier.clickable { vm.moveWidget(id, -1) }.padding(horizontal = 8.dp))
-                    Text("›", fontSize = 20.sp, color = Muted, modifier = Modifier.clickable { vm.moveWidget(id, 1) }.padding(horizontal = 8.dp))
-                }
-                Text("Remove", color = Accent, fontSize = 13.sp, modifier = Modifier.clickable { vm.removeWidget(id) }.padding(6.dp))
-            }
+            Text(label, color = Muted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(start = 4.dp, bottom = 4.dp))
         }
-        if (info == null || natural == null) return@Column
-        if (editing) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("−", fontSize = 20.sp, modifier = Modifier.clip(CircleShape)
-                    .clickable { vm.setWidgetSize(id, (heightDp - 20).coerceAtLeast(natural.minHeight), widthSetting) }
-                    .padding(horizontal = 10.dp))
-                Text("$heightDp", fontSize = 13.sp, color = Muted)
-                Text("+", fontSize = 20.sp, modifier = Modifier.clip(CircleShape)
-                    .clickable { vm.setWidgetSize(id, (heightDp + 20).coerceAtMost(natural.maxHeight), widthSetting) }
-                    .padding(horizontal = 10.dp))
-                Spacer(Modifier.weight(1f))
-                Text(if (widthSetting == 0) "Full" else "Own", color = Accent, fontSize = 13.sp,
-                    modifier = Modifier.clickable { vm.setWidgetSize(id, heightDp, if (widthSetting == 0) -1 else 0) }.padding(6.dp))
-            }
-            // Its look: each chip moves to the next choice.
-            Row(Modifier.padding(bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                LookChip(listOf("Plain", "Glass", "Glow")[look.style]) { vm.setWidgetLook(id, look.copy(style = (look.style + 1) % 3)) }
-                LookChip(listOf("Square", "Soft", "Round")[look.corners]) { vm.setWidgetLook(id, look.copy(corners = (look.corners + 1) % 3)) }
-                LookChip("${look.alpha}%") {
-                    vm.setWidgetLook(id, look.copy(alpha = when (look.alpha) { 100 -> 80; 80 -> 60; else -> 100 }))
-                }
-            }
+        if (info == null || natural == null) {
+            Text("Remove", color = Accent, fontSize = 13.sp, modifier = Modifier.clickable { vm.removeWidget(id) }.padding(6.dp))
+            return@Column
         }
         var hostView by remember { mutableStateOf<AppWidgetHostView?>(null) }
-        Box(Modifier.fillMaxWidth().height(h).widgetLook(look, lookAccent)) {
+        Box(Modifier.fillMaxWidth().height(h).widgetLook(look, accent)) {
             AndroidView(
                 factory = { ctx ->
                     vm.widgetHost.createView(ctx, id, info).also { v ->
@@ -280,19 +294,18 @@ private fun WidgetItem(vm: LauncherViewModel, id: Int, editing: Boolean, areaW: 
                     .onSizeChanged { size -> hostView?.let { reportSize(it, size.width / density.density, size.height / density.density) } },
             )
             if (editing) {
-                val accent = Accent
-                Box(Modifier.matchParentSize().border(1.dp, accent.copy(alpha = 0.45f), RoundedCornerShape(cornerFor(look) + 4.dp)))
-                // Drag anywhere on the widget to move it; the others make room. The dots are only a hint.
-                var gripAt by remember { mutableStateOf(Offset.Zero) }
+                Box(Modifier.matchParentSize().border(1.dp, accent.copy(alpha = 0.5f), RoundedCornerShape(cornerFor(look) + 4.dp)))
+                // Move: the whole widget is the handle. The others glide out of the way.
+                var areaAt by remember { mutableStateOf(Offset.Zero) }
                 Box(
                     Modifier.matchParentSize()
-                        .onGloballyPositioned { gripAt = it.boundsInRoot().topLeft }
+                        .onGloballyPositioned { areaAt = it.boundsInRoot().topLeft }
                         .pointerInput(id) {
                             detectDragGestures(
                                 onDragStart = { at ->
                                     val b = drag.bounds[id]
                                     if (b != null) {
-                                        drag.finger = gripAt + at
+                                        drag.finger = areaAt + at
                                         drag.grab = drag.finger - b.topLeft
                                         drag.lastSwap = null
                                         drag.id = id
@@ -304,25 +317,25 @@ private fun WidgetItem(vm: LauncherViewModel, id: Int, editing: Boolean, areaW: 
                                     change.consume()
                                     if (drag.id == id) {
                                         drag.finger += amount
-                                        val over = drag.bounds.entries
-                                            .firstOrNull { it.key != id && it.key in vm.widgetIds && it.value.contains(drag.finger) }?.key
-                                        if (over == null) drag.lastSwap = null
-                                        else if (over != drag.lastSwap) {
-                                            vm.moveWidgetTo(id, vm.widgetIds.indexOf(over))
-                                            drag.lastSwap = over
-                                        }
+                                        drag.trySwap(id, vm)
                                     }
                                 },
                             )
                         },
-                ) {
-                    Canvas(Modifier.align(Alignment.TopStart).size(40.dp).padding(14.dp)) {
-                        for (r in 0..2) for (c in 0..1) {
-                            drawCircle(accent, 1.8.dp.toPx(), Offset(c * size.width, r * size.height / 2))
-                        }
-                    }
-                }
-                // Corner handle: drag to resize. Snaps to full width and to half (two side by side).
+                )
+                // Grab bar, top centre: a quiet sign that the widget can be moved.
+                Box(
+                    Modifier.align(Alignment.TopCenter).padding(top = 8.dp).width(34.dp).height(5.dp)
+                        .clip(RoundedCornerShape(50)).background(accent.copy(alpha = 0.9f)),
+                )
+                // Remove, top-left.
+                Box(
+                    Modifier.align(Alignment.TopStart).padding(6.dp).size(26.dp).clip(CircleShape)
+                        .background(Color(0xE6262624)).border(0.5.dp, Color.White.copy(alpha = 0.2f), CircleShape)
+                        .clickable { confirmRemove = true },
+                    contentAlignment = Alignment.Center,
+                ) { Text("−", color = Ink, fontSize = 17.sp) }
+                // Resize, bottom-right. Snaps to full width and to half (two side by side).
                 Box(
                     Modifier.align(Alignment.BottomEnd).size(40.dp).pointerInput(id, areaW) {
                         detectDragGestures(
@@ -357,7 +370,55 @@ private fun WidgetItem(vm: LauncherViewModel, id: Int, editing: Boolean, areaW: 
                 }
             }
         }
+        if (editing) {
+            Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("−", fontSize = 20.sp, modifier = Modifier.clip(CircleShape)
+                    .clickable { vm.setWidgetSize(id, (heightDp - 20).coerceAtLeast(natural.minHeight), widthSetting) }
+                    .padding(horizontal = 10.dp))
+                Text("$heightDp", fontSize = 13.sp, color = Muted)
+                Text("+", fontSize = 20.sp, modifier = Modifier.clip(CircleShape)
+                    .clickable { vm.setWidgetSize(id, (heightDp + 20).coerceAtMost(natural.maxHeight), widthSetting) }
+                    .padding(horizontal = 10.dp))
+                Spacer(Modifier.weight(1f))
+                LookChip(if (widthSetting == 0) "Full" else "Own") {
+                    vm.setWidgetSize(id, heightDp, if (widthSetting == 0) -1 else 0)
+                }
+            }
+            // Its look: each chip moves to the next choice.
+            Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                LookChip(listOf("Plain", "Glass", "Glow")[look.style]) { vm.setWidgetLook(id, look.copy(style = (look.style + 1) % 3)) }
+                LookChip(listOf("Square", "Soft", "Round")[look.corners]) { vm.setWidgetLook(id, look.copy(corners = (look.corners + 1) % 3)) }
+                LookChip("${look.alpha}%") {
+                    vm.setWidgetLook(id, look.copy(alpha = when (look.alpha) { 100 -> 80; 80 -> 60; else -> 100 }))
+                }
+            }
+        }
     }
+    if (confirmRemove) {
+        AlertDialog(
+            onDismissRequest = { confirmRemove = false },
+            confirmButton = { TextButton(onClick = { confirmRemove = false; vm.removeWidget(id) }) { Text("Remove") } },
+            dismissButton = { TextButton(onClick = { confirmRemove = false }) { Text("Keep") } },
+            title = { Text("Remove $label?") },
+        )
+    }
+}
+
+/** Other widgets glide to their new place when one is moved, instead of jumping there. */
+private fun Modifier.animatePlacement(enabled: Boolean): Modifier = composed {
+    val scope = rememberCoroutineScope()
+    var target by remember { mutableStateOf(IntOffset.Zero) }
+    var anim by remember { mutableStateOf<Animatable<IntOffset, AnimationVector2D>?>(null) }
+    this.onPlaced { target = it.positionInParent().round() }
+        .offset {
+            val a = anim ?: Animatable(target, IntOffset.VectorConverter).also { anim = it }
+            if (a.targetValue != target) {
+                scope.launch {
+                    if (enabled) a.animateTo(target, spring(stiffness = Spring.StiffnessMediumLow)) else a.snapTo(target)
+                }
+            }
+            if (enabled) a.value - target else IntOffset.Zero
+        }
 }
 
 /** Widgets settle into place when the page opens: a short fade and rise, one after another. Nothing more. */
@@ -565,6 +626,23 @@ private class ShelfDrag {
     var finger by mutableStateOf(Offset.Zero)
     var grab = Offset.Zero
     var lastSwap: Int? = null
+
+    /**
+     * Takes another widget's place once the finger is well inside it (not just its edge),
+     * so two widgets don't flip back and forth at the border.
+     */
+    fun trySwap(id: Int, vm: LauncherViewModel) {
+        val over = bounds.entries.firstOrNull { (k, r) ->
+            k != id && k in vm.widgetIds && r.deflate(minOf(r.width, r.height) * 0.2f).contains(finger)
+        }?.key
+        if (over == null) {
+            lastSwap = null
+            return
+        }
+        if (over == lastSwap) return
+        vm.moveWidgetTo(id, vm.widgetIds.indexOf(over))
+        lastSwap = over
+    }
 }
 
 private fun cornerFor(look: WidgetLook): Dp = when (look.corners) {
