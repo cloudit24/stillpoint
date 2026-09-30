@@ -138,8 +138,9 @@ fun appIcon(vm: LauncherViewModel, app: AppEntry, size: Dp): (@Composable () -> 
 @Composable
 fun AppIcon(vm: LauncherViewModel, app: AppEntry, size: Dp) {
     val px = with(LocalDensity.current) { size.roundToPx() }
+    // Keyed on the app: when a list reorders, the icon must change with it (the old code kept the previous picture).
     val bmp by produceState(vm.cachedIcon(app), app.key) {
-        if (value == null) value = vm.loadIcon(app, px)
+        value = vm.cachedIcon(app) ?: vm.loadIcon(app, px)
     }
     val tint = vm.settings.iconTint
     val accent = Accent

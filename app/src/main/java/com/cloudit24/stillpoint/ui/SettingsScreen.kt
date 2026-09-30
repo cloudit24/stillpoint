@@ -358,7 +358,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         }
                     }
                     Group("Bottom shortcuts") {
-                        listOf(GestureSlot.SHORTCUT_LEFT, GestureSlot.SHORTCUT_RIGHT).forEach { slot ->
+                        listOf(GestureSlot.SHORTCUT_LEFT, GestureSlot.SHORTCUT_MIDDLE, GestureSlot.SHORTCUT_RIGHT).forEach { slot ->
                             ActionRow(slot.label, vm.targetLabel(s.gesture(slot)) ?: "Nothing") { picking = slot }
                         }
                     }

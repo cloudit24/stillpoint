@@ -39,17 +39,21 @@ class StillpointWidget : AppWidgetProvider() {
             val s = Prefs(context).loadSettings()
             val today = LocalDate.now()
             val views = RemoteViews(context.packageName, R.layout.widget_stillpoint)
+            val accent = s.accent.toInt()
+            views.setInt(R.id.widget_glow, "setColorFilter", accent)
+            views.setInt(R.id.widget_dot, "setColorFilter", accent)
+            views.setTextColor(R.id.widget_date, accent)
             views.setTextViewText(R.id.widget_hijri, Calendars.hijri(today, s.hijriAdjust))
             views.setTextViewText(R.id.widget_tamil, Calendars.tamil(today))
 
             val city = s.city
             val next = city?.let { PrayerTimes.next(System.currentTimeMillis(), it.lat, it.lon, s.prayerMethod, s.asrHanafi) }
             if (next == null) {
-                views.setViewVisibility(R.id.widget_prayer, View.GONE)
+                views.setViewVisibility(R.id.widget_prayer_row, View.GONE)
             } else {
-                views.setViewVisibility(R.id.widget_prayer, View.VISIBLE)
+                views.setViewVisibility(R.id.widget_prayer_row, View.VISIBLE)
                 views.setTextViewText(R.id.widget_prayer,
-                    "Next  ${next.first.label}  ${DateFormat.getTimeFormat(context).format(Date(next.second))}")
+                    "${next.first.label} at ${DateFormat.getTimeFormat(context).format(Date(next.second))}")
             }
             views.setOnClickPendingIntent(R.id.widget_root, openApp(context))
             manager.updateAppWidget(ids, views)

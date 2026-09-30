@@ -1,5 +1,6 @@
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.runtime.key
 import androidx.compose.material3.Icon
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Search
@@ -251,6 +252,10 @@ fun HomeScreen(vm: LauncherViewModel) {
             }
             .padding(horizontal = 28.dp, vertical = 24.dp),
     ) {
+        // Headline, info and cards share the space left above the apps; if they need more, they scroll
+        // (only then, so swipe gestures keep working when everything fits).
+        val topScroll = rememberScrollState()
+        Column(Modifier.weight(1f).verticalScroll(topScroll, enabled = topScroll.maxValue > 0)) {
         HeroHeader(vm, s, now)
 
         if (s.showUsage) {
@@ -273,11 +278,12 @@ fun HomeScreen(vm: LauncherViewModel) {
             )
         }
 
-        Column(Modifier.weight(1f).padding(top = 28.dp).verticalScroll(rememberScrollState())) {
+        Column(Modifier.padding(top = 28.dp)) {
             if (s.hubOn) {
                 if (s.projectsSource == ProjectSource.HUB) HubCard(vm, now) else LocalProjectCard(vm)
             }
             if (s.showAgenda) AgendaBlock(context, vm.agenda)
+        }
         }
 
         if (homeApps.isEmpty()) {
@@ -294,7 +300,7 @@ fun HomeScreen(vm: LauncherViewModel) {
             if (s.homeStyle == HomeStyle.ICONS) {
                 HomeIcons(vm, homeApps, (s.homeSize * 2).dp)
             } else {
-                homeApps.forEach { app ->
+                homeApps.forEach { app -> key(app.key) {
                     AppRow(
                         label = app.label,
                         usageMs = if (s.showUsage) vm.usage[app.packageName] else null,
@@ -303,7 +309,7 @@ fun HomeScreen(vm: LauncherViewModel) {
                         icon = appIcon(vm, app, (s.homeSize * 1.4f * listScale).dp),
                         rowPadding = 5.dp,
                     )
-                }
+                } }
             }
         }
 
@@ -314,16 +320,21 @@ fun HomeScreen(vm: LauncherViewModel) {
                 Text(label, color = Muted, modifier = Modifier.clickable { runTarget(vm, context, left) }.padding(vertical = 10.dp))
             }
             Spacer(Modifier.weight(1f))
-            // Search straight from home: opens the app list with the keyboard up.
-            Row(
-                Modifier.clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = 0.06f))
-                    .border(0.5.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(50))
-                    .clickable { vm.openSearch = true; vm.screen = Screen.DRAWER }
-                    .padding(horizontal = 18.dp, vertical = 9.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(Icons.Outlined.Search, contentDescription = null, tint = Muted, modifier = Modifier.size(18.dp))
-                Text("Search", color = Muted, fontSize = 14.sp, modifier = Modifier.padding(start = 8.dp))
+            // The middle shortcut (Settings, Gestures): Search by default, or any app or action, or nothing.
+            val middle = s.gesture(GestureSlot.SHORTCUT_MIDDLE)
+            vm.targetLabel(middle)?.let { label ->
+                val isSearch = GestureTarget.actionOf(middle) == HomeAction.SEARCH
+                Row(
+                    Modifier.clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = 0.06f))
+                        .border(0.5.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(50))
+                        .clickable { runTarget(vm, context, middle) }
+                        .padding(horizontal = 18.dp, vertical = 9.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (isSearch) Icon(Icons.Outlined.Search, contentDescription = null, tint = Muted, modifier = Modifier.size(18.dp))
+                    Text(label, color = Muted, fontSize = 14.sp, maxLines = 1,
+                        modifier = Modifier.padding(start = if (isSearch) 8.dp else 0.dp))
+                }
             }
             Spacer(Modifier.weight(1f))
             vm.targetLabel(right)?.let { label ->
@@ -363,7 +374,9 @@ private fun RecentStrip(vm: LauncherViewModel, apps: List<AppEntry>) {
         Text("RECENT", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.4.sp)
         Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             apps.forEach { app ->
-                Box(Modifier.clip(RoundedCornerShape(10.dp)).clickable { vm.launch(app) }) { AppIcon(vm, app, 34.dp) }
+                key(app.key) {
+                    Box(Modifier.clip(RoundedCornerShape(10.dp)).clickable { vm.launch(app) }) { AppIcon(vm, app, 34.dp) }
+                }
             }
         }
     }

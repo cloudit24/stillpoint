@@ -81,6 +81,7 @@ val GOLD_CURRENCIES = listOf("AED", "USD", "EUR", "GBP", "INR", "SAR", "PHP", "C
 enum class HomeAction(val label: String, val needsGestureService: Boolean = false) {
     NONE("Nothing"),
     APPS("All apps"),
+    SEARCH("Search"),
     WIDGETS("Widgets"),
     PHONE("Phone"),
     CAMERA("Camera"),
@@ -112,6 +113,7 @@ enum class GestureSlot(val label: String) {
     SWIPE_DOWN("Swipe down"),
     DOUBLE_TAP("Double-tap"),
     SHORTCUT_LEFT("Bottom-left shortcut"),
+    SHORTCUT_MIDDLE("Bottom-middle shortcut"),
     SHORTCUT_RIGHT("Bottom-right shortcut"),
 }
 
@@ -122,6 +124,7 @@ val DEFAULT_GESTURES: Map<GestureSlot, String> = mapOf(
     GestureSlot.SWIPE_DOWN to GestureTarget.action(HomeAction.NONE),
     GestureSlot.DOUBLE_TAP to GestureTarget.action(HomeAction.NONE),
     GestureSlot.SHORTCUT_LEFT to GestureTarget.action(HomeAction.FOCUS),
+    GestureSlot.SHORTCUT_MIDDLE to GestureTarget.action(HomeAction.SEARCH),
     GestureSlot.SHORTCUT_RIGHT to GestureTarget.action(HomeAction.PHONE),
 )
 

@@ -3,7 +3,7 @@
     android:description="@string/prayer_widget_description"
     android:initialLayout="@layout/widget_prayer"
     android:minWidth="250dp"
-    android:minHeight="140dp"
+    android:minHeight="160dp"
     android:previewLayout="@layout/widget_prayer"
     android:resizeMode="horizontal|vertical"
     android:targetCellWidth="4"

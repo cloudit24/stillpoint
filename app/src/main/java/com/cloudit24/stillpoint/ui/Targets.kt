@@ -15,6 +15,7 @@ fun runTarget(vm: LauncherViewModel, context: Context, target: String) {
     vm.appForTarget(target)?.let { vm.launch(it); return }
     when (GestureTarget.actionOf(target)) {
         HomeAction.APPS -> vm.screen = Screen.DRAWER
+        HomeAction.SEARCH -> { vm.openSearch = true; vm.screen = Screen.DRAWER }
         HomeAction.WIDGETS -> vm.screen = Screen.WIDGETS
         HomeAction.FOCUS -> vm.screen = Screen.FOCUS
         HomeAction.SETTINGS -> vm.screen = Screen.SETTINGS
