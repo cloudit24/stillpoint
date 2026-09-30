@@ -1,5 +1,6 @@
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.remember
 import androidx.compose.ui.text.TextStyle
@@ -32,6 +33,7 @@ val Accent: Color
     @Composable @ReadOnlyComposable get() = LocalAccent.current
 
 /** Bundled variable fonts: one file each, every weight drawn from it. */
+@OptIn(ExperimentalTextApi::class)
 private fun variable(res: Int, lo: Int, hi: Int) = FontFamily((1..9).map { i ->
     val w = i * 100
     Font(res, FontWeight(w), variationSettings = FontVariation.Settings(FontVariation.weight(w.coerceIn(lo, hi))))
