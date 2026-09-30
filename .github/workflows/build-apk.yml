@@ -65,5 +65,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cp out/stillpoint-github.apk "out/stillpoint-${GITHUB_REF_NAME}.apk"
-          gh release create "$GITHUB_REF_NAME" "out/stillpoint-${GITHUB_REF_NAME}.apk" \
-            --title "Stillpoint Launcher ${GITHUB_REF_NAME}" --generate-notes
+          # Same file under a fixed name, so .../releases/latest/download/Stillpoint-Launcher.apk always works.
+          cp out/stillpoint-github.apk out/Stillpoint-Launcher.apk
+          # Notes: this version's section of CHANGELOG.md, then how to install.
+          awk -v v="## ${GITHUB_REF_NAME} " 'index($0, v) == 1 { on = 1; next } /^## / { on = 0 } on && !/\.apk\]/' CHANGELOG.md > notes.md
+          printf '\n### Install\nDownload **stillpoint-%s.apk** below (Android 8.0 or newer). Already installed? Update from Settings, Updates.\n\nAll versions: [CHANGELOG.md](https://github.com/cloudit24/stillpoint/blob/main/CHANGELOG.md)\n' "$GITHUB_REF_NAME" >> notes.md
+          gh release create "$GITHUB_REF_NAME" "out/stillpoint-${GITHUB_REF_NAME}.apk" out/Stillpoint-Launcher.apk \
+            --title "Stillpoint Launcher ${GITHUB_REF_NAME}" --notes-file notes.md

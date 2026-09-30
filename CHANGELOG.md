@@ -1,0 +1,178 @@
+# Changelog
+
+Every version of Stillpoint Launcher, newest first. Each links to its APK.
+The newest is always at **[Download the latest APK](https://github.com/cloudit24/stillpoint/releases/latest/download/Stillpoint-Launcher.apk)**.
+
+## v0.26.0 · 30 Sep 2026
+- Use your own source for anything online: gold price (any address, with a "where the price is" path and a Test button), weather, city search, currency rates and public IP. Settings → System → Online sources.
+- Shelf: drag a widget by its grip to move it; the others make room.
+
+[stillpoint-v0.26.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.26.0/stillpoint-v0.26.0.apk)
+
+## v0.25.0 · 30 Sep 2026
+- The widget page is now the Shelf, with Notes. Widgets can sit side by side.
+- Choose a font: Inter, Manrope, Space Grotesk, Lora or the phone's own. Joined letters ("tt") are turned off.
+- Battery and memory page: what Stillpoint itself uses.
+- Update check in the background, with one quiet notification per new version.
+
+[stillpoint-v0.25.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.25.0/stillpoint-v0.25.0.apk)
+
+## v0.24.0 · 30 Sep 2026
+- Home is a fixed frame of zones; a full zone scrolls inside itself with soft edges instead of pushing others away.
+- Widgets resize from the corner and settle in gently when the page opens.
+
+[stillpoint-v0.24.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.24.0/stillpoint-v0.24.0.apk)
+
+## v0.23.0 · 30 Sep 2026
+- Widgets from any app fit: real sizes, resizing, lists that scroll.
+- Update notice at the top of Settings.
+
+[stillpoint-v0.23.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.23.0/stillpoint-v0.23.0.apk)
+
+## v0.22.1 · 30 Sep 2026
+- Headline cards keep one height, so nothing below moves when they flip.
+
+[stillpoint-v0.22.1.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.22.1/stillpoint-v0.22.1.apk)
+
+## v0.22.0 · 30 Sep 2026
+- Fixed recent app icons opening the wrong app.
+- The bottom shortcuts always stay on screen; the middle one (Search) can be any app or action, or hidden.
+- Redesigned widgets.
+
+[stillpoint-v0.22.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.22.0/stillpoint-v0.22.0.apk)
+
+## v0.21.1 · 29 Sep 2026
+- Ring text always fits inside the circle; pinned apps have a set space that scrolls.
+
+[stillpoint-v0.21.1.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.21.1/stillpoint-v0.21.1.apk)
+
+## v0.21.0 · 29 Sep 2026
+- A clean prayer ring: the current prayer and the time left, nothing else.
+
+[stillpoint-v0.21.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.21.0/stillpoint-v0.21.0.apk)
+
+## v0.20.0 · 29 Sep 2026
+- Settings reorganised into Appearance and Home screen.
+- Stillpoint Prayer widget with the moon phase.
+
+[stillpoint-v0.20.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.20.0/stillpoint-v0.20.0.apk)
+
+## v0.19.0 · 29 Sep 2026
+- New logo and name: Stillpoint Launcher.
+
+[stillpoint-v0.19.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.19.0/stillpoint-v0.19.0.apk)
+
+## v0.18.0 · 29 Sep 2026
+- The ring beside the headline can show the next prayer, battery or time left, or be off. Screen time became a headline card.
+
+[stillpoint-v0.18.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.18.0/stillpoint-v0.18.0.apk)
+
+## v0.17.0 · 29 Sep 2026
+- Info panels can be combined; Islamic prayer moved under Extras; a Dates page.
+
+[stillpoint-v0.17.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.17.0/stillpoint-v0.17.0.apk)
+
+## v0.16.2 · 29 Sep 2026
+- Security: settings never leave the phone; updates only from this project; calendar links limited in size.
+
+[stillpoint-v0.16.2.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.16.2/stillpoint-v0.16.2.apk)
+
+## v0.16.1 · 29 Sep 2026
+- Day dial animation and finishing rings.
+
+[stillpoint-v0.16.1.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.16.1/stillpoint-v0.16.1.apk)
+
+## v0.16.0 · 29 Sep 2026
+- Info panel under the headline, recently used apps, swipe back from the app list. Old clock styles removed.
+
+[stillpoint-v0.16.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.16.0/stillpoint-v0.16.0.apk)
+
+## v0.15.0 · 29 Sep 2026
+- Day dial, search button on home, one-line edge light.
+
+[stillpoint-v0.15.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.15.0/stillpoint-v0.15.0.apk)
+
+## v0.14.0 · 29 Sep 2026
+- Weather card, grey icons, scrolling pinned list, crash report kept on the phone.
+
+[stillpoint-v0.14.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.14.0/stillpoint-v0.14.0.apk)
+
+## v0.13.0 · 29 Sep 2026
+- Edge light settings, with styles for flat screens.
+
+[stillpoint-v0.13.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.13.0/stillpoint-v0.13.0.apk)
+
+## v0.12.1 · 29 Sep 2026
+- Edge light shows the current and next prayer; widgets fit their space.
+
+[stillpoint-v0.12.1.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.12.1/stillpoint-v0.12.1.apk)
+
+## v0.12.0 · 29 Sep 2026
+- Prayer and iqama alerts, edge light, Qibla compass vibration.
+
+[stillpoint-v0.12.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.12.0/stillpoint-v0.12.0.apk)
+
+## v0.11.0 · 28 Sep 2026
+- Tasks, calendar and projects from the phone, Tasks.org, OpenTasks, a calendar link or Project Hub, with sync options.
+
+[stillpoint-v0.11.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.11.0/stillpoint-v0.11.0.apk)
+
+## v0.10.0 · 28 Sep 2026
+- Lock screen info, Stillpoint Gold widget.
+
+[stillpoint-v0.10.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.10.0/stillpoint-v0.10.0.apk)
+
+## v0.9.0 · 28 Sep 2026
+- Clock-free home with a flipping headline.
+
+[stillpoint-v0.9.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.9.0/stillpoint-v0.9.0.apk)
+
+## v0.8.2 · 28 Sep 2026
+- Home layout tidied.
+
+[stillpoint-v0.8.2.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.8.2/stillpoint-v0.8.2.apk)
+
+## v0.8.1 · 28 Sep 2026
+- Home alignment fixes.
+
+[stillpoint-v0.8.1.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.8.1/stillpoint-v0.8.1.apk)
+
+## v0.8.0 · 28 Sep 2026
+- Optional Project Hub connection.
+
+[stillpoint-v0.8.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.8.0/stillpoint-v0.8.0.apk)
+
+## v0.7.1 · 28 Sep 2026
+- Organised settings; Stillpoint Widget.
+
+[stillpoint-v0.7.1.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.7.1/stillpoint-v0.7.1.apk)
+
+## v0.7.0 · 28 Sep 2026
+- Accent colours, pivot tabs, search button, slide transitions.
+
+[stillpoint-v0.7.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.7.0/stillpoint-v0.7.0.apk)
+
+## v0.6.0 · 28 Sep 2026
+- Prayer times, Qibla compass, Hijri and Tamil dates.
+
+[stillpoint-v0.6.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.6.0/stillpoint-v0.6.0.apk)
+
+## v0.5.0 · 28 Sep 2026
+- Local and public IP address on home.
+
+[stillpoint-v0.5.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.5.0/stillpoint-v0.5.0.apk)
+
+## v0.4.0 · 28 Sep 2026
+- Data usage per app.
+
+[stillpoint-v0.4.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.4.0/stillpoint-v0.4.0.apk)
+
+## v0.3.1 · 28 Sep 2026
+- Gold price: Dubai shop rate by default.
+
+[stillpoint-v0.3.1.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.3.1/stillpoint-v0.3.1.apk)
+
+## v0.3.0 · 28 Sep 2026
+- First public release: app list with tabs and favorites, gestures, clock styles, weather, gold price, in-app updates.
+
+[stillpoint-v0.3.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.3.0/stillpoint-v0.3.0.apk)
