@@ -1,5 +1,6 @@
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.BoxWithConstraints
 import com.cloudit24.stillpoint.data.Moon
 import androidx.compose.ui.graphics.asComposePath
@@ -195,13 +196,20 @@ private fun FlipCard(key: Int, card: HeroCard, modifier: Modifier) {
         cameraDistance = 14f * density
     }) {
         // Shrinks until the whole line fits next to the dial (down to 22 sp) instead of cutting it off.
+        // Fixed heights: every card takes exactly the same space (Tamil script is taller than English),
+        // so nothing below moves when the card flips.
         var size by remember(display.title) { mutableFloatStateOf(if (display.small) 30f else 40f) }
-        Text(display.title, color = display.color, fontSize = size.sp, lineHeight = 46.sp,
-            fontWeight = FontWeight.Light, maxLines = 1, softWrap = false,
-            overflow = if (size > 22f) TextOverflow.Clip else TextOverflow.Ellipsis,
-            onTextLayout = { if (it.hasVisualOverflow && size > 22f) size -= 2f })
-        Text(display.subtitle, color = Muted, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(top = 2.dp))
+        Box(Modifier.fillMaxWidth().height(54.dp), contentAlignment = Alignment.CenterStart) {
+            Text(display.title, color = display.color, fontSize = size.sp, lineHeight = 46.sp,
+                fontWeight = FontWeight.Light, maxLines = 1, softWrap = false,
+                overflow = if (size > 22f) TextOverflow.Clip else TextOverflow.Ellipsis,
+                modifier = Modifier.wrapContentHeight(unbounded = true),
+                onTextLayout = { if (it.hasVisualOverflow && size > 22f) size -= 2f })
+        }
+        Box(Modifier.fillMaxWidth().height(24.dp), contentAlignment = Alignment.CenterStart) {
+            Text(display.subtitle, color = Muted, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.wrapContentHeight(unbounded = true))
+        }
     }
 }
 
