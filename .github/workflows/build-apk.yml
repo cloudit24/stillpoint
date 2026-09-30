@@ -44,7 +44,8 @@ jobs:
           STILLPOINT_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           STILLPOINT_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           STILLPOINT_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: gradle :app:assembleGithubRelease :app:assembleFdroidRelease --stacktrace
+        # The checks run first; if one fails, nothing is built or released.
+        run: gradle :app:testGithubDebugUnitTest :app:assembleGithubRelease :app:assembleFdroidRelease --stacktrace
 
       - name: Collect APKs
         run: |

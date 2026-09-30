@@ -1,5 +1,7 @@
 package com.cloudit24.stillpoint.ui
 
+import com.cloudit24.stillpoint.data.Backup
+import androidx.compose.material.icons.outlined.Send
 import com.cloudit24.stillpoint.data.SourceKey
 import androidx.compose.material.icons.outlined.Share
 import com.cloudit24.stillpoint.update.UpdateNotice
@@ -145,6 +147,7 @@ private enum class SettingsPage(val section: String, val title: String, val summ
     GOLD("Extras", "Gold price", "Home line and widget · uses outside websites", Icons.Outlined.Star),
     HUB("Extras", "Project Hub", "Connection to your own server", Icons.Outlined.CheckCircle),
     PRIVACY("System", "Permissions and data", "Usage access, gesture service, data usage", Icons.Outlined.Lock),
+    BACKUP("System", "Backup and restore", "Keep your setup in a file, bring it to a new phone", Icons.Outlined.Send),
     FOOTPRINT("System", "Battery and memory", "What Stillpoint itself uses", Icons.Outlined.Settings),
     SOURCES("System", "Online sources", "Use your own server or another service for anything online", Icons.Outlined.Share),
     UPDATES("System", "Updates", "Download new versions from GitHub", Icons.Outlined.Refresh),
@@ -163,6 +166,24 @@ fun SettingsScreen(vm: LauncherViewModel) {
     var picking by remember { mutableStateOf<GestureSlot?>(null) }
     var dialog by remember { mutableStateOf<SettingsDialog?>(null) }
     var textEdit by remember { mutableStateOf<TextEdit?>(null) }
+    var backupNote by remember { mutableStateOf<String?>(null) }
+    var restored by remember { mutableStateOf(false) }
+    val saveBackup = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri != null) {
+            backupNote = runCatching {
+                ctx.contentResolver.openOutputStream(uri)?.use { it.write(Backup.export(ctx).toByteArray()) }
+                "Saved. Keep the file somewhere safe, like Drive or a computer."
+            }.getOrElse { "Couldn't save the file: ${it.message}" }
+        }
+    }
+    val openBackup = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            runCatching {
+                val text = ctx.contentResolver.openInputStream(uri)!!.bufferedReader().use { it.readText() }
+                Backup.import(ctx, text)
+            }.onSuccess { restored = true }.onFailure { backupNote = it.message ?: "Couldn't read that file." }
+        }
+    }
     val settingsScope = rememberCoroutineScope()
     // Checks GitHub quietly when Settings opens (at most every 6 hours) so a new version shows at the top.
     var available by remember { mutableStateOf(UpdateNotice.cached()) }
@@ -524,6 +545,21 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         "else. Choose what uses it under Productivity: Tasks, Calendar and Projects. Use https unless the hub is on your home network.")
                 }
 
+                SettingsPage.BACKUP -> {
+                    Group("Backup") {
+                        ActionRow("Save a backup file", "Settings, notes, tasks, projects, pinned apps, favorites, gestures") {
+                            saveBackup.launch("stillpoint-backup-${java.time.LocalDate.now()}.json")
+                        }
+                        ActionRow("Restore from a file", "Puts a backup's setup in place, then Stillpoint restarts") {
+                            openBackup.launch(arrayOf("application/json", "text/plain", "application/octet-stream"))
+                        }
+                    }
+                    backupNote?.let { Note(it) }
+                    Note("You choose where the file goes; Stillpoint uploads nothing. It includes your Project Hub key " +
+                        "and calendar link if you set them, so keep it private. Widgets aren't included: they belong " +
+                        "to one phone, so add them again on the new one.")
+                }
+
                 SettingsPage.FOOTPRINT -> {
                     var f by remember { mutableStateOf(footprint()) }
                     LaunchedEffect(Unit) {
@@ -736,6 +772,22 @@ fun SettingsScreen(vm: LauncherViewModel) {
                 }
             }
         }
+    }
+
+    if (restored) {
+        AlertDialog(
+            onDismissRequest = {},
+            confirmButton = {
+                TextButton(onClick = {
+                    // Start fresh so every screen reads the restored setup.
+                    val launch = ctx.packageManager.getLaunchIntentForPackage(ctx.packageName)
+                    if (launch?.component != null) ctx.startActivity(Intent.makeRestartActivityTask(launch.component))
+                    Runtime.getRuntime().exit(0)
+                }) { Text("Restart") }
+            },
+            title = { Text("Restored") },
+            text = { Text("Your setup is back. Stillpoint restarts to load it.") },
+        )
     }
 
     textEdit?.let { t ->

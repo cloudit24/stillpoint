@@ -578,6 +578,18 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         return bmp
     }
 
+    /** Prepares every app icon in the background once, so lists never show icons popping in. */
+    private var preloading = false
+    private fun preloadIcons() {
+        if (preloading) return
+        preloading = true
+        viewModelScope.launch {
+            val px = (56 * getApplication<Application>().resources.displayMetrics.density).toInt()
+            apps.forEach { if (cachedIcon(it) == null) loadIcon(it, px) }
+            preloading = false
+        }
+    }
+
     fun refresh() {
         resumeTick++
         viewModelScope.launch {
@@ -591,6 +603,7 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
                 )
             }
             apps = loaded.apps
+            preloadIcons()
             hasUsageAccess = loaded.usageAccess
             usage = loaded.usage
             weekUsage = loaded.weekUsage

@@ -544,7 +544,7 @@ private fun StatsStrip(vm: LauncherViewModel, s: LauncherSettings, modifier: Mod
                 am.getMemoryInfo(mem)
                 ramPct = ((1 - mem.availMem.toDouble() / mem.totalMem) * 100).roundToInt()
                 ramTotal = (mem.totalMem / 1_073_741_824.0).roundToInt()
-                delay(1_000)
+                delay(2_000) // Every 2 s is plenty for a speed figure, and half the work.
                 val rx = TrafficStats.getTotalRxBytes()
                 val tx = TrafficStats.getTotalTxBytes()
                 val t = SystemClock.elapsedRealtime()

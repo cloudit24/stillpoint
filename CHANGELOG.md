@@ -3,6 +3,16 @@
 Every version of Stillpoint Launcher, newest first. Each links to its APK.
 The newest is always at **[Download the latest APK](https://github.com/cloudit24/stillpoint/releases/latest/download/Stillpoint-Launcher.apk)**.
 
+## v0.28.0 · 1 Oct 2026
+- Backup and restore: save all your settings, notes, tasks, pinned apps, favorites and gestures to one file,
+  and load it on a new phone. Settings → System → Backup and restore.
+- Opens faster after installing or updating, and app icons are ready before you scroll.
+- Home redraws the network figures half as often.
+- Automatic checks for prayer times, Qibla, Hijri and Tamil dates, the moon and your own gold source
+  run before every release.
+
+[stillpoint-v0.28.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.28.0/stillpoint-v0.28.0.apk)
+
 ## v0.27.1 · 30 Sep 2026
 - Shelf: swiping to home is paused while you arrange, so a drag can't throw you off the page.
 - Moving widgets is smooth: the others glide out of the way, the moved one lifts with a soft shadow,

@@ -1,0 +1,4 @@
+# Start-up profile: tells Android to prepare Stillpoint's code ahead of time instead of while you wait.
+# The app is small, so all of it is included. Compose's own libraries ship their profiles too.
+HSPLcom/cloudit24/stillpoint/**->**(**)**
+Lcom/cloudit24/stillpoint/**;
