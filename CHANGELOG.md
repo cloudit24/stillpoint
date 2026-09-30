@@ -3,6 +3,13 @@
 Every version of Stillpoint Launcher, newest first. Each links to its APK.
 The newest is always at **[Download the latest APK](https://github.com/cloudit24/stillpoint/releases/latest/download/Stillpoint-Launcher.apk)**.
 
+## v0.27.0 · 30 Sep 2026
+- Shelf: long-press any widget to arrange, then drag the widget itself to move it.
+- Each widget can have its own look: Plain, Glass or Glow; Square, Soft or Round corners; 100, 80 or 60% opacity.
+- A soft light in your accent colour behind the Shelf.
+
+[stillpoint-v0.27.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.27.0/stillpoint-v0.27.0.apk)
+
 ## v0.26.0 · 30 Sep 2026
 - Use your own source for anything online: gold price (any address, with a "where the price is" path and a Test button), weather, city search, currency rates and public IP. Settings → System → Online sources.
 - Shelf: drag a widget by its grip to move it; the others make room.

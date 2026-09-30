@@ -1,5 +1,11 @@
 package com.cloudit24.stillpoint.ui
 
+import com.cloudit24.stillpoint.data.WidgetLook
+import com.cloudit24.stillpoint.widget.LongPressHostView
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.zIndex
@@ -101,6 +107,7 @@ fun WidgetsScreen(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderInfo) ->
     var picking by rememberSaveable { mutableStateOf(false) }
     var editing by rememberSaveable { mutableStateOf(false) }
     val drag = remember { ShelfDrag() }
+    val shelfAccent = Accent
 
     if (picking) {
         BackHandler { picking = false }
@@ -111,6 +118,13 @@ fun WidgetsScreen(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderInfo) ->
     Column(
         Modifier
             .fillMaxSize()
+            // A soft light in the accent colour from the top corner.
+            .drawBehind {
+                drawRect(Brush.radialGradient(
+                    listOf(shelfAccent.copy(alpha = 0.16f), Color.Transparent),
+                    center = Offset(size.width * 0.9f, 0f), radius = size.width * 1.1f,
+                ))
+            }
             .pointerInput(Unit) {
                 val threshold = 64.dp.toPx()
                 var total = 0f
@@ -142,7 +156,8 @@ fun WidgetsScreen(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderInfo) ->
             if (vm.settings.hubOn && vm.settings.projectsSource == ProjectSource.PHONE) {
                 Column(Modifier.padding(horizontal = 12.dp).padding(bottom = 20.dp)) { ProjectsBlock(vm) }
             }
-            Text("Widgets", color = Muted, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 12.dp))
+            Text(if (editing) "Widgets · drag to move, corner to resize, tap a style" else "Widgets · long-press one to arrange",
+                color = Muted, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 12.dp))
             if (vm.widgetIds.isEmpty()) {
                 Text("None yet. Tap Add widget below.", color = Muted, fontSize = 14.sp,
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
@@ -167,7 +182,7 @@ fun WidgetsScreen(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderInfo) ->
                                             scaleY = 1.03f
                                         }
                                     },
-                            ) { AppearIn(i) { WidgetItem(vm, id, editing, areaW, drag) } }
+                            ) { AppearIn(i) { WidgetItem(vm, id, editing, areaW, drag) { editing = true } } }
                         }
                     }
                 }
@@ -183,7 +198,7 @@ fun WidgetsScreen(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderInfo) ->
 }
 
 @Composable
-private fun WidgetItem(vm: LauncherViewModel, id: Int, editing: Boolean, areaW: Dp, drag: ShelfDrag) {
+private fun WidgetItem(vm: LauncherViewModel, id: Int, editing: Boolean, areaW: Dp, drag: ShelfDrag, onArrange: () -> Unit) {
     val context = LocalContext.current
     val density = LocalDensity.current
     val info = remember(id) { vm.widgetManager.getAppWidgetInfo(id) }
@@ -208,6 +223,9 @@ private fun WidgetItem(vm: LauncherViewModel, id: Int, editing: Boolean, areaW: 
     val h by animateDpAsState(dragH ?: heightDp.dp, if (dragging) snap<Dp>() else spring<Dp>(stiffness = Spring.StiffnessMediumLow), label = "h")
     val curW by rememberUpdatedState(w)
     val curH by rememberUpdatedState(h)
+    val look = vm.widgetLooks[id] ?: WidgetLook()
+    val lookAccent = Accent
+    val latestArrange by rememberUpdatedState(onArrange)
 
     Column(Modifier.width(w).padding(vertical = 6.dp)) {
         if (editing || info == null) {
@@ -235,24 +253,39 @@ private fun WidgetItem(vm: LauncherViewModel, id: Int, editing: Boolean, areaW: 
                 Text(if (widthSetting == 0) "Full" else "Own", color = Accent, fontSize = 13.sp,
                     modifier = Modifier.clickable { vm.setWidgetSize(id, heightDp, if (widthSetting == 0) -1 else 0) }.padding(6.dp))
             }
+            // Its look: each chip moves to the next choice.
+            Row(Modifier.padding(bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                LookChip(listOf("Plain", "Glass", "Glow")[look.style]) { vm.setWidgetLook(id, look.copy(style = (look.style + 1) % 3)) }
+                LookChip(listOf("Square", "Soft", "Round")[look.corners]) { vm.setWidgetLook(id, look.copy(corners = (look.corners + 1) % 3)) }
+                LookChip("${look.alpha}%") {
+                    vm.setWidgetLook(id, look.copy(alpha = when (look.alpha) { 100 -> 80; 80 -> 60; else -> 100 }))
+                }
+            }
         }
         var hostView by remember { mutableStateOf<AppWidgetHostView?>(null) }
-        Box(Modifier.fillMaxWidth().height(h)) {
+        Box(Modifier.fillMaxWidth().height(h).widgetLook(look, lookAccent)) {
             AndroidView(
-                factory = { ctx -> vm.widgetHost.createView(ctx, id, info).also { hostView = it } },
+                factory = { ctx ->
+                    vm.widgetHost.createView(ctx, id, info).also { v ->
+                        hostView = v
+                        (v as? LongPressHostView)?.onLongPress = { latestArrange() }
+                    }
+                },
                 modifier = Modifier
                     .fillMaxSize()
+                    .padding(if (look.style == 1) 6.dp else 0.dp)
+                    .clip(RoundedCornerShape(cornerFor(look)))
                     // Lets lists inside widgets (mail, calendar, notes) scroll instead of the page.
                     .nestedScroll(rememberNestedScrollInteropConnection())
                     .onSizeChanged { size -> hostView?.let { reportSize(it, size.width / density.density, size.height / density.density) } },
             )
             if (editing) {
                 val accent = Accent
-                Box(Modifier.matchParentSize().border(1.dp, accent.copy(alpha = 0.45f), RoundedCornerShape(22.dp)))
-                // Grip, top-left: drag to move. The others make room as it passes over them.
+                Box(Modifier.matchParentSize().border(1.dp, accent.copy(alpha = 0.45f), RoundedCornerShape(cornerFor(look) + 4.dp)))
+                // Drag anywhere on the widget to move it; the others make room. The dots are only a hint.
                 var gripAt by remember { mutableStateOf(Offset.Zero) }
                 Box(
-                    Modifier.align(Alignment.TopStart).size(40.dp)
+                    Modifier.matchParentSize()
                         .onGloballyPositioned { gripAt = it.boundsInRoot().topLeft }
                         .pointerInput(id) {
                             detectDragGestures(
@@ -283,7 +316,7 @@ private fun WidgetItem(vm: LauncherViewModel, id: Int, editing: Boolean, areaW: 
                             )
                         },
                 ) {
-                    Canvas(Modifier.fillMaxSize().padding(14.dp)) {
+                    Canvas(Modifier.align(Alignment.TopStart).size(40.dp).padding(14.dp)) {
                         for (r in 0..2) for (c in 0..1) {
                             drawCircle(accent, 1.8.dp.toPx(), Offset(c * size.width, r * size.height / 2))
                         }
@@ -532,4 +565,35 @@ private class ShelfDrag {
     var finger by mutableStateOf(Offset.Zero)
     var grab = Offset.Zero
     var lastSwap: Int? = null
+}
+
+private fun cornerFor(look: WidgetLook): Dp = when (look.corners) {
+    0 -> 0.dp
+    2 -> 28.dp
+    else -> 16.dp
+}
+
+/**
+ * Glass: a frosted tile with a hairline edge around the widget. Glow: soft accent light behind it.
+ * Opacity fades the whole widget.
+ */
+private fun Modifier.widgetLook(look: WidgetLook, accent: Color): Modifier {
+    val shape = RoundedCornerShape(cornerFor(look) + 6.dp)
+    val glow = if (look.style != 2) Modifier else Modifier.drawBehind {
+        val pad = 22.dp.toPx()
+        drawRoundRect(
+            Brush.radialGradient(listOf(accent.copy(alpha = 0.32f), Color.Transparent), center, size.maxDimension * 0.8f),
+            topLeft = Offset(-pad, -pad), size = Size(size.width + pad * 2, size.height + pad * 2),
+            cornerRadius = CornerRadius(40.dp.toPx()),
+        )
+    }
+    val glass = if (look.style != 1) Modifier
+    else Modifier.clip(shape).background(Color.White.copy(alpha = 0.06f)).border(0.5.dp, Color.White.copy(alpha = 0.14f), shape)
+    return this.then(glow).graphicsLayer { alpha = look.alpha / 100f }.then(glass)
+}
+
+@Composable
+private fun LookChip(label: String, onClick: () -> Unit) {
+    Text(label, color = Accent, fontSize = 12.sp, modifier = Modifier.clip(RoundedCornerShape(50))
+        .background(Color.White.copy(alpha = 0.06f)).clickable(onClick = onClick).padding(horizontal = 10.dp, vertical = 4.dp))
 }

@@ -267,3 +267,6 @@ enum class AppFont(val label: String) {
 
 /** A line kept on the Shelf. */
 data class Note(val id: Long, val text: String)
+
+/** How one widget on the Shelf looks. style: 0 plain, 1 glass, 2 glow. corners: 0 square, 1 soft, 2 round. */
+data class WidgetLook(val style: Int = 0, val corners: Int = 1, val alpha: Int = 100)

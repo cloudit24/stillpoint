@@ -247,6 +247,17 @@ class Prefs(context: Context) {
             .putBoolean("gold_custom_gram", g.perGram).putString("gold_custom_cur", g.currency).apply()
     }
 
+    /** Widget id -> look, stored as "id:style:corners:alpha,...". */
+    fun loadWidgetLooks(): Map<Int, WidgetLook> = (sp.getString("widget_looks", null) ?: "").split(",").mapNotNull { part ->
+        val f = part.split(":").map { it.toIntOrNull() }
+        if (f.size != 4 || f.any { it == null }) null else f[0]!! to WidgetLook(f[1]!!, f[2]!!, f[3]!!)
+    }.toMap()
+
+    fun saveWidgetLooks(looks: Map<Int, WidgetLook>) {
+        sp.edit().putString("widget_looks",
+            looks.entries.joinToString(",") { (id, l) -> "$id:${l.style}:${l.corners}:${l.alpha}" }).apply()
+    }
+
     fun loadNotes(): List<Note> = runCatching {
         val a = JSONArray(sp.getString("notes", "[]"))
         (0 until a.length()).map { i -> a.getJSONObject(i).let { Note(it.getLong("id"), it.getString("text")) } }

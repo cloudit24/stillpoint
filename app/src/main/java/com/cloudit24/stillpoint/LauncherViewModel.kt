@@ -1,5 +1,7 @@
 package com.cloudit24.stillpoint
 
+import com.cloudit24.stillpoint.data.WidgetLook
+import com.cloudit24.stillpoint.widget.ShelfHost
 import com.cloudit24.stillpoint.data.SourceKey
 import com.cloudit24.stillpoint.data.CustomGold
 import com.cloudit24.stillpoint.data.GoldSource
@@ -470,7 +472,7 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     // ---- Widgets ----
 
     val widgetManager: AppWidgetManager = AppWidgetManager.getInstance(app)
-    val widgetHost = AppWidgetHost(app, WIDGET_HOST_ID)
+    val widgetHost: AppWidgetHost = ShelfHost(app, WIDGET_HOST_ID)
     var widgetIds by mutableStateOf(prefs.loadWidgetIds())
         private set
     /** Id allocated while the bind / configure screens are open. Lives here so it survives activity recreation. */
@@ -508,6 +510,14 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
 
     var widgetSizes by mutableStateOf(prefs.loadWidgetSizes())
         private set
+
+    var widgetLooks by mutableStateOf(prefs.loadWidgetLooks())
+        private set
+
+    fun setWidgetLook(id: Int, look: WidgetLook) {
+        widgetLooks = widgetLooks + (id to look)
+        prefs.saveWidgetLooks(widgetLooks)
+    }
 
     /** Puts a widget at [index] on the Shelf (drag to move). */
     fun moveWidgetTo(id: Int, index: Int) {
