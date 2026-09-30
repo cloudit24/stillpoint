@@ -173,6 +173,16 @@ data class LauncherSettings(
     val edgeRight: Boolean = true,
     val iconTint: IconTint = IconTint.ORIGINAL,
     val font: AppFont = AppFont.SYSTEM,
+    // Notification light (needs Notification access).
+    val notifyLight: Boolean = true,
+    val notifyStyle: NotifyStyle = NotifyStyle.BREATHE,
+    val notifyDot: Boolean = true,
+    val notifyAppDots: Boolean = true,
+    val notifyOff: Set<String> = emptySet(),
+    val notifyColors: Map<String, Long> = emptyMap(),
+    val importantApps: Set<String> = emptySet(),
+    val importantPeople: List<String> = emptyList(),
+    val remindEvery: Int = 0,
     val infoPanels: Set<InfoPanel> = setOf(InfoPanel.PRAYER),
     val showRecent: Boolean = true,
     val dialMode: DialMode = DialMode.PRAYER,
@@ -270,3 +280,9 @@ data class Note(val id: Long, val text: String)
 
 /** How one widget on the Shelf looks. style: 0 plain, 1 glass, 2 glow. corners: 0 square, 1 soft, 2 round. */
 data class WidgetLook(val style: Int = 0, val corners: Int = 1, val alpha: Int = 100)
+
+enum class NotifyStyle(val label: String) {
+    BREATHE("Breathe"),
+    SWEEP("Sweep"),
+    BLINK("Blink, like BlackBerry"),
+}

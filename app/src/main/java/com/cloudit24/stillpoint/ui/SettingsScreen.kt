@@ -1,5 +1,9 @@
 package com.cloudit24.stillpoint.ui
 
+import com.cloudit24.stillpoint.notify.NotifyHub
+import com.cloudit24.stillpoint.data.NotifyStyle
+import com.cloudit24.stillpoint.data.AppEntry
+import androidx.compose.material3.Switch
 import com.cloudit24.stillpoint.data.Backup
 import androidx.compose.material.icons.outlined.Send
 import com.cloudit24.stillpoint.data.SourceKey
@@ -138,6 +142,7 @@ private enum class SettingsPage(val section: String, val title: String, val summ
     HOME("Personalization", "Home screen", "Headline, ring, prayer and info, apps, footer", Icons.Outlined.Home),
     APPS("Personalization", "App list", "Starting tab, hidden apps", Icons.Outlined.Menu),
     GESTURES("Personalization", "Gestures and shortcuts", "Swipes, double-tap, bottom shortcuts", Icons.Outlined.ThumbUp),
+    NOTIFY("Personalization", "Notification light", "Edge light, signal dot and app dots; never miss important people", Icons.Outlined.Star),
     LOCK("Personalization", "Lock screen", "Next prayer and dates on the lock screen", Icons.Outlined.Notifications),
     TASKS("Productivity", "Tasks", "On this phone, Project Hub, Tasks.org or OpenTasks", Icons.Outlined.Done),
     CALENDAR("Productivity", "Calendar", "Phone calendar, Project Hub or a calendar link", Icons.Outlined.DateRange),
@@ -558,6 +563,51 @@ fun SettingsScreen(vm: LauncherViewModel) {
                     Note("You choose where the file goes; Stillpoint uploads nothing. It includes your Project Hub key " +
                         "and calendar link if you set them, so keep it private. Widgets aren't included: they belong " +
                         "to one phone, so add them again on the new one.")
+                }
+
+                SettingsPage.NOTIFY -> {
+                    val access = remember(vm.resumeTick) { NotifyHub.hasAccess(ctx) }
+                    Group("Notification access") {
+                        ActionRow(if (access) "Allowed" else "Not allowed · tap to allow",
+                            "Stillpoint reads notifications on the phone only, to light up and remind you. Nothing is kept or sent.") {
+                            ctx.safeStart(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
+                        }
+                    }
+                    if (!access) Note("If the switch is greyed out: App info, menu (⋮), Allow restricted settings, then try again.")
+                    Group("Show") {
+                        ToggleRow("Edge light", s.notifyLight) { on -> vm.updateSettings { it.copy(notifyLight = on) } }
+                        ActionRow("Style", s.notifyStyle.label) {
+                            vm.updateSettings { it.copy(notifyStyle = NotifyStyle.entries[(it.notifyStyle.ordinal + 1) % NotifyStyle.entries.size]) }
+                        }
+                        ToggleRow("Signal dot at the top", s.notifyDot) { on -> vm.updateSettings { it.copy(notifyDot = on) } }
+                        ToggleRow("Dots on apps", s.notifyAppDots) { on -> vm.updateSettings { it.copy(notifyAppDots = on) } }
+                    }
+                    Note("The light uses the edge style under Appearance, in each app's colour. Several apps take turns. " +
+                        "It moves only while home is on screen; with Animations off it stays softly lit.")
+                    Group("Never miss") {
+                        ActionRow("Remind again while unread", if (s.remindEvery == 0) "Off" else "Every ${s.remindEvery} min, up to 3 times") {
+                            vm.updateSettings { it.copy(remindEvery = when (it.remindEvery) { 0 -> 5; 5 -> 10; 10 -> 15; else -> 0 }) }
+                        }
+                        s.importantPeople.forEach { name ->
+                            ActionRow(name, "Important person · tap to remove") {
+                                vm.updateSettings { it.copy(importantPeople = it.importantPeople - name) }
+                            }
+                        }
+                        ActionRow("Add a person", "A name as it shows in their notifications") {
+                            textEdit = TextEdit("Important person",
+                                "Type the name as it appears in notifications (for example Mum, or a group's name).", "", "Name") { n ->
+                                if (n.isNotBlank()) vm.updateSettings { it.copy(importantPeople = (it.importantPeople + n.trim()).distinct()) }
+                            }
+                        }
+                    }
+                    Note("Important apps (★ below) and people shine brighter; reminders come as Stillpoint notifications " +
+                        "that open the original message.")
+                    Group("Apps") {
+                        val seen = vm.notifySeenApps()
+                        if (seen.isEmpty()) Text("Apps appear here after they show a notification.", color = Muted, fontSize = 14.sp,
+                            modifier = Modifier.padding(vertical = 12.dp))
+                        seen.forEach { app -> NotifyAppRow(vm, app) }
+                    }
                 }
 
                 SettingsPage.FOOTPRINT -> {
@@ -1249,4 +1299,29 @@ private fun TextSettingDialog(t: TextEdit, onDismiss: () -> Unit) {
             }
         },
     )
+}
+
+/** One app in the notification light: its colour (tap to change), important star, and whether it lights up. */
+@Composable
+private fun NotifyAppRow(vm: LauncherViewModel, app: AppEntry) {
+    val s = vm.settings
+    val pkg = app.packageName
+    val color = vm.notifyColor(pkg)
+    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(24.dp).clip(CircleShape).background(color).clickable {
+            val i = ACCENTS.indexOfFirst { it.argb == s.notifyColors[pkg] }
+            val next = ACCENTS[(i + 1) % ACCENTS.size].argb
+            vm.updateSettings { it.copy(notifyColors = it.notifyColors + (pkg to next)) }
+        })
+        Text(app.label, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f).padding(start = 14.dp))
+        val important = pkg in s.importantApps
+        Text(if (important) "★" else "☆", color = if (important) Accent else Muted, fontSize = 20.sp,
+            modifier = Modifier.clip(CircleShape).clickable {
+                vm.updateSettings { it.copy(importantApps = if (important) it.importantApps - pkg else it.importantApps + pkg) }
+            }.padding(horizontal = 10.dp))
+        Switch(checked = pkg !in s.notifyOff, onCheckedChange = { on ->
+            vm.updateSettings { it.copy(notifyOff = if (on) it.notifyOff - pkg else it.notifyOff + pkg) }
+        })
+    }
 }

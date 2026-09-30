@@ -59,6 +59,18 @@ class Prefs(context: Context) {
             edgeRight = sp.getBoolean(K_EDGE_RIGHT, d.edgeRight),
             iconTint = runCatching { IconTint.valueOf(sp.getString(K_ICON_TINT, null)!!) }.getOrDefault(d.iconTint),
             font = runCatching { AppFont.valueOf(sp.getString("app_font", null)!!) }.getOrDefault(d.font),
+            notifyLight = sp.getBoolean("notify_light", d.notifyLight),
+            notifyStyle = runCatching { NotifyStyle.valueOf(sp.getString("notify_style", null)!!) }.getOrDefault(d.notifyStyle),
+            notifyDot = sp.getBoolean("notify_dot", d.notifyDot),
+            notifyAppDots = sp.getBoolean("notify_app_dots", d.notifyAppDots),
+            notifyOff = sp.getStringSet("notify_off", null)?.toSet() ?: d.notifyOff,
+            notifyColors = (sp.getString("notify_colors", "") ?: "").split(";").mapNotNull { e ->
+                val (k, v) = e.split("=").takeIf { it.size == 2 } ?: return@mapNotNull null
+                v.toLongOrNull()?.let { k to it }
+            }.toMap(),
+            importantApps = sp.getStringSet("important_apps", null)?.toSet() ?: d.importantApps,
+            importantPeople = (sp.getString("important_people", "") ?: "").split("\n").filter { it.isNotBlank() },
+            remindEvery = sp.getInt("remind_every", d.remindEvery),
             // Before 0.17 only one could be chosen (key "info_panel").
             infoPanels = (sp.getString(K_INFO_PANELS, null) ?: sp.getString(K_INFO_PANEL, null))
                 ?.split(",")?.mapNotNull { n -> runCatching { InfoPanel.valueOf(n) }.getOrNull() }?.toSet()
@@ -137,6 +149,15 @@ class Prefs(context: Context) {
             .putBoolean(K_EDGE_RIGHT, s.edgeRight)
             .putString(K_ICON_TINT, s.iconTint.name)
             .putString("app_font", s.font.name)
+            .putBoolean("notify_light", s.notifyLight)
+            .putString("notify_style", s.notifyStyle.name)
+            .putBoolean("notify_dot", s.notifyDot)
+            .putBoolean("notify_app_dots", s.notifyAppDots)
+            .putStringSet("notify_off", s.notifyOff)
+            .putString("notify_colors", s.notifyColors.entries.joinToString(";") { "${it.key}=${it.value}" })
+            .putStringSet("important_apps", s.importantApps)
+            .putString("important_people", s.importantPeople.joinToString("\n"))
+            .putInt("remind_every", s.remindEvery)
             .putString(K_INFO_PANELS, s.infoPanels.joinToString(",") { it.name })
             .putBoolean(K_SHOW_RECENT, s.showRecent)
             .putString(K_DIAL, s.dialMode.name)
@@ -256,6 +277,14 @@ class Prefs(context: Context) {
     fun saveWidgetLooks(looks: Map<Int, WidgetLook>) {
         sp.edit().putString("widget_looks",
             looks.entries.joinToString(",") { (id, l) -> "$id:${l.style}:${l.corners}:${l.alpha}" }).apply()
+    }
+
+    /** Apps that have shown a notification since the light was turned on (for its settings list). */
+    fun notifySeen(): Set<String> = sp.getStringSet("notify_seen", null)?.toSet() ?: emptySet()
+
+    fun addNotifySeen(pkgs: Set<String>) {
+        val cur = notifySeen()
+        if (!cur.containsAll(pkgs)) sp.edit().putStringSet("notify_seen", cur + pkgs).apply()
     }
 
     fun loadNotes(): List<Note> = runCatching {

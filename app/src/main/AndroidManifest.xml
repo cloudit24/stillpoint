@@ -128,6 +128,17 @@
             android:name=".widget.PrayerAlertReceiver"
             android:exported="false" />
 
+        <!-- Optional: the notification light. Reads notifications on the phone only; nothing is kept or sent. -->
+        <service
+            android:name=".notify.NotifyListener"
+            android:exported="true"
+            android:label="@string/notify_label"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
         <!-- Optional. Used only for double-tap lock and swipe-down notifications. Off by default. -->
         <service
             android:name=".service.LockAccessibilityService"

@@ -1,5 +1,8 @@
 package com.cloudit24.stillpoint
 
+import com.cloudit24.stillpoint.notify.NotifyHub
+import com.cloudit24.stillpoint.notify.NotifyItem
+import androidx.compose.ui.graphics.Color
 import com.cloudit24.stillpoint.data.WidgetLook
 import com.cloudit24.stillpoint.widget.ShelfHost
 import com.cloudit24.stillpoint.data.SourceKey
@@ -534,6 +537,28 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         if (i < 0 || i == j) return
         widgetIds = widgetIds.toMutableList().apply { add(j, removeAt(i)) }
         prefs.saveWidgetIds(widgetIds)
+    }
+
+    // ---- Notification light ----
+
+    var notifyItems by mutableStateOf<List<NotifyItem>>(emptyList())
+        private set
+
+    init {
+        viewModelScope.launch { NotifyHub.items.collect { notifyItems = it } }
+    }
+
+    fun litNotifications(): List<NotifyItem> = notifyItems.filter { it.pkg !in settings.notifyOff }
+
+    fun notifyColor(pkg: String): Color = settings.notifyColors[pkg]?.let { Color(it) } ?: Color(settings.accent)
+
+    /** The colour of the small dot on an app with something new, or null. */
+    fun dotFor(pkg: String): Color? =
+        if (settings.notifyAppDots && pkg !in settings.notifyOff && notifyItems.any { it.pkg == pkg }) notifyColor(pkg) else null
+
+    fun notifySeenApps(): List<AppEntry> {
+        val seen = prefs.notifySeen()
+        return apps.filter { it.packageName in seen }.distinctBy { it.packageName }.sortedBy { it.label.lowercase() }
     }
 
     // ---- Notes on the Shelf ----

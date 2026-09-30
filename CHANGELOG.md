@@ -3,6 +3,16 @@
 Every version of Stillpoint Launcher, newest first. Each links to its APK.
 The newest is always at **[Download the latest APK](https://github.com/cloudit24/stillpoint/releases/latest/download/Stillpoint-Launcher.apk)**.
 
+## v0.29.0 · 1 Oct 2026
+- Notification light, for everyone (not only prayer): unread notifications light the screen edges in each
+  app's colour. Styles: Breathe, Sweep, or Blink like a BlackBerry.
+- A BlackBerry-style signal dot at the top of home, and a small dot on each app that has something new.
+- Never miss: mark important apps and people (a name as it shows in the notification). Their notifications
+  shine brighter, and Stillpoint can remind you again every few minutes while they stay unread.
+- Everything is read on the phone only. Settings → Personalization → Notification light.
+
+[stillpoint-v0.29.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.29.0/stillpoint-v0.29.0.apk)
+
 ## v0.28.0 · 1 Oct 2026
 - Backup and restore: save all your settings, notes, tasks, pinned apps, favorites and gestures to one file,
   and load it on a new phone. Settings → System → Backup and restore.

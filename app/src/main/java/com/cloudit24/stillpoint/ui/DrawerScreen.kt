@@ -587,6 +587,7 @@ private fun DrawerItem(
             onLongClick = { onMenu(true) },
             icon = appIcon(vm, app, 30.dp),
             trailing = trailing,
+            dot = vm.dotFor(app.packageName),
         )
         DropdownMenu(expanded = menuOpen, onDismissRequest = { onMenu(false) }) {
             DropdownMenuItem(

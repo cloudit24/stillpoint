@@ -1,5 +1,9 @@
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.border
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.ScrollState
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.CompositingStrategy
@@ -112,6 +116,8 @@ fun AppRow(
     /** Replaces the usage figure on the right, e.g. "3d ago". */
     trailing: String? = null,
     rowPadding: Dp = 10.dp,
+    /** Something new from this app (shown when there's no icon to carry the dot). */
+    dot: Color? = null,
 ) {
     Row(
         Modifier
@@ -129,8 +135,12 @@ fun AppRow(
             fontSize = fontSize,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f, fill = dot == null || icon != null),
         )
+        if (dot != null && icon == null) {
+            Box(Modifier.padding(start = 8.dp).size(7.dp).clip(CircleShape).background(dot))
+            Spacer(Modifier.weight(1f))
+        }
         val right = trailing ?: usageMs?.takeIf { it >= 60_000L }?.let { formatDuration(it) }
         if (right != null) {
             Text(right, color = Muted, fontSize = 13.sp, modifier = Modifier.padding(start = 12.dp))
@@ -157,6 +167,11 @@ fun AppIcon(vm: LauncherViewModel, app: AppEntry, size: Dp) {
         bmp?.let {
             Image(it, contentDescription = null, modifier = Modifier.size(size), colorFilter = filter,
                 alpha = if (tint == IconTint.DIM) 0.55f else 1f)
+        }
+        // Something new from this app: a small dot in its notification colour, like BlackBerry.
+        vm.dotFor(app.packageName)?.let { c ->
+            Box(Modifier.align(Alignment.TopEnd).size(size * 0.26f).clip(CircleShape).background(c)
+                .border(1.5.dp, Color.Black, CircleShape))
         }
     }
 }

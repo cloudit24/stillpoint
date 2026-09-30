@@ -1,5 +1,6 @@
 package com.cloudit24.stillpoint.ui
 
+import com.cloudit24.stillpoint.data.NotifyStyle
 import androidx.compose.runtime.key
 import androidx.compose.material3.Icon
 import androidx.compose.material.icons.Icons
@@ -175,7 +176,11 @@ fun HomeScreen(vm: LauncherViewModel) {
     val edgeGrow = remember { Animatable(0f) }
     LaunchedEffect(Unit) { edgeGrow.animateTo(1f, tween(1400, easing = FastOutSlowInEasing)) }
     var edgePhase by remember { mutableFloatStateOf(0f) }
-    val edgeMoving = s.edgeMotion && edge != null && (edge.ending || edge.starting || edge.started)
+    // Notification light: colours of the apps with something unread; important ones shine brighter.
+    val lit = if (s.notifyLight || s.notifyDot) vm.litNotifications() else emptyList()
+    val litColors = lit.sortedByDescending { it.important }.map { vm.notifyColor(it.pkg) }.distinct()
+    val litImportant = lit.any { it.important }
+    val edgeMoving = s.edgeMotion && ((edge != null && (edge.ending || edge.starting || edge.started)) || litColors.isNotEmpty())
     LaunchedEffect(edgeMoving) {
         if (edgeMoving) {
             val start = withFrameMillis { it }
@@ -192,6 +197,10 @@ fun HomeScreen(vm: LauncherViewModel) {
             .drawWithContent {
                 drawContent()
                 if (edge != null) drawEdges(edge, s.edgeStyle, s.edgeRight, EDGE_BRIGHTNESS[s.edgeBright.coerceIn(1, 3) - 1], edgeGrow.value, edgePhase, accent)
+                if (litColors.isNotEmpty()) {
+                    drawNotifyLight(litColors, s.notifyStyle, if (s.edgeStyle == EdgeStyle.OFF) EdgeStyle.FLAT else s.edgeStyle,
+                        edgePhase, s.edgeMotion, s.notifyLight, s.notifyDot, litImportant)
+                }
             }
             .drawBehind {
                 drawRect(Brush.radialGradient(
@@ -313,6 +322,7 @@ fun HomeScreen(vm: LauncherViewModel) {
                         onClick = { vm.launch(app) },
                         icon = appIcon(vm, app, (s.homeSize * 1.4f * listScale).dp),
                         rowPadding = 5.dp,
+                        dot = vm.dotFor(app.packageName),
                     )
                 } }
             }
@@ -650,4 +660,58 @@ private fun DrawScope.edgeBeam(from: Offset, to: Offset, frac: Float, color: Col
     )
     drawCircle(color.copy(alpha = 0.3f * alpha), radius = 10.dp.toPx(), center = tip)
     drawCircle(color.copy(alpha = alpha), radius = 3.dp.toPx(), center = tip)
+}
+
+/**
+ * Unread notifications on the screen edges, in each app's colour (taking turns when there are several),
+ * and a signal dot at the top right, like a BlackBerry LED. Still and softly lit when Animations is off.
+ */
+private fun DrawScope.drawNotifyLight(
+    colors: List<Color>, style: NotifyStyle, geo: EdgeStyle, phase: Float, motion: Boolean,
+    edges: Boolean, dot: Boolean, important: Boolean,
+) {
+    val strength = if (important) 1f else 0.75f
+    val color = colors[(phase / 2.4f).toInt().coerceAtLeast(0) % colors.size]
+    val w = size.width
+    val h = size.height
+    val tracks = when (geo) {
+        EdgeStyle.BOTTOM -> listOf(Offset(28.dp.toPx(), h - 4.dp.toPx()) to Offset(w - 28.dp.toPx(), h - 4.dp.toPx()))
+        EdgeStyle.FLAT -> {
+            val x = 6.dp.toPx()
+            val m = 56.dp.toPx()
+            listOf(Offset(x, h - m) to Offset(x, m), Offset(w - x, h - m) to Offset(w - x, m))
+        }
+        else -> {
+            val x = 1.dp.toPx()
+            listOf(Offset(x, h) to Offset(x, 0f), Offset(w - x, h) to Offset(w - x, 0f))
+        }
+    }
+    if (edges) for ((a, b) in tracks) {
+        when (style) {
+            NotifyStyle.BREATHE -> glowLine(a, b, color, strength * if (motion) 0.25f + 0.65f * wave(phase, 2.4f) else 0.7f)
+            NotifyStyle.BLINK -> glowLine(a, b, color, strength * if (!motion || phase % 3f < 0.22f) 1f else 0.06f)
+            NotifyStyle.SWEEP -> if (!motion) glowLine(a, b, color, strength * 0.7f) else {
+                val t = (phase % 2f) / 2f
+                val head = lerp(a, b, t)
+                val tail = lerp(a, b, (t - 0.3f).coerceAtLeast(0f))
+                glowLine(a, b, color, strength * 0.12f)
+                if ((head - tail).getDistance() > 1f) {
+                    drawLine(Brush.linearGradient(listOf(Color.Transparent, color.copy(alpha = 0.3f * strength)), start = tail, end = head),
+                        tail, head, 14.dp.toPx())
+                    drawLine(Brush.linearGradient(listOf(Color.Transparent, color.copy(alpha = strength)), start = tail, end = head),
+                        tail, head, 3.dp.toPx(), cap = StrokeCap.Round)
+                }
+            }
+        }
+    }
+    if (dot && (!motion || phase % 2.5f < 0.3f)) {
+        val c = Offset(w - 14.dp.toPx(), 10.dp.toPx())
+        drawCircle(color.copy(alpha = 0.3f * strength), 10.dp.toPx(), c)
+        drawCircle(color.copy(alpha = strength), 4.5.dp.toPx(), c)
+    }
+}
+
+private fun DrawScope.glowLine(a: Offset, b: Offset, color: Color, alpha: Float) {
+    drawLine(color.copy(alpha = 0.25f * alpha), a, b, 14.dp.toPx())
+    drawLine(color.copy(alpha = alpha), a, b, 2.dp.toPx(), cap = StrokeCap.Round)
 }
