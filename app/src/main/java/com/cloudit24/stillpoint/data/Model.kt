@@ -82,7 +82,7 @@ enum class HomeAction(val label: String, val needsGestureService: Boolean = fals
     NONE("Nothing"),
     APPS("All apps"),
     SEARCH("Search"),
-    WIDGETS("Widgets"),
+    WIDGETS("Shelf"),
     PHONE("Phone"),
     CAMERA("Camera"),
     FOCUS("Focus"),
@@ -171,6 +171,7 @@ data class LauncherSettings(
     val edgeMotion: Boolean = true,
     val edgeRight: Boolean = true,
     val iconTint: IconTint = IconTint.ORIGINAL,
+    val font: AppFont = AppFont.SYSTEM,
     val infoPanels: Set<InfoPanel> = setOf(InfoPanel.PRAYER),
     val showRecent: Boolean = true,
     val dialMode: DialMode = DialMode.PRAYER,
@@ -253,3 +254,15 @@ enum class DialMode(val label: String) {
     DAY("Time left today"),
     OFF("Off"),
 }
+
+/** The app's typeface. The bundled ones are open-source (docs/FONTS.md). */
+enum class AppFont(val label: String) {
+    SYSTEM("Phone's font"),
+    INTER("Inter"),
+    MANROPE("Manrope"),
+    SPACE("Space Grotesk"),
+    LORA("Lora (serif)"),
+}
+
+/** A line kept on the Shelf. */
+data class Note(val id: Long, val text: String)

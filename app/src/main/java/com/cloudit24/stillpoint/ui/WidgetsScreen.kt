@@ -1,5 +1,15 @@
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
@@ -80,6 +90,7 @@ import com.cloudit24.stillpoint.LauncherViewModel
 import com.cloudit24.stillpoint.Screen
 
 /** Swipe-left page. Widgets stack vertically; Edit shows a Remove link above each. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun WidgetsScreen(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderInfo) -> Unit) {
     var picking by rememberSaveable { mutableStateOf(false) }
@@ -109,25 +120,34 @@ fun WidgetsScreen(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderInfo) ->
             .padding(horizontal = 16.dp, vertical = 24.dp),
     ) {
         Row(Modifier.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("Widgets", fontSize = 34.sp, fontWeight = FontWeight.Light, modifier = Modifier.weight(1f))
+            Text("Shelf", fontSize = 34.sp, fontWeight = FontWeight.Light, modifier = Modifier.weight(1f))
             if (vm.widgetIds.isNotEmpty()) {
                 Text(if (editing) "Done" else "Edit", color = Muted,
                     modifier = Modifier.clickable { editing = !editing }.padding(8.dp))
             }
         }
 
+        // The Shelf: things to keep near but off the home screen. Notes, tasks, projects, then widgets.
         Column(Modifier.weight(1f).padding(top = 16.dp).verticalScroll(rememberScrollState())) {
+            Column(Modifier.padding(horizontal = 12.dp).padding(bottom = 20.dp)) { NotesBlock(vm) }
             if (vm.settings.showTasks) {
                 Column(Modifier.padding(horizontal = 12.dp).padding(bottom = 20.dp)) { TasksBlock(vm) }
             }
             if (vm.settings.hubOn && vm.settings.projectsSource == ProjectSource.PHONE) {
                 Column(Modifier.padding(horizontal = 12.dp).padding(bottom = 20.dp)) { ProjectsBlock(vm) }
             }
+            Text("Widgets", color = Muted, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 12.dp))
             if (vm.widgetIds.isEmpty()) {
-                Text("No widgets yet. Tap Add widget below.", color = Muted, fontSize = 14.sp,
-                    modifier = Modifier.padding(horizontal = 12.dp))
+                Text("None yet. Tap Add widget below.", color = Muted, fontSize = 14.sp,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
             }
-            vm.widgetIds.forEachIndexed { i, id -> key(id) { AppearIn(i) { WidgetItem(vm, id, editing) } } }
+            // Widgets flow like tiles: two half-width ones sit side by side.
+            BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
+                val areaW = maxWidth
+                FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    vm.widgetIds.forEachIndexed { i, id -> key(id) { AppearIn(i) { WidgetItem(vm, id, editing, areaW) } } }
+                }
+            }
         }
 
         Row(Modifier.fillMaxWidth().padding(top = 16.dp, start = 12.dp, end = 12.dp)) {
@@ -139,99 +159,103 @@ fun WidgetsScreen(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderInfo) ->
 }
 
 @Composable
-private fun WidgetItem(vm: LauncherViewModel, id: Int, editing: Boolean) {
+private fun WidgetItem(vm: LauncherViewModel, id: Int, editing: Boolean, areaW: Dp) {
     val context = LocalContext.current
     val density = LocalDensity.current
     val info = remember(id) { vm.widgetManager.getAppWidgetInfo(id) }
+    val natural = remember(info) { info?.let { naturalSize(it, density.density) } }
+    val saved = vm.widgetSizes[id]
+    val heightDp = saved?.first ?: natural?.height ?: 80
+    // Width: 0 = full, -1 = the widget's own width, more = chosen by dragging the corner.
+    val widthSetting = saved?.second ?: if (natural?.fullWidth != false) 0 else -1
+    val targetW = when {
+        natural == null || widthSetting == 0 -> areaW
+        widthSetting < 0 -> minOf(areaW, natural.width.dp)
+        else -> minOf(areaW, widthSetting.dp)
+    }
+    // Two half-width widgets fit side by side with the gap between them.
+    val half = (areaW - 12.dp) / 2
 
-    Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+    // While the corner is dragged the widget follows the finger; otherwise size changes glide.
+    var dragW by remember { mutableStateOf<Dp?>(null) }
+    var dragH by remember { mutableStateOf<Dp?>(null) }
+    val dragging = dragW != null
+    val w by animateDpAsState(dragW ?: targetW, if (dragging) snap<Dp>() else spring<Dp>(stiffness = Spring.StiffnessMediumLow), label = "w")
+    val h by animateDpAsState(dragH ?: heightDp.dp, if (dragging) snap<Dp>() else spring<Dp>(stiffness = Spring.StiffnessMediumLow), label = "h")
+    val curW by rememberUpdatedState(w)
+    val curH by rememberUpdatedState(h)
+
+    Column(Modifier.width(w).padding(vertical = 6.dp)) {
         if (editing || info == null) {
-            Row(Modifier.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(info?.loadLabel(context.packageManager) ?: "Widget no longer available",
-                    color = Muted, fontSize = 13.sp, modifier = Modifier.weight(1f))
-                Text("Remove", color = Accent, modifier = Modifier.clickable { vm.removeWidget(id) }.padding(8.dp))
+                    color = Muted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                if (info != null) {
+                    Text("‹", fontSize = 20.sp, color = Muted, modifier = Modifier.clickable { vm.moveWidget(id, -1) }.padding(horizontal = 8.dp))
+                    Text("›", fontSize = 20.sp, color = Muted, modifier = Modifier.clickable { vm.moveWidget(id, 1) }.padding(horizontal = 8.dp))
+                }
+                Text("Remove", color = Accent, fontSize = 13.sp, modifier = Modifier.clickable { vm.removeWidget(id) }.padding(6.dp))
             }
         }
-        if (info == null) return@Column
-        val natural = remember(info) { naturalSize(info, density.density) }
-        val saved = vm.widgetSizes[id]
-        val heightDp = saved?.first ?: natural.height
-        // Width: 0 = full, -1 = the widget's own width, more = chosen by dragging the corner.
-        val widthSetting = saved?.second ?: if (natural.fullWidth) 0 else -1
+        if (info == null || natural == null) return@Column
         if (editing) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("Height", color = Muted, fontSize = 13.sp)
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("−", fontSize = 20.sp, modifier = Modifier.clip(CircleShape)
                     .clickable { vm.setWidgetSize(id, (heightDp - 20).coerceAtLeast(natural.minHeight), widthSetting) }
-                    .padding(horizontal = 12.dp))
-                Text("$heightDp", fontSize = 14.sp)
+                    .padding(horizontal = 10.dp))
+                Text("$heightDp", fontSize = 13.sp, color = Muted)
                 Text("+", fontSize = 20.sp, modifier = Modifier.clip(CircleShape)
                     .clickable { vm.setWidgetSize(id, (heightDp + 20).coerceAtMost(natural.maxHeight), widthSetting) }
-                    .padding(horizontal = 12.dp))
+                    .padding(horizontal = 10.dp))
                 Spacer(Modifier.weight(1f))
-                Text(if (widthSetting == 0) "Full width" else "Own width", color = Accent, fontSize = 13.sp,
-                    modifier = Modifier.clickable { vm.setWidgetSize(id, heightDp, if (widthSetting == 0) -1 else 0) }.padding(8.dp))
+                Text(if (widthSetting == 0) "Full" else "Own", color = Accent, fontSize = 13.sp,
+                    modifier = Modifier.clickable { vm.setWidgetSize(id, heightDp, if (widthSetting == 0) -1 else 0) }.padding(6.dp))
             }
         }
-        BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            val maxW = maxWidth
-            val targetW = when {
-                widthSetting == 0 -> maxW
-                widthSetting < 0 -> minOf(maxW, natural.width.dp)
-                else -> minOf(maxW, widthSetting.dp)
-            }
-            // While the corner is dragged the widget follows the finger; otherwise size changes glide.
-            var dragW by remember { mutableStateOf<Dp?>(null) }
-            var dragH by remember { mutableStateOf<Dp?>(null) }
-            val dragging = dragW != null
-            val w by animateDpAsState(dragW ?: targetW, if (dragging) snap<Dp>() else spring<Dp>(stiffness = Spring.StiffnessMediumLow), label = "w")
-            val h by animateDpAsState(dragH ?: heightDp.dp, if (dragging) snap<Dp>() else spring<Dp>(stiffness = Spring.StiffnessMediumLow), label = "h")
-            val curW by rememberUpdatedState(w)
-            val curH by rememberUpdatedState(h)
-            var hostView by remember { mutableStateOf<AppWidgetHostView?>(null) }
-            Box(Modifier.width(w).height(h)) {
-                AndroidView(
-                    factory = { ctx -> vm.widgetHost.createView(ctx, id, info).also { hostView = it } },
-                    modifier = Modifier
-                        .fillMaxSize()
-                        // Lets lists inside widgets (mail, calendar, notes) scroll instead of the page.
-                        .nestedScroll(rememberNestedScrollInteropConnection())
-                        .onSizeChanged { size -> hostView?.let { reportSize(it, size.width / density.density, size.height / density.density) } },
-                )
-                if (editing) {
-                    val accent = Accent
-                    Box(Modifier.matchParentSize().border(1.dp, accent.copy(alpha = 0.45f), RoundedCornerShape(22.dp)))
-                    // Corner handle: drag to resize, like on iPhone and Pixel.
-                    Box(
-                        Modifier.align(Alignment.BottomEnd).size(40.dp).pointerInput(id, maxW) {
-                            detectDragGestures(
-                                onDragStart = { dragW = curW; dragH = curH },
-                                onDragCancel = { dragW = null; dragH = null },
-                                onDragEnd = {
-                                    val fw = dragW ?: curW
-                                    val fh = dragH ?: curH
-                                    val hh = ((fh.value / 4).roundToInt() * 4).coerceIn(natural.minHeight, natural.maxHeight)
-                                    val ww = if (fw >= maxW - 4.dp) 0 else (fw.value / 4).roundToInt() * 4
-                                    vm.setWidgetSize(id, hh, ww)
-                                    dragW = null
-                                    dragH = null
-                                },
-                                onDrag = { change, amount ->
-                                    change.consume()
-                                    // The widget is centred, so the width grows on both sides: twice the finger's move.
-                                    dragW = ((dragW ?: curW) + (amount.x * 2).toDp()).coerceIn(120.dp, maxW)
-                                    dragH = ((dragH ?: curH) + amount.y.toDp())
-                                        .coerceIn(natural.minHeight.dp, natural.maxHeight.dp)
-                                },
-                            )
-                        },
-                    ) {
-                        Canvas(Modifier.fillMaxSize().padding(10.dp)) {
-                            val s = size.width
-                            val stroke = 3.dp.toPx()
-                            drawArc(accent, 0f, 90f, useCenter = false, topLeft = Offset(-s, -s), size = Size(s * 2, s * 2),
-                                style = Stroke(stroke, cap = StrokeCap.Round))
-                        }
+        var hostView by remember { mutableStateOf<AppWidgetHostView?>(null) }
+        Box(Modifier.fillMaxWidth().height(h)) {
+            AndroidView(
+                factory = { ctx -> vm.widgetHost.createView(ctx, id, info).also { hostView = it } },
+                modifier = Modifier
+                    .fillMaxSize()
+                    // Lets lists inside widgets (mail, calendar, notes) scroll instead of the page.
+                    .nestedScroll(rememberNestedScrollInteropConnection())
+                    .onSizeChanged { size -> hostView?.let { reportSize(it, size.width / density.density, size.height / density.density) } },
+            )
+            if (editing) {
+                val accent = Accent
+                Box(Modifier.matchParentSize().border(1.dp, accent.copy(alpha = 0.45f), RoundedCornerShape(22.dp)))
+                // Corner handle: drag to resize. Snaps to full width and to half (two side by side).
+                Box(
+                    Modifier.align(Alignment.BottomEnd).size(40.dp).pointerInput(id, areaW) {
+                        detectDragGestures(
+                            onDragStart = { dragW = curW; dragH = curH },
+                            onDragCancel = { dragW = null; dragH = null },
+                            onDragEnd = {
+                                val fw = dragW ?: curW
+                                val fh = dragH ?: curH
+                                val hh = ((fh.value / 4).roundToInt() * 4).coerceIn(natural.minHeight, natural.maxHeight)
+                                val ww = when {
+                                    fw >= areaW - 16.dp -> 0
+                                    kotlin.math.abs((fw - half).value) < 24f -> half.value.toInt()
+                                    else -> (fw.value / 4).roundToInt() * 4
+                                }
+                                vm.setWidgetSize(id, hh, ww)
+                                dragW = null
+                                dragH = null
+                            },
+                            onDrag = { change, amount ->
+                                change.consume()
+                                dragW = ((dragW ?: curW) + amount.x.toDp()).coerceIn(120.dp, areaW)
+                                dragH = ((dragH ?: curH) + amount.y.toDp()).coerceIn(natural.minHeight.dp, natural.maxHeight.dp)
+                            },
+                        )
+                    },
+                ) {
+                    Canvas(Modifier.fillMaxSize().padding(10.dp)) {
+                        val s = size.width
+                        drawArc(accent, 0f, 90f, useCenter = false, topLeft = Offset(-s, -s), size = Size(s * 2, s * 2),
+                            style = Stroke(3.dp.toPx(), cap = StrokeCap.Round))
                     }
                 }
             }
@@ -248,6 +272,47 @@ private fun AppearIn(index: Int, content: @Composable () -> Unit) {
         a.animateTo(1f, tween(380, easing = FastOutSlowInEasing))
     }
     Box(Modifier.graphicsLayer { alpha = a.value; translationY = (1f - a.value) * 14.dp.toPx() }) { content() }
+}
+
+/** Notes: a scribble board. Type and press done to keep a line; tap one to change it; long-press to let it go. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun NotesBlock(vm: LauncherViewModel) {
+    var input by rememberSaveable { mutableStateOf("") }
+    var editingId by remember { mutableStateOf<Long?>(null) }
+    var editText by remember { mutableStateOf("") }
+    val accent = Accent
+    Text("Notes", color = Muted, fontSize = 13.sp)
+    vm.notes.forEach { n ->
+        key(n.id) {
+            if (editingId == n.id) {
+                BasicTextField(
+                    value = editText, onValueChange = { editText = it },
+                    textStyle = TextStyle(color = Ink, fontSize = 16.sp), cursorBrush = SolidColor(accent),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { vm.updateNote(n.id, editText); editingId = null }),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                )
+            } else {
+                Text(n.text, fontSize = 16.sp, color = Ink, modifier = Modifier.fillMaxWidth()
+                    .combinedClickable(onClick = { editingId = n.id; editText = n.text }, onLongClick = { vm.deleteNote(n.id) })
+                    .padding(vertical = 6.dp))
+            }
+        }
+    }
+    BasicTextField(
+        value = input, onValueChange = { input = it }, singleLine = true,
+        textStyle = TextStyle(color = Ink, fontSize = 16.sp), cursorBrush = SolidColor(accent),
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+        keyboardActions = KeyboardActions(onDone = { vm.addNote(input); input = "" }),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        decorationBox = { inner ->
+            Box {
+                if (input.isEmpty()) Text("Write a note", color = Muted, fontSize = 16.sp)
+                inner()
+            }
+        },
+    )
 }
 
 private class NaturalSize(val width: Int, val height: Int, val minHeight: Int, val maxHeight: Int, val fullWidth: Boolean)

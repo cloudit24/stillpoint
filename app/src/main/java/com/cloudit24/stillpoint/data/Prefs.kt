@@ -58,6 +58,7 @@ class Prefs(context: Context) {
             edgeMotion = sp.getBoolean(K_EDGE_MOTION, d.edgeMotion),
             edgeRight = sp.getBoolean(K_EDGE_RIGHT, d.edgeRight),
             iconTint = runCatching { IconTint.valueOf(sp.getString(K_ICON_TINT, null)!!) }.getOrDefault(d.iconTint),
+            font = runCatching { AppFont.valueOf(sp.getString("app_font", null)!!) }.getOrDefault(d.font),
             // Before 0.17 only one could be chosen (key "info_panel").
             infoPanels = (sp.getString(K_INFO_PANELS, null) ?: sp.getString(K_INFO_PANEL, null))
                 ?.split(",")?.mapNotNull { n -> runCatching { InfoPanel.valueOf(n) }.getOrNull() }?.toSet()
@@ -135,6 +136,7 @@ class Prefs(context: Context) {
             .putBoolean(K_EDGE_MOTION, s.edgeMotion)
             .putBoolean(K_EDGE_RIGHT, s.edgeRight)
             .putString(K_ICON_TINT, s.iconTint.name)
+            .putString("app_font", s.font.name)
             .putString(K_INFO_PANELS, s.infoPanels.joinToString(",") { it.name })
             .putBoolean(K_SHOW_RECENT, s.showRecent)
             .putString(K_DIAL, s.dialMode.name)
@@ -225,6 +227,17 @@ class Prefs(context: Context) {
     }
 
     /** Widget ids in page order. Ids belong to the system widget host, so they live apart from settings. */
+    fun loadNotes(): List<Note> = runCatching {
+        val a = JSONArray(sp.getString("notes", "[]"))
+        (0 until a.length()).map { i -> a.getJSONObject(i).let { Note(it.getLong("id"), it.getString("text")) } }
+    }.getOrDefault(emptyList())
+
+    fun saveNotes(notes: List<Note>) {
+        val a = JSONArray()
+        notes.forEach { a.put(JSONObject().put("id", it.id).put("text", it.text)) }
+        sp.edit().putString("notes", a.toString()).apply()
+    }
+
     fun loadWidgetIds(): List<Int> =
         readStringList(sp.getString(K_WIDGET_IDS, null)).mapNotNull { it.toIntOrNull() }
 

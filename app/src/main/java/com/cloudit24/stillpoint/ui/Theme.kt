@@ -1,5 +1,14 @@
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.material3.Typography
+import androidx.compose.runtime.remember
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
+import androidx.compose.ui.text.font.FontWeight
+import com.cloudit24.stillpoint.R
+import com.cloudit24.stillpoint.data.AppFont
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -22,9 +31,40 @@ val LocalAccent = staticCompositionLocalOf { Slate }
 val Accent: Color
     @Composable @ReadOnlyComposable get() = LocalAccent.current
 
+/** Bundled variable fonts: one file each, every weight drawn from it. */
+private fun variable(res: Int, lo: Int, hi: Int) = FontFamily((1..9).map { i ->
+    val w = i * 100
+    Font(res, FontWeight(w), variationSettings = FontVariation.Settings(FontVariation.weight(w.coerceIn(lo, hi))))
+})
+
+fun fontFamilyFor(f: AppFont): FontFamily = when (f) {
+    AppFont.SYSTEM -> FontFamily.Default
+    AppFont.INTER -> variable(R.font.inter, 100, 900)
+    AppFont.MANROPE -> variable(R.font.manrope, 200, 800)
+    AppFont.SPACE -> variable(R.font.space_grotesk, 300, 700)
+    AppFont.LORA -> variable(R.font.lora, 400, 700)
+}
+
+/**
+ * Every text style in the chosen font, with joined letters ("tt", "fi") turned off:
+ * some fonts, like Motorola's, join them and words such as "Battery" look glued.
+ */
+private fun Typography.withFont(ff: FontFamily): Typography {
+    fun TextStyle.f() = copy(fontFamily = ff, fontFeatureSettings = "liga 0, clig 0")
+    return copy(
+        displayLarge = displayLarge.f(), displayMedium = displayMedium.f(), displaySmall = displaySmall.f(),
+        headlineLarge = headlineLarge.f(), headlineMedium = headlineMedium.f(), headlineSmall = headlineSmall.f(),
+        titleLarge = titleLarge.f(), titleMedium = titleMedium.f(), titleSmall = titleSmall.f(),
+        bodyLarge = bodyLarge.f(), bodyMedium = bodyMedium.f(), bodySmall = bodySmall.f(),
+        labelLarge = labelLarge.f(), labelMedium = labelMedium.f(), labelSmall = labelSmall.f(),
+    )
+}
+
 @Composable
-fun StillpointTheme(accent: Color = Slate, content: @Composable () -> Unit) {
+fun StillpointTheme(accent: Color = Slate, font: AppFont = AppFont.SYSTEM, content: @Composable () -> Unit) {
+    val typography = remember(font) { Typography().withFont(fontFamilyFor(font)) }
     MaterialTheme(
+        typography = typography,
         colorScheme = darkColorScheme(
             background = Color.Black,
             surface = Color(0xFF161615),

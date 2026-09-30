@@ -1,5 +1,7 @@
 package com.cloudit24.stillpoint
 
+import com.cloudit24.stillpoint.update.UpdateNotice
+import com.cloudit24.stillpoint.data.Note
 import com.cloudit24.stillpoint.data.InfoPanel
 import com.cloudit24.stillpoint.data.CalendarSource
 import com.cloudit24.stillpoint.data.Ics
@@ -480,6 +482,38 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     var widgetSizes by mutableStateOf(prefs.loadWidgetSizes())
         private set
 
+    /** Moves a widget earlier (-1) or later (+1) on the Shelf. */
+    fun moveWidget(id: Int, delta: Int) {
+        val i = widgetIds.indexOf(id)
+        val j = (i + delta).coerceIn(0, widgetIds.lastIndex)
+        if (i < 0 || i == j) return
+        widgetIds = widgetIds.toMutableList().apply { add(j, removeAt(i)) }
+        prefs.saveWidgetIds(widgetIds)
+    }
+
+    // ---- Notes on the Shelf ----
+
+    var notes by mutableStateOf(prefs.loadNotes())
+        private set
+
+    fun addNote(text: String) {
+        val t = text.trim()
+        if (t.isEmpty()) return
+        notes = notes + Note(System.currentTimeMillis(), t)
+        prefs.saveNotes(notes)
+    }
+
+    fun updateNote(id: Long, text: String) {
+        val t = text.trim()
+        notes = if (t.isEmpty()) notes.filter { it.id != id } else notes.map { if (it.id == id) it.copy(text = t) else it }
+        prefs.saveNotes(notes)
+    }
+
+    fun deleteNote(id: Long) {
+        notes = notes.filter { it.id != id }
+        prefs.saveNotes(notes)
+    }
+
     /** [width]: 0 = full, -1 = the widget's own width, more = dp. */
     fun setWidgetSize(id: Int, heightDp: Int, width: Int) {
         widgetSizes = widgetSizes + (id to (heightDp to width))
@@ -520,6 +554,7 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
             refreshLive()
             refreshHub()
             Sync.schedule(getApplication())
+            UpdateNotice.check()?.let { UpdateNotice.notifyOnce(getApplication(), it) }
             if (settings.tasksSource.authority != null) loadProviderTasks()
             if (settings.calendarSource == CalendarSource.ICS) {
                 Sync.run(getApplication(), force = false, only = SyncFeature.CALENDAR)

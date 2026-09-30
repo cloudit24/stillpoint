@@ -1,5 +1,6 @@
 package com.cloudit24.stillpoint
 
+import com.cloudit24.stillpoint.update.UpdateNotice
 import com.cloudit24.stillpoint.widget.Refresh
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ContentTransform
@@ -63,7 +64,7 @@ class MainActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
         )
         setContent {
-            StillpointTheme(accent = androidx.compose.ui.graphics.Color(vm.settings.accent)) { LauncherRoot(vm, ::addWidget) }
+            StillpointTheme(accent = androidx.compose.ui.graphics.Color(vm.settings.accent), font = vm.settings.font) { LauncherRoot(vm, ::addWidget) }
         }
         if (savedInstanceState == null) handleHubLink(intent)
     }
@@ -71,6 +72,11 @@ class MainActivity : ComponentActivity() {
     /** stillpoint://hub?url=...&key=... from the QR code on the hub's "Connect phone" page. Only fills in the
      *  connect form: nothing is saved until the user sees the address and taps Connect. */
     private fun handleHubLink(intent: Intent?) {
+        // From the "new version is ready" notification.
+        if (intent?.getBooleanExtra(UpdateNotice.EXTRA_OPEN_SETTINGS, false) == true) {
+            vm.screen = Screen.SETTINGS
+            return
+        }
         val data = intent?.data ?: return
         if (intent.action != Intent.ACTION_VIEW || data.scheme != "stillpoint" || data.host != "hub") return
         val url = data.getQueryParameter("url")

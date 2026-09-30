@@ -1,5 +1,9 @@
 package com.cloudit24.stillpoint.ui
 
+import com.cloudit24.stillpoint.update.UpdateNotice
+import androidx.compose.material.icons.outlined.Settings
+import kotlinx.coroutines.delay
+import com.cloudit24.stillpoint.data.AppFont
 import com.cloudit24.stillpoint.data.DialMode
 import com.cloudit24.stillpoint.data.InfoPanel
 import com.cloudit24.stillpoint.data.IconTint
@@ -139,6 +143,7 @@ private enum class SettingsPage(val section: String, val title: String, val summ
     GOLD("Extras", "Gold price", "Home line and widget · uses outside websites", Icons.Outlined.Star),
     HUB("Extras", "Project Hub", "Connection to your own server", Icons.Outlined.CheckCircle),
     PRIVACY("System", "Permissions and data", "Usage access, gesture service, data usage", Icons.Outlined.Lock),
+    FOOTPRINT("System", "Battery and memory", "What Stillpoint itself uses", Icons.Outlined.Settings),
     UPDATES("System", "Updates", "Download new versions from GitHub", Icons.Outlined.Refresh),
     ABOUT("System", "About", "Version, source code and privacy", Icons.Outlined.Info),
 }
@@ -155,17 +160,8 @@ fun SettingsScreen(vm: LauncherViewModel) {
     var picking by remember { mutableStateOf<GestureSlot?>(null) }
     var dialog by remember { mutableStateOf<SettingsDialog?>(null) }
     // Checks GitHub quietly when Settings opens (at most every 6 hours) so a new version shows at the top.
-    var available by remember { mutableStateOf(lastUpdate?.takeIf { System.currentTimeMillis() - it.first < 6 * 3_600_000L }?.second) }
-    LaunchedEffect(Unit) {
-        if (!Updater.AVAILABLE) return@LaunchedEffect
-        val last = lastUpdate
-        if (last != null && System.currentTimeMillis() - last.first < 6 * 3_600_000L) return@LaunchedEffect
-        val r = Updater.check(BuildConfig.VERSION_NAME)
-        if (r !is UpdateCheck.Failed) {
-            lastUpdate = System.currentTimeMillis() to (r as? UpdateCheck.Available)
-            available = r as? UpdateCheck.Available
-        }
-    }
+    var available by remember { mutableStateOf(UpdateNotice.cached()) }
+    LaunchedEffect(Unit) { UpdateNotice.check()?.let { available = it } }
 
     BackHandler(enabled = page != null) { page = null }
 
@@ -273,6 +269,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
                             Box(Modifier.size(28.dp).clip(CircleShape).background(Color(s.accent)))
                         }
                         ActionRow("Icon colours", s.iconTint.label) { dialog = SettingsDialog.ICON_TINT }
+                        ActionRow("Font", s.font.label) { dialog = SettingsDialog.FONT }
                     }
                     Group("Apps") {
                         ActionRow("Home apps as", s.homeStyle.label) { dialog = SettingsDialog.HOME_STYLE }
@@ -350,7 +347,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
                     Note("Pinned apps show when Most used is off, or before usage data exists. Pin from the app list by " +
                         "long-pressing. Recently used and Most used need usage access.")
                     Group("Widgets") {
-                        Text("Swipe right on home for the widget page. Stillpoint's own widgets: Stillpoint Widget " +
+                        Text("Swipe right on home for the Shelf. Stillpoint's own widgets: Stillpoint Widget " +
                             "(clock and dates), Stillpoint Prayer (times, countdown, moon) and Stillpoint Gold. " +
                             "They work in any launcher too.", color = Muted, fontSize = 14.sp,
                             modifier = Modifier.padding(vertical = 12.dp))
@@ -468,7 +465,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         }
                     }
                     Group("Widget") {
-                        Text("Add \"Stillpoint Gold\" from the widget page (swipe right on home, Add widget) " +
+                        Text("Add \"Stillpoint Gold\" from the Shelf (swipe right on home, Add widget) " +
                             "or from any launcher. Tap the widget to refresh.", color = Muted, fontSize = 14.sp,
                             modifier = Modifier.padding(vertical = 12.dp))
                     }
@@ -494,6 +491,34 @@ fun SettingsScreen(vm: LauncherViewModel) {
                     }
                     Note("Project Hub is a server you run yourself. Stillpoint talks only to the address you enter and nothing " +
                         "else. Choose what uses it under Productivity: Tasks, Calendar and Projects. Use https unless the hub is on your home network.")
+                }
+
+                SettingsPage.FOOTPRINT -> {
+                    var f by remember { mutableStateOf(footprint()) }
+                    LaunchedEffect(Unit) {
+                        while (true) {
+                            delay(2_000)
+                            f = footprint()
+                        }
+                    }
+                    Group("Right now") {
+                        ActionRow("Memory", "${f.memMb} MB") {}
+                        ActionRow("Processor", "${formatDuration(f.cpuMs).let { if (f.cpuMs < 60_000) "${f.cpuMs / 1000} s" else it }} " +
+                            "of work since it started ${formatDuration(f.upMs)} ago " +
+                            "(${String.format(java.util.Locale.US, "%.2f", f.cpuMs * 100.0 / f.upMs.coerceAtLeast(1))}% of the time)") {}
+                    }
+                    Group("Battery") {
+                        ActionRow("Battery use", "Android keeps this figure. Tap to see Stillpoint's page.") {
+                            ctx.safeStart(
+                                Intent("android.settings.VIEW_ADVANCED_POWER_USAGE_DETAIL").putExtra("package_name", ctx.packageName),
+                                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${ctx.packageName}")),
+                            )
+                        }
+                    }
+                    Note("Android doesn't let an app read its own battery figure, so it's on Android's page. Processor " +
+                        "time is the best sign of battery use: Stillpoint works only while you look at it, and wakes " +
+                        "briefly at prayer times, at midnight and for syncs you switched on. Memory includes app icons " +
+                        "kept ready so lists open instantly; Android takes it back when another app needs it.")
                 }
 
                 SettingsPage.LOCK -> {
@@ -538,17 +563,17 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         }
                     }
                     when (s.tasksSource) {
-                        TaskSource.PHONE -> Note("Stored only on this phone. Add and tick tasks on the widget page.")
+                        TaskSource.PHONE -> Note("Stored only on this phone. Add and tick tasks on the Shelf.")
                         TaskSource.HUB -> SyncGroup(vm, SyncFeature.TASKS, Sync.HUB, s.tasksSync) { dialog = SettingsDialog.SYNC_TASKS }
                         else -> Group("Sync") {
                             Text("${s.tasksSource.label} keeps itself in sync, for example with DAVx5. Stillpoint reads its open " +
-                                "tasks when you open the widget page; ticking one there marks it done in ${s.tasksSource.label}.",
+                                "tasks when you open the Shelf; ticking one there marks it done in ${s.tasksSource.label}.",
                                 color = Muted, fontSize = 14.sp, modifier = Modifier.padding(vertical = 12.dp))
                             ActionRow("Read now", vm.providerError ?: "${vm.providerTasks.size} open tasks") { vm.loadProviderTasks() }
                         }
                     }
                     Group("Display") {
-                        ToggleRow("Tasks on the widget page", s.showTasks) { on -> vm.updateSettings { it.copy(showTasks = on) } }
+                        ToggleRow("Tasks on the Shelf", s.showTasks) { on -> vm.updateSettings { it.copy(showTasks = on) } }
                     }
                 }
 
@@ -592,7 +617,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         if (src == ProjectSource.HUB && !vm.hubConnected()) page = SettingsPage.HUB else vm.setProjectSource(src)
                     }
                     when (s.projectsSource) {
-                        ProjectSource.PHONE -> Note("Add projects and their next step on the widget page. " +
+                        ProjectSource.PHONE -> Note("Add projects and their next step on the Shelf. " +
                             "Home shows the first project that has a next step.")
                         ProjectSource.HUB -> SyncGroup(vm, SyncFeature.PROJECTS, Sync.HUB, s.projectsSync) { dialog = SettingsDialog.SYNC_PROJECTS }
                     }
@@ -714,6 +739,9 @@ fun SettingsScreen(vm: LauncherViewModel) {
         SettingsDialog.DIAL_MODE -> ChoiceDialog("Ring by the headline", DialMode.entries, { it.label }, onDismiss = { dialog = null }) { m ->
             vm.updateSettings { it.copy(dialMode = m) }
         }
+        SettingsDialog.FONT -> ChoiceDialog("Font", AppFont.entries, { it.label }, onDismiss = { dialog = null }) { f ->
+            vm.updateSettings { it.copy(font = f) }
+        }
         SettingsDialog.ICS_URL -> IcsDialog(vm.icsUrl().orEmpty(), onDismiss = { dialog = null }) { vm.setIcsUrl(it) }
         null -> Unit
     }
@@ -725,7 +753,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
 
 private enum class SettingsDialog {
     ACCENT, HOME_STYLE, DRAWER_START, CLOCK, GOLD_SOURCE, CURRENCY, KARAT, CITY, PRAYER_CITY, PRAYER_METHOD, HUB,
-    SYNC_TASKS, SYNC_CALENDAR, SYNC_PROJECTS, ICS_URL, EDGE_STYLE, ICON_TINT, DIAL_MODE,
+    SYNC_TASKS, SYNC_CALENDAR, SYNC_PROJECTS, ICS_URL, EDGE_STYLE, ICON_TINT, DIAL_MODE, FONT,
 }
 
 /** Type in the hub address and app key (from the hub's "Connect phone" page). Tested before it's saved. */
@@ -1066,5 +1094,14 @@ private fun IcsDialog(initial: String, onDismiss: () -> Unit, onSave: (String) -
     )
 }
 
-/** Last quiet update check this session: when, and the newer version if there was one. */
-private var lastUpdate: Pair<Long, UpdateCheck.Available?>? = null
+private class Footprint(val memMb: Int, val cpuMs: Long, val upMs: Long)
+
+/** This app's own memory (as Android counts it) and processor time since it started. */
+private fun footprint(): Footprint {
+    val mi = android.os.Debug.MemoryInfo().also { android.os.Debug.getMemoryInfo(it) }
+    return Footprint(
+        memMb = mi.totalPss / 1024,
+        cpuMs = android.os.Process.getElapsedCpuTime(),
+        upMs = android.os.SystemClock.elapsedRealtime() - android.os.Process.getStartElapsedRealtime(),
+    )
+}

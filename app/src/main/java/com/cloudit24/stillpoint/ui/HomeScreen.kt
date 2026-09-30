@@ -481,7 +481,7 @@ private fun AgendaBlock(context: Context, items: List<AgendaItem>) {
 private fun LocalProjectCard(vm: LauncherViewModel) {
     val p = vm.projects.firstOrNull { it.next.isNotBlank() }
     if (p == null) {
-        Text("No next step yet. Add projects on the widget page.", color = Muted, fontSize = 14.sp,
+        Text("No next step yet. Add projects on the Shelf.", color = Muted, fontSize = 14.sp,
             modifier = Modifier.padding(bottom = 20.dp).clickable { vm.screen = Screen.WIDGETS })
         return
     }
@@ -501,7 +501,7 @@ private fun LocalProjectCard(vm: LauncherViewModel) {
     }
 }
 
-/** Shown on the widget page. Where the tasks come from is chosen in Settings, Tasks. */
+/** Shown on the Shelf. Where the tasks come from is chosen in Settings, Tasks. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TasksBlock(vm: LauncherViewModel) {
