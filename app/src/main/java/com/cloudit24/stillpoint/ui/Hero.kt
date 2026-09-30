@@ -168,10 +168,15 @@ fun HeroHeader(vm: LauncherViewModel, s: LauncherSettings, now: Long) {
        }
        if (s.dialMode != DialMode.OFF) DayDial(vm, s, now, Modifier.padding(start = 12.dp).size(104.dp))
       }
-        InfoSlot(vm, s, now, Modifier.padding(top = 30.dp))
-        if (s.showStats || s.showLocalIp || s.publicIpOn) {
-            StatsStrip(vm, s, Modifier.padding(top = 26.dp))
-        }
+    }
+}
+
+/** The info zone under the headline: the chosen panels, then the quiet footer figures. */
+@Composable
+fun HeroInfo(vm: LauncherViewModel, s: LauncherSettings, now: Long) {
+    InfoSlot(vm, s, now, Modifier)
+    if (s.showStats || s.showLocalIp || s.publicIpOn) {
+        StatsStrip(vm, s, Modifier.padding(top = 26.dp))
     }
 }
 

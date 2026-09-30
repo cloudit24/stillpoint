@@ -480,8 +480,9 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     var widgetSizes by mutableStateOf(prefs.loadWidgetSizes())
         private set
 
-    fun setWidgetSize(id: Int, heightDp: Int, fullWidth: Boolean) {
-        widgetSizes = widgetSizes + (id to (heightDp to fullWidth))
+    /** [width]: 0 = full, -1 = the widget's own width, more = dp. */
+    fun setWidgetSize(id: Int, heightDp: Int, width: Int) {
+        widgetSizes = widgetSizes + (id to (heightDp to width))
         prefs.saveWidgetSizes(widgetSizes)
     }
 

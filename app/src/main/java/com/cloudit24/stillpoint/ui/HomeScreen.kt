@@ -252,11 +252,15 @@ fun HomeScreen(vm: LauncherViewModel) {
             }
             .padding(horizontal = 28.dp, vertical = 24.dp),
     ) {
-        // Headline, info and cards share the space left above the apps; if they need more, they scroll
-        // (only then, so swipe gestures keep working when everything fits).
-        val topScroll = rememberScrollState()
-        Column(Modifier.weight(1f).verticalScroll(topScroll, enabled = topScroll.maxValue > 0)) {
+        // The frame (docs/DESIGN.md): headline, fixed · info zone, takes what is left and scrolls inside itself ·
+        // recent apps, fixed · apps, at most a third of the screen, scrolls inside itself · shortcuts, fixed.
+        // New things go inside a zone; zones never push each other off the screen.
         HeroHeader(vm, s, now)
+        val infoScroll = rememberScrollState()
+        // Scrolls only when it has to, so swipe gestures keep working when everything fits.
+        Column(Modifier.weight(1f).padding(top = 26.dp).fadingEdges(infoScroll)
+            .verticalScroll(infoScroll, enabled = infoScroll.maxValue > 0)) {
+        HeroInfo(vm, s, now)
 
         if (s.showUsage) {
             // Screen time itself is one of the flipping headline cards.
@@ -296,7 +300,8 @@ fun HomeScreen(vm: LauncherViewModel) {
         // A set space for the apps (about a third of the screen); more apps scroll inside it.
         val listScale = 1f
         val maxListHeight = (LocalConfiguration.current.screenHeightDp * 0.34f).dp
-        Column(Modifier.heightIn(max = maxListHeight).verticalScroll(rememberScrollState())) {
+        val appsScroll = rememberScrollState()
+        Column(Modifier.heightIn(max = maxListHeight).fadingEdges(appsScroll).verticalScroll(appsScroll)) {
             if (s.homeStyle == HomeStyle.ICONS) {
                 HomeIcons(vm, homeApps, (s.homeSize * 2).dp)
             } else {

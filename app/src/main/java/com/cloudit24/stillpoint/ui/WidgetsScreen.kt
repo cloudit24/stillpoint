@@ -1,5 +1,25 @@
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.Dp
+import kotlinx.coroutines.delay
+import kotlin.math.roundToInt
 import android.appwidget.AppWidgetManager
 import android.util.SizeF
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -107,7 +127,7 @@ fun WidgetsScreen(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderInfo) ->
                 Text("No widgets yet. Tap Add widget below.", color = Muted, fontSize = 14.sp,
                     modifier = Modifier.padding(horizontal = 12.dp))
             }
-            vm.widgetIds.forEach { id -> key(id) { WidgetItem(vm, id, editing) } }
+            vm.widgetIds.forEachIndexed { i, id -> key(id) { AppearIn(i) { WidgetItem(vm, id, editing) } } }
         }
 
         Row(Modifier.fillMaxWidth().padding(top = 16.dp, start = 12.dp, end = 12.dp)) {
@@ -136,37 +156,98 @@ private fun WidgetItem(vm: LauncherViewModel, id: Int, editing: Boolean) {
         val natural = remember(info) { naturalSize(info, density.density) }
         val saved = vm.widgetSizes[id]
         val heightDp = saved?.first ?: natural.height
-        val full = saved?.second ?: natural.fullWidth
+        // Width: 0 = full, -1 = the widget's own width, more = chosen by dragging the corner.
+        val widthSetting = saved?.second ?: if (natural.fullWidth) 0 else -1
         if (editing) {
-            // Resize like on any home screen: height in steps, and full width or the widget's own width.
             Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("Height", color = Muted, fontSize = 13.sp)
                 Text("−", fontSize = 20.sp, modifier = Modifier.clip(CircleShape)
-                    .clickable { vm.setWidgetSize(id, (heightDp - 20).coerceAtLeast(natural.minHeight), full) }
+                    .clickable { vm.setWidgetSize(id, (heightDp - 20).coerceAtLeast(natural.minHeight), widthSetting) }
                     .padding(horizontal = 12.dp))
                 Text("$heightDp", fontSize = 14.sp)
                 Text("+", fontSize = 20.sp, modifier = Modifier.clip(CircleShape)
-                    .clickable { vm.setWidgetSize(id, (heightDp + 20).coerceAtMost(natural.maxHeight), full) }
+                    .clickable { vm.setWidgetSize(id, (heightDp + 20).coerceAtMost(natural.maxHeight), widthSetting) }
                     .padding(horizontal = 12.dp))
                 Spacer(Modifier.weight(1f))
-                Text(if (full) "Full width" else "Own width", color = Accent, fontSize = 13.sp,
-                    modifier = Modifier.clickable { vm.setWidgetSize(id, heightDp, !full) }.padding(8.dp))
+                Text(if (widthSetting == 0) "Full width" else "Own width", color = Accent, fontSize = 13.sp,
+                    modifier = Modifier.clickable { vm.setWidgetSize(id, heightDp, if (widthSetting == 0) -1 else 0) }.padding(8.dp))
             }
         }
         BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            val width = if (full) maxWidth else minOf(maxWidth, natural.width.dp)
+            val maxW = maxWidth
+            val targetW = when {
+                widthSetting == 0 -> maxW
+                widthSetting < 0 -> minOf(maxW, natural.width.dp)
+                else -> minOf(maxW, widthSetting.dp)
+            }
+            // While the corner is dragged the widget follows the finger; otherwise size changes glide.
+            var dragW by remember { mutableStateOf<Dp?>(null) }
+            var dragH by remember { mutableStateOf<Dp?>(null) }
+            val dragging = dragW != null
+            val w by animateDpAsState(dragW ?: targetW, if (dragging) snap<Dp>() else spring<Dp>(stiffness = Spring.StiffnessMediumLow), label = "w")
+            val h by animateDpAsState(dragH ?: heightDp.dp, if (dragging) snap<Dp>() else spring<Dp>(stiffness = Spring.StiffnessMediumLow), label = "h")
+            val curW by rememberUpdatedState(w)
+            val curH by rememberUpdatedState(h)
             var hostView by remember { mutableStateOf<AppWidgetHostView?>(null) }
-            AndroidView(
-                factory = { ctx -> vm.widgetHost.createView(ctx, id, info).also { hostView = it } },
-                modifier = Modifier
-                    .width(width)
-                    .height(heightDp.dp)
-                    // Lets lists inside widgets (mail, calendar, notes) scroll instead of the page.
-                    .nestedScroll(rememberNestedScrollInteropConnection())
-                    .onSizeChanged { size -> hostView?.let { reportSize(it, size.width / density.density, size.height / density.density) } },
-            )
+            Box(Modifier.width(w).height(h)) {
+                AndroidView(
+                    factory = { ctx -> vm.widgetHost.createView(ctx, id, info).also { hostView = it } },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        // Lets lists inside widgets (mail, calendar, notes) scroll instead of the page.
+                        .nestedScroll(rememberNestedScrollInteropConnection())
+                        .onSizeChanged { size -> hostView?.let { reportSize(it, size.width / density.density, size.height / density.density) } },
+                )
+                if (editing) {
+                    val accent = Accent
+                    Box(Modifier.matchParentSize().border(1.dp, accent.copy(alpha = 0.45f), RoundedCornerShape(22.dp)))
+                    // Corner handle: drag to resize, like on iPhone and Pixel.
+                    Box(
+                        Modifier.align(Alignment.BottomEnd).size(40.dp).pointerInput(id, maxW) {
+                            detectDragGestures(
+                                onDragStart = { dragW = curW; dragH = curH },
+                                onDragCancel = { dragW = null; dragH = null },
+                                onDragEnd = {
+                                    val fw = dragW ?: curW
+                                    val fh = dragH ?: curH
+                                    val hh = ((fh.value / 4).roundToInt() * 4).coerceIn(natural.minHeight, natural.maxHeight)
+                                    val ww = if (fw >= maxW - 4.dp) 0 else (fw.value / 4).roundToInt() * 4
+                                    vm.setWidgetSize(id, hh, ww)
+                                    dragW = null
+                                    dragH = null
+                                },
+                                onDrag = { change, amount ->
+                                    change.consume()
+                                    // The widget is centred, so the width grows on both sides: twice the finger's move.
+                                    dragW = ((dragW ?: curW) + (amount.x * 2).toDp()).coerceIn(120.dp, maxW)
+                                    dragH = ((dragH ?: curH) + amount.y.toDp())
+                                        .coerceIn(natural.minHeight.dp, natural.maxHeight.dp)
+                                },
+                            )
+                        },
+                    ) {
+                        Canvas(Modifier.fillMaxSize().padding(10.dp)) {
+                            val s = size.width
+                            val stroke = 3.dp.toPx()
+                            drawArc(accent, 0f, 90f, useCenter = false, topLeft = Offset(-s, -s), size = Size(s * 2, s * 2),
+                                style = Stroke(stroke, cap = StrokeCap.Round))
+                        }
+                    }
+                }
+            }
         }
     }
+}
+
+/** Widgets settle into place when the page opens: a short fade and rise, one after another. Nothing more. */
+@Composable
+private fun AppearIn(index: Int, content: @Composable () -> Unit) {
+    val a = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        delay(index * 45L)
+        a.animateTo(1f, tween(380, easing = FastOutSlowInEasing))
+    }
+    Box(Modifier.graphicsLayer { alpha = a.value; translationY = (1f - a.value) * 14.dp.toPx() }) { content() }
 }
 
 private class NaturalSize(val width: Int, val height: Int, val minHeight: Int, val maxHeight: Int, val fullWidth: Boolean)

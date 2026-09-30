@@ -1,5 +1,13 @@
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.foundation.ScrollState
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.Color
@@ -187,3 +195,22 @@ fun ActionRow(label: String, detail: String? = null, onClick: () -> Unit) {
         if (detail != null) Text(detail, color = Muted, fontSize = 13.sp)
     }
 }
+
+/**
+ * Fades the top or bottom edge of a scrolling zone when there is more to see that way,
+ * so a zone that is full looks finished rather than cut off.
+ */
+fun Modifier.fadingEdges(state: ScrollState, edge: Dp = 20.dp): Modifier = this
+    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+    .drawWithContent {
+        drawContent()
+        val e = edge.toPx()
+        if (state.value > 0) {
+            drawRect(Brush.verticalGradient(listOf(Color.Transparent, Color.Black), 0f, e),
+                size = Size(size.width, e), blendMode = BlendMode.DstIn)
+        }
+        if (state.value < state.maxValue) {
+            drawRect(Brush.verticalGradient(listOf(Color.Black, Color.Transparent), size.height - e, size.height),
+                topLeft = Offset(0f, size.height - e), size = Size(size.width, e), blendMode = BlendMode.DstIn)
+        }
+    }

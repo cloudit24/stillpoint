@@ -232,16 +232,26 @@ class Prefs(context: Context) {
         sp.edit().putString(K_WIDGET_IDS, JSONArray(ids.map { it.toString() }).toString()).apply()
     }
 
-    /** Widget id -> (height in dp, full width) as chosen in Edit. Stored as "id:height:1,id:height:0". */
-    fun loadWidgetSizes(): Map<Int, Pair<Int, Boolean>> = (sp.getString("widget_sizes", null) ?: "")
-        .split(",").mapNotNull { part ->
+    /**
+     * Widget id -> (height in dp, width) as chosen in Edit. Width: 0 = full, -1 = the widget's own, more = dp.
+     * Stored as "id:height:width"; the 0.23 key held 1/0 for full/own width.
+     */
+    fun loadWidgetSizes(): Map<Int, Pair<Int, Int>> {
+        val v2 = sp.getString("widget_sizes2", null)
+        val raw = v2 ?: sp.getString("widget_sizes", null) ?: ""
+        return raw.split(",").mapNotNull { part ->
             val f = part.split(":")
-            if (f.size != 3) null else f[0].toIntOrNull()?.let { id -> f[1].toIntOrNull()?.let { h -> id to (h to (f[2] == "1")) } }
+            val id = f.getOrNull(0)?.toIntOrNull()
+            val h = f.getOrNull(1)?.toIntOrNull()
+            val w = f.getOrNull(2)?.toIntOrNull()
+            if (f.size != 3 || id == null || h == null || w == null) null
+            else id to (h to if (v2 != null) w else if (w == 1) 0 else -1)
         }.toMap()
+    }
 
-    fun saveWidgetSizes(sizes: Map<Int, Pair<Int, Boolean>>) {
-        sp.edit().putString("widget_sizes",
-            sizes.entries.joinToString(",") { (id, v) -> "$id:${v.first}:${if (v.second) 1 else 0}" }).apply()
+    fun saveWidgetSizes(sizes: Map<Int, Pair<Int, Int>>) {
+        sp.edit().putString("widget_sizes2",
+            sizes.entries.joinToString(",") { (id, v) -> "$id:${v.first}:${v.second}" }).apply()
     }
 
     /** Last fetched values, so home shows something instantly after a restart. */
