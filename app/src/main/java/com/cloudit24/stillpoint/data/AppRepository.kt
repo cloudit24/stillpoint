@@ -35,7 +35,6 @@ class AppRepository(private val context: Context) {
                 }
             }.getOrDefault(emptyList())
         }
-            .filter { it.packageName != context.packageName }
             .sortedBy { it.label.lowercase() }
     }
 

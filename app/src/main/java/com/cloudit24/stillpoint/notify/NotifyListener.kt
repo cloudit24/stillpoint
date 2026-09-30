@@ -71,7 +71,8 @@ class NotifyListener : NotificationListenerService() {
     }
 
     private fun shown(sbn: StatusBarNotification): Boolean =
-        sbn.isClearable && !sbn.isOngoing && sbn.packageName != packageName &&
+        sbn.isClearable && !sbn.isOngoing &&
+            (sbn.packageName != packageName || sbn.notification.channelId == NotifyTest.CHANNEL) &&
             (sbn.notification.flags and Notification.FLAG_GROUP_SUMMARY) == 0
 
     private fun publish() {

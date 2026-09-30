@@ -1,5 +1,6 @@
 package com.cloudit24.stillpoint
 
+import com.cloudit24.stillpoint.ui.subnet
 import com.cloudit24.stillpoint.data.Calendars
 import com.cloudit24.stillpoint.data.Moon
 import com.cloudit24.stillpoint.data.Prayer
@@ -103,6 +104,17 @@ class CoreTest {
         assertEquals(517.25, readNumber("""[{"price":"517.25"}]""", "0.price")!!, 0.001)
         assertEquals(2648.3, readNumber("Gold: USD 2,648.30 per ounce", "")!!, 0.001)
         assertNull(readNumber("""{"data":{}}""", "data.price"))
+    }
+
+    @Test
+    fun subnetCalculator() {
+        val r = subnet("192.168.1.10/24")!!.toMap()
+        assertEquals("192.168.1.0/24", r["Network"])
+        assertEquals("255.255.255.0", r["Mask"])
+        assertEquals("192.168.1.255", r["Broadcast"])
+        assertEquals("254", r["Hosts"])
+        assertEquals("10.0.3.255", subnet("10.0.0.5/22")!!.toMap()["Broadcast"])
+        assertNull(subnet("300.1.1.1/24"))
     }
 
     @Test

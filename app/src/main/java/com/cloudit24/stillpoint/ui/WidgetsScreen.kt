@@ -175,6 +175,7 @@ fun WidgetsScreen(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderInfo) ->
     ) {
         Row(Modifier.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("Shelf", fontSize = 34.sp, fontWeight = FontWeight.Light, modifier = Modifier.weight(1f))
+            if (!editing) Text("Tools", color = Muted, modifier = Modifier.clickable { vm.screen = Screen.TOOLS }.padding(8.dp))
             if (vm.widgetIds.isNotEmpty()) {
                 Text(if (editing) "Done" else "Edit", color = Muted,
                     modifier = Modifier.clickable { editing = !editing }.padding(8.dp))

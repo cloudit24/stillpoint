@@ -1,5 +1,6 @@
 package com.cloudit24.stillpoint.ui
 
+import com.cloudit24.stillpoint.notify.NotifyTest
 import com.cloudit24.stillpoint.notify.NotifyHub
 import com.cloudit24.stillpoint.data.NotifyStyle
 import com.cloudit24.stillpoint.data.AppEntry
@@ -581,6 +582,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         }
                         ToggleRow("Signal dot at the top", s.notifyDot) { on -> vm.updateSettings { it.copy(notifyDot = on) } }
                         ToggleRow("Dots on apps", s.notifyAppDots) { on -> vm.updateSettings { it.copy(notifyAppDots = on) } }
+                        ActionRow("Send a test notification", "Then go home to see the light and the dots") { NotifyTest.send(ctx) }
                     }
                     Note("The light uses the edge style under Appearance, in each app's colour. Several apps take turns. " +
                         "It moves only while home is on screen; with Animations off it stays softly lit.")
@@ -787,6 +789,9 @@ fun SettingsScreen(vm: LauncherViewModel) {
                 SettingsPage.ABOUT -> {
                     Group("Stillpoint Launcher") {
                         ActionRow("Version", BuildConfig.VERSION_NAME) {}
+                        ActionRow("App info", "Android's page for Stillpoint: permissions, notifications, battery, storage") {
+                            ctx.safeStart(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${ctx.packageName}")))
+                        }
                         ActionRow("Made by", "cloudit24 · github.com/cloudit24") {
                             ctx.safeStart(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/cloudit24")))
                         }

@@ -21,6 +21,7 @@ fun runTarget(vm: LauncherViewModel, context: Context, target: String) {
         HomeAction.SETTINGS -> vm.screen = Screen.SETTINGS
         HomeAction.DATA_USAGE -> vm.screen = Screen.DATA
         HomeAction.PRAYER -> vm.screen = Screen.PRAYER
+        HomeAction.TOOLS -> vm.screen = Screen.TOOLS
         HomeAction.PHONE -> context.safeStart(Intent(Intent.ACTION_DIAL))
         HomeAction.CAMERA -> context.safeStart(Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA))
         HomeAction.NOTIFICATIONS -> if (!LockAccessibilityService.openNotifications()) needsService(context)

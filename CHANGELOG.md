@@ -3,6 +3,15 @@
 Every version of Stillpoint Launcher, newest first. Each links to its APK.
 The newest is always at **[Download the latest APK](https://github.com/cloudit24/stillpoint/releases/latest/download/Stillpoint-Launcher.apk)**.
 
+## v0.30.0 · 1 Oct 2026
+- Tools, one place for small everyday tools (Shelf → Tools, or any gesture):
+  device info; password generator, hash, Base64, UUID, JSON formatter, QR code;
+  my addresses, subnet calculator, ping, port check, DNS lookup, Wi-Fi details, Wake-on-LAN.
+- Notification light: a Send test notification button.
+- Stillpoint now shows in the app list (opens Settings; long-press for App info), and Settings → About has App info.
+
+[stillpoint-v0.30.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.30.0/stillpoint-v0.30.0.apk)
+
 ## v0.29.0 · 1 Oct 2026
 - Notification light, for everyone (not only prayer): unread notifications light the screen edges in each
   app's colour. Styles: Breathe, Sweep, or Blink like a BlackBerry.

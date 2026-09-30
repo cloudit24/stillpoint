@@ -90,6 +90,7 @@ enum class HomeAction(val label: String, val needsGestureService: Boolean = fals
     SETTINGS("Settings"),
     DATA_USAGE("Data usage"),
     PRAYER("Prayer times and Qibla"),
+    TOOLS("Tools"),
     NOTIFICATIONS("Notifications", needsGestureService = true),
     LOCK("Lock screen", needsGestureService = true),
 }

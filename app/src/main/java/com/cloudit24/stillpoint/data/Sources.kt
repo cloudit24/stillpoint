@@ -17,6 +17,8 @@ enum class SourceKey(val label: String, val default: String, val help: String) {
         "A Frankfurter server (open source, easy to run yourself). /v1/latest is added."),
     IP("Public IP", "https://api.ipify.org",
         "Any address that answers with just your IP address as plain text."),
+    DNS("DNS lookup (Tools)", "https://cloudflare-dns.com/dns-query",
+        "A DNS-over-HTTPS server that answers in JSON, like Cloudflare, Google (https://dns.google/resolve) or your own."),
 }
 
 /** Your own gold price: any web address, and where in its answer the price is (taken as 24K). */

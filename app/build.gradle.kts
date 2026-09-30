@@ -17,8 +17,8 @@ android {
         minSdk = 26
         targetSdk = 35
         // Bump both for every release. The GitHub tag must be "v" + versionName.
-        versionCode = 39
-        versionName = "0.29.0"
+        versionCode = 40
+        versionName = "0.30.0"
     }
 
     // github: in-app updates from GitHub Releases.
@@ -74,6 +74,8 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     // Installs the start-up profile on sideloaded phones too (faster first open).
     implementation("androidx.profileinstaller:profileinstaller:1.4.1")
+    // QR codes for Tools (pure Java, open source, no network).
+    implementation("com.google.zxing:core:3.5.3")
 
     testImplementation("junit:junit:4.13.2")
     // The real org.json for checks that run on the computer (Android's copy only exists on phones).

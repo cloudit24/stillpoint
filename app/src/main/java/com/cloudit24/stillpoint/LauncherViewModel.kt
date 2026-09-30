@@ -63,7 +63,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-enum class Screen { HOME, DRAWER, FOCUS, SETTINGS, WIDGETS, DATA, PRAYER }
+enum class Screen { HOME, DRAWER, FOCUS, SETTINGS, WIDGETS, DATA, PRAYER, TOOLS }
 
 class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     private val appsRepo = AppRepository(app)
@@ -766,6 +766,11 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun launch(app: AppEntry) {
+        // Stillpoint itself, from the app list: open its settings.
+        if (app.packageName == getApplication<Application>().packageName) {
+            screen = Screen.SETTINGS
+            return
+        }
         if (isFocusActive() && app.key !in settings.focusAllowed) {
             blockedMessage = "${app.label} is blocked until ${formatClock(getApplication(), settings.focusEndsAt)}."
             return

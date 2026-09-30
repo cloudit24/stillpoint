@@ -1,5 +1,6 @@
 package com.cloudit24.stillpoint
 
+import com.cloudit24.stillpoint.ui.ToolsScreen
 import com.cloudit24.stillpoint.update.UpdateNotice
 import com.cloudit24.stillpoint.widget.Refresh
 import androidx.compose.animation.AnimatedContent
@@ -173,6 +174,7 @@ private fun LauncherRoot(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderI
             Screen.WIDGETS -> WidgetsScreen(vm, onAddWidget)
             Screen.DATA -> DataUsageScreen(vm)
             Screen.PRAYER -> PrayerScreen(vm)
+            Screen.TOOLS -> ToolsScreen(vm)
         }
         }
     }
