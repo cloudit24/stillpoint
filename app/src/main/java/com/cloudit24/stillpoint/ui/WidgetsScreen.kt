@@ -7,7 +7,8 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.composed
-import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.round
@@ -209,12 +210,9 @@ fun WidgetsScreen(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderInfo) ->
                             Box(
                                 Modifier.zIndex(if (moving) 1f else 0f)
                                     .onGloballyPositioned { drag.bounds[id] = it.boundsInRoot() }
-                                    .animatePlacement(enabled = !moving)
+                                    .shelfPlacement(moving, drag)
                                     .graphicsLayer {
-                                        val b = drag.bounds[id]
-                                        if (moving && b != null) {
-                                            translationX = drag.finger.x - drag.grab.x - b.left
-                                            translationY = drag.finger.y - drag.grab.y - b.top
+                                        if (moving) {
                                             scaleX = 1.04f
                                             scaleY = 1.04f
                                             shadowElevation = 24.dp.toPx()
@@ -512,21 +510,48 @@ private fun ShelfTabs(vm: LauncherViewModel, modifier: Modifier) {
     }
 }
 
-/** Other widgets glide to their new place when one is moved, instead of jumping there. */
-private fun Modifier.animatePlacement(enabled: Boolean): Modifier = composed {
+private class Glide {
+    var anim: Animatable<IntOffset, AnimationVector2D>? = null
+    var released: IntOffset? = null
+}
+
+/**
+ * Cards glide to a new place instead of jumping there; the one being dragged follows the finger.
+ * Where a card should be is read while it is placed, in the same pass, so it never shows at
+ * the new spot for one frame first (that was the flicker).
+ */
+private fun Modifier.shelfPlacement(moving: Boolean, drag: ShelfDrag): Modifier = composed {
     val scope = rememberCoroutineScope()
-    var target by remember { mutableStateOf(IntOffset.Zero) }
-    var anim by remember { mutableStateOf<Animatable<IntOffset, AnimationVector2D>?>(null) }
-    this.onPlaced { target = it.positionInParent().round() }
-        .offset {
-            val a = anim ?: Animatable(target, IntOffset.VectorConverter).also { anim = it }
-            if (a.targetValue != target) {
-                scope.launch {
-                    if (enabled) a.animateTo(target, spring(stiffness = Spring.StiffnessMediumLow)) else a.snapTo(target)
+    val g = remember { Glide() }
+    layout { measurable, constraints ->
+        val p = measurable.measure(constraints)
+        layout(p.width, p.height) {
+            val c = coordinates
+            val target = c?.positionInParent()?.round() ?: IntOffset.Zero
+            val a = g.anim ?: Animatable(target, IntOffset.VectorConverter).also { g.anim = it }
+            val from = g.released
+            when {
+                moving && c != null -> {
+                    val off = (drag.finger - drag.grab - c.positionInRoot()).round()
+                    g.released = target + off
+                    p.place(off)
+                }
+                from != null -> {
+                    // Let go: glide from under the finger into its slot.
+                    g.released = null
+                    scope.launch {
+                        a.snapTo(from)
+                        a.animateTo(target, spring(stiffness = Spring.StiffnessMediumLow))
+                    }
+                    p.place(from - target)
+                }
+                else -> {
+                    if (a.targetValue != target) scope.launch { a.animateTo(target, spring(stiffness = Spring.StiffnessMediumLow)) }
+                    p.place(a.value - target)
                 }
             }
-            if (enabled) a.value - target else IntOffset.Zero
         }
+    }
 }
 
 /** Widgets settle into place when the page opens: a short fade and rise, one after another. Nothing more. */

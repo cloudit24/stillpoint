@@ -552,7 +552,7 @@ private fun WifiTool() {
     var tick by remember { mutableStateOf(0) }
     val rows = remember(tick) {
         @Suppress("DEPRECATION")
-        val info = ctx.applicationContext.getSystemService(WifiManager::class.java)?.connectionInfo
+        val info = runCatching { ctx.applicationContext.getSystemService(WifiManager::class.java)?.connectionInfo }.getOrNull()
         if (info == null || info.networkId == -1) listOf("Wi-Fi" to "Not connected")
         else {
             val freq = info.frequency
