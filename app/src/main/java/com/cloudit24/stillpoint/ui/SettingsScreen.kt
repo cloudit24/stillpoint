@@ -143,7 +143,7 @@ private enum class SettingsPage(val section: String, val title: String, val summ
     HOME("Personalization", "Home screen", "Headline, calendars, swipe cards, apps, footer", Icons.Outlined.Home),
     APPS("Personalization", "App list", "Starting tab, hidden apps", Icons.Outlined.Menu),
     GESTURES("Personalization", "Gestures and shortcuts", "Swipes, double-tap, bottom shortcuts", Icons.Outlined.ThumbUp),
-    NOTIFY("Personalization", "Notification light", "Edge light, signal dot and app dots; never miss important people", Icons.Outlined.Star),
+    NOTIFY("Personalization", "Notification", "Edge light, signal dot and app dots; never miss important people", Icons.Outlined.Star),
     LOCK("Personalization", "Lock screen", "Next prayer and dates on the lock screen", Icons.Outlined.Notifications),
     TASKS("Productivity", "Tasks", "On this phone, Project Hub, Tasks.org or OpenTasks", Icons.Outlined.Done),
     CALENDAR("Productivity", "Calendar", "Phone calendar, Project Hub or a calendar link", Icons.Outlined.DateRange),
@@ -159,8 +159,19 @@ private enum class SettingsPage(val section: String, val title: String, val summ
     FOOTPRINT("System", "Battery and memory", "What Stillpoint itself uses", Icons.Outlined.Settings),
     SOURCES("System", "Online sources", "Use your own server or another service for anything online", Icons.Outlined.Share),
     UPDATES("System", "Updates", "Download new versions from GitHub", Icons.Outlined.Refresh),
+    SYSTEM("System", "System", "Permissions, backup, battery, online sources, updates", Icons.Outlined.Settings),
     ABOUT("System", "About", "Version, source code and privacy", Icons.Outlined.Info),
 }
+
+/** Pages reached from inside another page rather than from the main list. */
+private val SettingsPage.parent: SettingsPage?
+    get() = when (this) {
+        SettingsPage.GESTURES -> SettingsPage.HOME
+        SettingsPage.PRIVACY, SettingsPage.BACKUP, SettingsPage.FOOTPRINT, SettingsPage.SOURCES, SettingsPage.UPDATES -> SettingsPage.SYSTEM
+        else -> null
+    }
+
+private val SettingsPage?.depth: Int get() = if (this == null) 0 else if (parent == null) 1 else 2
 
 private val CardColor = Color(0xFF121211)
 private val DividerColor = Color(0xFF232321)
@@ -197,7 +208,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
     var available by remember { mutableStateOf(UpdateNotice.cached()) }
     LaunchedEffect(Unit) { UpdateNotice.check()?.let { available = it } }
 
-    BackHandler(enabled = page != null) { page = null }
+    BackHandler(enabled = page != null) { page = page?.parent }
 
     val notifyPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         vm.updateSettings { it.copy(lockOn = granted) }
@@ -241,7 +252,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
     AnimatedContent(
         targetState = page,
         transitionSpec = {
-            val forward = targetState != null
+            val forward = targetState.depth > initialState.depth
             (slideInHorizontally(tween(240)) { w -> if (forward) w / 5 else -w / 5 } + fadeIn(tween(240))) togetherWith
                 (slideOutHorizontally(tween(180)) { w -> if (forward) -w / 5 else w / 5 } + fadeOut(tween(160)))
         },
@@ -270,7 +281,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
             } else {
                 Row(Modifier.padding(top = 4.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Ink,
-                        modifier = Modifier.clip(CircleShape).clickable { page = null }.padding(8.dp))
+                        modifier = Modifier.clip(CircleShape).clickable { page = current.parent }.padding(8.dp))
                     Text(current.title, fontSize = 26.sp, fontWeight = FontWeight.Light, modifier = Modifier.padding(start = 8.dp))
                 }
             }
@@ -278,11 +289,12 @@ fun SettingsScreen(vm: LauncherViewModel) {
             when (current) {
                 null -> {
                     SettingsPage.entries
-                        .filter { it != SettingsPage.UPDATES || Updater.AVAILABLE }
+                        .filter { it.parent == null }
                         .groupBy { it.section }
                         .forEach { (section, pages) ->
                             Group(section) {
-                                pages.forEachIndexed { i, p ->
+                                if (section == "Productivity") TileRow(pages) { page = it }
+                                else pages.forEachIndexed { i, p ->
                                     if (i > 0) HorizontalDivider(color = DividerColor, thickness = 0.5.dp, modifier = Modifier.padding(start = 56.dp))
                                     MenuRow(p.icon, p.title, p.summary) { page = p }
                                 }
@@ -341,6 +353,9 @@ fun SettingsScreen(vm: LauncherViewModel) {
 
                 SettingsPage.HOME -> {
                     var worldOpen by remember { mutableStateOf(false) }
+                    Group("Gestures") {
+                        SettingsPage.GESTURES.let { MenuRow(it.icon, it.title, it.summary) { page = it } }
+                    }
                     Group("Headline") {
                         ToggleRow("Screen time card", s.showUsage) { on -> vm.updateSettings { it.copy(showUsage = on) } }
                         ActionRow("Ring beside it", s.dialMode.label) { dialog = SettingsDialog.DIAL_MODE }
@@ -819,6 +834,15 @@ fun SettingsScreen(vm: LauncherViewModel) {
 
                 SettingsPage.UPDATES -> Group("GitHub releases") { UpdateSection(available) }
 
+                SettingsPage.SYSTEM -> Group("System") {
+                    SettingsPage.entries
+                        .filter { it.parent == SettingsPage.SYSTEM && (it != SettingsPage.UPDATES || Updater.AVAILABLE) }
+                        .forEachIndexed { i, p ->
+                            if (i > 0) HorizontalDivider(color = DividerColor, thickness = 0.5.dp, modifier = Modifier.padding(start = 56.dp))
+                            MenuRow(p.icon, p.title, p.summary) { page = p }
+                        }
+                }
+
                 SettingsPage.ABOUT -> {
                     Group("Stillpoint Launcher") {
                         ActionRow("Version", BuildConfig.VERSION_NAME) {}
@@ -1031,6 +1055,25 @@ private fun MenuRow(icon: ImageVector, title: String, summary: String, onClick: 
             Text(summary, color = Muted, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = null, tint = Muted)
+    }
+}
+
+/** A row of pages side by side: icon above the name. */
+@Composable
+private fun TileRow(pages: List<SettingsPage>, onClick: (SettingsPage) -> Unit) {
+    val accent = Accent
+    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+        pages.forEach { p ->
+            Column(
+                Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).clickable { onClick(p) }.padding(vertical = 10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Box(Modifier.size(44.dp).clip(CircleShape).background(accent.copy(alpha = 0.16f)), contentAlignment = Alignment.Center) {
+                    Icon(p.icon, contentDescription = null, tint = accent, modifier = Modifier.size(22.dp))
+                }
+                Text(p.title, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
+            }
+        }
     }
 }
 

@@ -19,7 +19,7 @@ object NotifyTest {
         }
         val nm = context.getSystemService(NotificationManager::class.java) ?: return
         nm.createNotificationChannel(NotificationChannel(CHANNEL, "Test", NotificationManager.IMPORTANCE_DEFAULT).apply {
-            description = "The test from Settings, Notification light."
+            description = "The test from Settings, Notification."
         })
         nm.notify(4210, Notification.Builder(context, CHANNEL)
             .setSmallIcon(R.drawable.ic_stat_stillpoint)
