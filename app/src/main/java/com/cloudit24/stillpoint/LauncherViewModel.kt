@@ -1,5 +1,7 @@
 package com.cloudit24.stillpoint
 
+import com.cloudit24.stillpoint.data.ShelfPage
+import com.cloudit24.stillpoint.data.BuiltIn
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import com.cloudit24.stillpoint.notify.NotifyHub
@@ -515,8 +517,63 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
 
     val widgetManager: AppWidgetManager = AppWidgetManager.getInstance(app)
     val widgetHost: AppWidgetHost = ShelfHost(app, WIDGET_HOST_ID)
-    var widgetIds by mutableStateOf(prefs.loadWidgetIds())
+    var shelfPages by mutableStateOf(prefs.loadShelfPages())
         private set
+    var shelfIndex by mutableIntStateOf(prefs.shelfIndex().coerceIn(0, shelfPages.lastIndex))
+        private set
+
+    /** What's on the shelf you're looking at, in order: widget ids, and Stillpoint cards as negative ids. */
+    val widgetIds: List<Int> get() = shelfPages.getOrNull(shelfIndex)?.items.orEmpty()
+
+    private fun setItems(items: List<Int>) {
+        shelfPages = shelfPages.mapIndexed { i, p -> if (i == shelfIndex) p.copy(items = items) else p }
+        prefs.saveShelfPages(shelfPages)
+    }
+
+    fun selectShelf(i: Int) {
+        shelfIndex = i.coerceIn(0, shelfPages.lastIndex)
+        prefs.saveShelfIndex(shelfIndex)
+    }
+
+    fun addShelf() {
+        val id = (0..99).first { n -> shelfPages.none { it.id == n } }
+        shelfPages = shelfPages + ShelfPage(id, "Shelf ${shelfPages.size + 1}", emptyList())
+        prefs.saveShelfPages(shelfPages)
+        selectShelf(shelfPages.lastIndex)
+    }
+
+    fun renameShelf(i: Int, name: String) {
+        val n = name.trim().ifEmpty { return }
+        shelfPages = shelfPages.mapIndexed { j, p -> if (j == i) p.copy(name = n) else p }
+        prefs.saveShelfPages(shelfPages)
+    }
+
+    /** Deletes a shelf and gives its widgets back to Android. There is always at least one shelf. */
+    fun deleteShelf(i: Int) {
+        if (shelfPages.size <= 1) return
+        val gone = shelfPages.getOrNull(i) ?: return
+        gone.items.filter { it > 0 }.forEach { runCatching { widgetHost.deleteAppWidgetId(it) } }
+        shelfPages = shelfPages.filterIndexed { j, _ -> j != i }
+        prefs.saveShelfPages(shelfPages)
+        selectShelf(if (shelfIndex >= i) shelfIndex - 1 else shelfIndex)
+    }
+
+    fun addBuiltIn(kind: BuiltIn) {
+        val page = shelfPages.getOrNull(shelfIndex) ?: return
+        val id = kind.id(page.id)
+        if (id !in widgetIds) setItems(widgetIds + id)
+    }
+
+    var countdowns by mutableStateOf(prefs.loadCountdowns())
+        private set
+
+    fun setCountdown(id: Int, title: String, day: Long) {
+        countdowns = countdowns + (id to (title to day))
+        prefs.saveCountdowns(countdowns)
+    }
+
+    /** Where back from Tools goes: the screen it was opened from. */
+    var toolsReturn = Screen.WIDGETS
     /** Id allocated while the bind / configure screens are open. Lives here so it survives activity recreation. */
     var pendingWidgetId = -1
         private set
@@ -531,8 +588,7 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
 
     fun commitPendingWidget() {
         if (pendingWidgetId != -1) {
-            widgetIds = widgetIds + pendingWidgetId
-            prefs.saveWidgetIds(widgetIds)
+            setItems(widgetIds + pendingWidgetId)
         }
         pendingWidgetId = -1
     }
@@ -543,9 +599,9 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun removeWidget(id: Int) {
-        runCatching { widgetHost.deleteAppWidgetId(id) }
-        widgetIds = widgetIds - id
-        prefs.saveWidgetIds(widgetIds)
+        if (id > 0) runCatching { widgetHost.deleteAppWidgetId(id) }
+        shelfPages = shelfPages.map { it.copy(items = it.items - id) }
+        prefs.saveShelfPages(shelfPages)
         widgetSizes = widgetSizes - id
         prefs.saveWidgetSizes(widgetSizes)
     }
@@ -565,8 +621,7 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     fun moveWidgetTo(id: Int, index: Int) {
         val i = widgetIds.indexOf(id)
         if (i < 0 || index < 0 || index > widgetIds.lastIndex || i == index) return
-        widgetIds = widgetIds.toMutableList().apply { add(index, removeAt(i)) }
-        prefs.saveWidgetIds(widgetIds)
+        setItems(widgetIds.toMutableList().apply { add(index, removeAt(i)) })
     }
 
     /** Moves a widget earlier (-1) or later (+1) on the Shelf. */
@@ -574,8 +629,7 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         val i = widgetIds.indexOf(id)
         val j = (i + delta).coerceIn(0, widgetIds.lastIndex)
         if (i < 0 || i == j) return
-        widgetIds = widgetIds.toMutableList().apply { add(j, removeAt(i)) }
-        prefs.saveWidgetIds(widgetIds)
+        setItems(widgetIds.toMutableList().apply { add(j, removeAt(i)) })
     }
 
     // ---- Notification light ----

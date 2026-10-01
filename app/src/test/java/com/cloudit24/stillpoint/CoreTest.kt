@@ -1,5 +1,6 @@
 package com.cloudit24.stillpoint
 
+import com.cloudit24.stillpoint.data.BuiltIn
 import com.cloudit24.stillpoint.ui.dueLabel
 import com.cloudit24.stillpoint.ui.subnet
 import com.cloudit24.stillpoint.data.Calendars
@@ -105,6 +106,18 @@ class CoreTest {
         assertEquals(517.25, readNumber("""[{"price":"517.25"}]""", "0.price")!!, 0.001)
         assertEquals(2648.3, readNumber("Gold: USD 2,648.30 per ounce", "")!!, 0.001)
         assertNull(readNumber("""{"data":{}}""", "data.price"))
+    }
+
+    @Test
+    fun shelfCardIds() {
+        BuiltIn.entries.forEach { b ->
+            (0..99).forEach { shelf ->
+                assertTrue(b.id(shelf) < 0)
+                assertEquals(b, BuiltIn.of(b.id(shelf)))
+            }
+        }
+        assertNull(BuiltIn.of(42))
+        assertEquals(BuiltIn.entries.size, BuiltIn.entries.map { it.code }.toSet().size)
     }
 
     @Test

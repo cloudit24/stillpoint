@@ -111,11 +111,11 @@ enum class Tool(val section: String, val title: String, val summary: String) {
 @Composable
 fun ToolsScreen(vm: LauncherViewModel) {
     var tool by rememberSaveable { mutableStateOf<Tool?>(null) }
-    BackHandler { if (tool != null) tool = null else vm.screen = Screen.WIDGETS }
+    BackHandler { if (tool != null) tool = null else vm.screen = vm.toolsReturn }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp)) {
         Row(Modifier.padding(top = 4.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Ink,
-                modifier = Modifier.clip(CircleShape).clickable { if (tool != null) tool = null else vm.screen = Screen.WIDGETS }.padding(8.dp))
+                modifier = Modifier.clip(CircleShape).clickable { if (tool != null) tool = null else vm.screen = vm.toolsReturn }.padding(8.dp))
             Text(tool?.title ?: "Tools", fontSize = 26.sp, fontWeight = FontWeight.Light, modifier = Modifier.padding(start = 8.dp))
         }
         when (tool) {

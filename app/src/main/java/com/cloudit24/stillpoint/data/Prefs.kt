@@ -82,6 +82,7 @@ class Prefs(context: Context) {
             showRecent = sp.getBoolean(K_SHOW_RECENT, d.showRecent),
             dialMode = runCatching { DialMode.valueOf(sp.getString(K_DIAL, null)!!) }.getOrDefault(d.dialMode),
             compassHaptics = sp.getBoolean(K_COMPASS_HAPTICS, d.compassHaptics),
+            toolsOn = sp.getBoolean("tools_on", d.toolsOn),
             // Before 0.11, a connected hub was used for tasks and the home card: keep that on upgrade.
             tasksSource = runCatching { TaskSource.valueOf(sp.getString(K_TASKS_SRC, null)!!) }
                 .getOrDefault(if (sp.getBoolean(K_HUB_ON, false)) TaskSource.HUB else TaskSource.PHONE),
@@ -170,6 +171,7 @@ class Prefs(context: Context) {
             .putBoolean(K_SHOW_RECENT, s.showRecent)
             .putString(K_DIAL, s.dialMode.name)
             .putBoolean(K_COMPASS_HAPTICS, s.compassHaptics)
+            .putBoolean("tools_on", s.toolsOn)
             .putString(K_TASKS_SRC, s.tasksSource.name)
             .putString(K_CAL_SRC, s.calendarSource.name)
             .putString(K_PROJ_SRC, s.projectsSource.name)
@@ -309,6 +311,55 @@ class Prefs(context: Context) {
         val a = JSONArray()
         notes.forEach { a.put(JSONObject().put("id", it.id).put("text", it.text)) }
         sp.edit().putString("notes", a.toString()).apply()
+    }
+
+    /**
+     * The shelves. Widget ids belong to this phone's widget host, so the key starts with "widget_" and is left out of backups.
+     * The first time (0.32), notes, tasks and projects become cards on the first shelf, followed by its widgets.
+     */
+    fun loadShelfPages(): List<ShelfPage> {
+        sp.getString("widget_pages", null)?.let { raw ->
+            runCatching {
+                val a = JSONArray(raw)
+                List(a.length()) { i ->
+                    val o = a.getJSONObject(i)
+                    val items = o.getJSONArray("items")
+                    ShelfPage(o.getInt("id"), o.getString("name"), List(items.length()) { j -> items.getInt(j) })
+                }
+            }.getOrNull()?.takeIf { it.isNotEmpty() }?.let { return it }
+        }
+        val s = loadSettings()
+        val cards = buildList {
+            add(BuiltIn.NOTES.id(0))
+            if (s.showTasks) add(BuiltIn.TASKS.id(0))
+            if (s.showProjects && s.projectsSource == ProjectSource.PHONE) add(BuiltIn.PROJECTS.id(0))
+        }
+        return listOf(ShelfPage(0, "Shelf", cards + loadWidgetIds()))
+    }
+
+    fun saveShelfPages(pages: List<ShelfPage>) {
+        val a = JSONArray()
+        pages.forEach { a.put(JSONObject().put("id", it.id).put("name", it.name).put("items", JSONArray(it.items))) }
+        sp.edit().putString("widget_pages", a.toString()).apply()
+    }
+
+    fun shelfIndex(): Int = sp.getInt("widget_page_index", 0)
+    fun saveShelfIndex(i: Int) = sp.edit().putInt("widget_page_index", i).apply()
+
+    /** Countdown cards: card id -> (what for, epoch day). */
+    fun loadCountdowns(): Map<Int, Pair<String, Long>> = (sp.getString("countdowns", "") ?: "").split("\n").mapNotNull { line ->
+        val p = line.split("|", limit = 3)
+        if (p.size < 3) null else {
+            val id = p[0].toIntOrNull()
+            val day = p[1].toLongOrNull()
+            if (id == null || day == null) null else id to (p[2] to day)
+        }
+    }.toMap()
+
+    fun saveCountdowns(map: Map<Int, Pair<String, Long>>) {
+        sp.edit().putString("countdowns", map.entries.joinToString("\n") {
+            "${it.key}|${it.value.second}|${it.value.first.replace("\n", " ")}"
+        }).apply()
     }
 
     fun loadWidgetIds(): List<Int> =

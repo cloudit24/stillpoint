@@ -3,6 +3,16 @@
 Every version of Stillpoint Launcher, newest first. Each links to its APK.
 The newest is always at **[Download the latest APK](https://github.com/cloudit24/stillpoint/releases/latest/download/Stillpoint-Launcher.apk)**.
 
+## v0.32.0 · 1 Oct 2026
+- More shelves: tap + next to the Shelf title for another (Work, Family, Travel...). Tap a name to switch,
+  long-press it to rename or delete.
+- Stillpoint cards for any shelf (Add → Stillpoint cards): notes, tasks, projects, this month's calendar,
+  world clock, battery and storage, weather, prayer and moon, and a countdown to a date you choose.
+  Move them like widgets; some can sit half width side by side.
+- Tools moved to Settings → Extras and is off until you turn it on.
+
+[stillpoint-v0.32.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.32.0/stillpoint-v0.32.0.apk)
+
 ## v0.31.0 · 1 Oct 2026
 - Shelf tasks, redone: round ticks, an optional day (today, tomorrow or any date), late ones marked overdue,
   done ones folded away. Swipe left to delete, with Undo.

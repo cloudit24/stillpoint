@@ -194,6 +194,8 @@ data class LauncherSettings(
     val showProjects: Boolean = true,
     val dialMode: DialMode = DialMode.PRAYER,
     val compassHaptics: Boolean = true,
+    /** Tools (device, security and text, network): off until turned on in Extras. */
+    val toolsOn: Boolean = false,
     // Tasks, calendar and projects: where each comes from and how it syncs.
     val tasksSource: TaskSource = TaskSource.PHONE,
     val calendarSource: CalendarSource = CalendarSource.PHONE,
@@ -296,4 +298,29 @@ enum class NotifyStyle(val label: String) {
     BREATHE("Breathe"),
     SWEEP("Sweep"),
     BLINK("Blink, like BlackBerry"),
+}
+
+/** One shelf: its name and what's on it, in order (widget ids, and Stillpoint cards as negative ids). */
+data class ShelfPage(val id: Int, val name: String, val items: List<Int>)
+
+/**
+ * Stillpoint's own cards for the Shelf. On a shelf each has the id -(code * 100 + shelf id),
+ * so it never collides with a widget id (always positive) and can appear once per shelf.
+ */
+enum class BuiltIn(val code: Int, val title: String, val summary: String, val canHalf: Boolean = false) {
+    NOTES(1, "Notes", "A scribble board"),
+    TASKS(2, "Tasks", "Round ticks and days; syncs with Project Hub or your task app"),
+    PROJECTS(3, "Projects", "Steps and how far along you are"),
+    CALENDAR(10, "Calendar", "This month, with your calendars"),
+    CLOCKS(11, "World clock", "Your cities at a glance"),
+    BATTERY(12, "Battery and storage", "Charge, temperature, space and memory", canHalf = true),
+    WEATHER(13, "Weather", "Now, with when it was fetched"),
+    PRAYER(14, "Prayer and moon", "Today's five times and tonight's moon"),
+    COUNTDOWN(15, "Countdown", "Days to a date you choose", canHalf = true);
+
+    fun id(shelf: Int): Int = -(code * 100 + shelf)
+
+    companion object {
+        fun of(id: Int): BuiltIn? = if (id >= 0) null else entries.firstOrNull { it.code == (-id) / 100 }
+    }
 }

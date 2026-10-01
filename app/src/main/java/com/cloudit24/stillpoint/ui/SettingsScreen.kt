@@ -152,6 +152,7 @@ private enum class SettingsPage(val section: String, val title: String, val summ
     WEATHER("Extras", "Weather", "Headline card · uses Open-Meteo", Icons.Outlined.LocationOn),
     GOLD("Extras", "Gold price", "Home line and widget · uses outside websites", Icons.Outlined.Star),
     HUB("Extras", "Project Hub", "Connection to your own server", Icons.Outlined.CheckCircle),
+    TOOLS("Extras", "Tools", "Device info, passwords, QR, ping, DNS and more", Icons.Outlined.Build),
     PRIVACY("System", "Permissions and data", "Usage access, gesture service, data usage", Icons.Outlined.Lock),
     BACKUP("System", "Backup and restore", "Keep your setup in a file, bring it to a new phone", Icons.Outlined.Send),
     FOOTPRINT("System", "Battery and memory", "What Stillpoint itself uses", Icons.Outlined.Settings),
@@ -396,7 +397,8 @@ fun SettingsScreen(vm: LauncherViewModel) {
                     Note("Pinned apps show when Most used is off, or before usage data exists. Pin from the app list by " +
                         "long-pressing. Recently used and Most used need usage access.")
                     Group("Widgets") {
-                        Text("Swipe right on home for the Shelf. Stillpoint's own widgets: Stillpoint Widget " +
+                        Text("Swipe right on home for the Shelf. Add more shelves with +, and put Stillpoint cards " +
+                            "(notes, tasks, calendar, countdown...) or any app's widgets on them. Stillpoint's own widgets: Stillpoint Widget " +
                             "(clock and dates), Stillpoint Prayer (times, countdown, moon) and Stillpoint Gold. " +
                             "They work in any launcher too.", color = Muted, fontSize = 14.sp,
                             modifier = Modifier.padding(vertical = 12.dp))
@@ -486,6 +488,19 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         }
                     }
                     Note("The compass ticks every 10°, clicks at N, E, S and W, and taps once when you face the Qibla.")
+                }
+
+                SettingsPage.TOOLS -> {
+                    Group("Tools") {
+                        ToggleRow("Show Tools", s.toolsOn) { on -> vm.updateSettings { it.copy(toolsOn = on) } }
+                        if (s.toolsOn) ActionRow("Open Tools", "Device, security and text, network") {
+                            vm.toolsReturn = Screen.SETTINGS
+                            vm.screen = Screen.TOOLS
+                        }
+                    }
+                    Note("Small everyday tools in one place, so you need fewer little apps: device info; password, hash, " +
+                        "Base64, UUID, JSON and QR code; your addresses, subnet, ping, port check, DNS lookup, Wi-Fi and " +
+                        "Wake-on-LAN. When on, open them from the top of the Shelf, or set a gesture to Tools.")
                 }
 
                 SettingsPage.WEATHER -> {
@@ -728,9 +743,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
                             ActionRow("Read now", vm.providerError ?: "${vm.providerTasks.size} open tasks") { vm.loadProviderTasks() }
                         }
                     }
-                    Group("Display") {
-                        ToggleRow("Tasks on the Shelf", s.showTasks) { on -> vm.updateSettings { it.copy(showTasks = on) } }
-                    }
+                    Note("Tasks can go on any shelf: open the Shelf, tap Add, then Tasks under Stillpoint cards.")
                 }
 
                 SettingsPage.CALENDAR -> {
@@ -778,9 +791,6 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         ProjectSource.HUB -> SyncGroup(vm, SyncFeature.PROJECTS, Sync.HUB, s.projectsSync) { dialog = SettingsDialog.SYNC_PROJECTS }
                     }
                     Group("Display") {
-                        if (s.projectsSource == ProjectSource.PHONE) {
-                            ToggleRow("Projects on the Shelf", s.showProjects) { on -> vm.updateSettings { it.copy(showProjects = on) } }
-                        }
                         ToggleRow("Next step on home", s.hubOn) { on ->
                             vm.updateSettings { it.copy(hubOn = on) }
                             if (on && s.projectsSource == ProjectSource.HUB) vm.refreshHub(force = true)
@@ -1143,7 +1153,7 @@ private fun TargetPicker(vm: LauncherViewModel, title: String, onPick: (String) 
         title = { Text(title) },
         text = {
             LazyColumn(Modifier.heightIn(max = 460.dp)) {
-                items(HomeAction.entries) { a ->
+                items(HomeAction.entries.filter { it != HomeAction.TOOLS || vm.settings.toolsOn }) { a ->
                     Text(
                         a.label + if (a.needsGestureService) "  (gesture service)" else "",
                         fontSize = 17.sp,

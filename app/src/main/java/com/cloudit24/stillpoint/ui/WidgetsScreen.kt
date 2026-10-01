@@ -1,5 +1,10 @@
 package com.cloudit24.stillpoint.ui
 
+import com.cloudit24.stillpoint.data.BuiltIn
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.composed
 import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.layout.positionInParent
@@ -144,7 +149,7 @@ fun WidgetsScreen(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderInfo) ->
 
     if (picking) {
         BackHandler { picking = false }
-        WidgetPicker(vm) { picking = false; onAddWidget(it) }
+        WidgetPicker(vm, onBuiltIn = { picking = false; vm.addBuiltIn(it) }) { picking = false; onAddWidget(it) }
         return
     }
 
@@ -174,8 +179,11 @@ fun WidgetsScreen(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderInfo) ->
             .padding(horizontal = 16.dp, vertical = 24.dp),
     ) {
         Row(Modifier.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("Shelf", fontSize = 34.sp, fontWeight = FontWeight.Light, modifier = Modifier.weight(1f))
-            if (!editing) Text("Tools", color = Muted, modifier = Modifier.clickable { vm.screen = Screen.TOOLS }.padding(8.dp))
+            ShelfTabs(vm, Modifier.weight(1f))
+            if (!editing && vm.settings.toolsOn) Text("Tools", color = Muted, modifier = Modifier.clickable {
+                vm.toolsReturn = Screen.WIDGETS
+                vm.screen = Screen.TOOLS
+            }.padding(8.dp))
             if (vm.widgetIds.isNotEmpty()) {
                 Text(if (editing) "Done" else "Edit", color = Muted,
                     modifier = Modifier.clickable { editing = !editing }.padding(8.dp))
@@ -185,17 +193,10 @@ fun WidgetsScreen(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderInfo) ->
         // The Shelf: things to keep near but off the home screen. Notes, tasks, projects, then widgets.
         Column(Modifier.weight(1f).padding(top = 16.dp).onGloballyPositioned { viewport = it.boundsInRoot() }
             .verticalScroll(shelfScroll, enabled = drag.id == null)) {
-            Column(Modifier.padding(horizontal = 12.dp).padding(bottom = 20.dp)) { NotesBlock(vm) }
-            if (vm.settings.showTasks) {
-                Column(Modifier.padding(horizontal = 12.dp).padding(bottom = 20.dp)) { TasksBlock(vm) }
-            }
-            if (vm.settings.showProjects && vm.settings.projectsSource == ProjectSource.PHONE) {
-                Column(Modifier.padding(horizontal = 12.dp).padding(bottom = 20.dp)) { ProjectsBlock(vm) }
-            }
-            Text(if (editing) "Widgets · drag to move, corner to resize, tap a style" else "Widgets · long-press one to arrange",
-                color = Muted, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 12.dp))
+            if (editing) Text("Drag to move · corner to resize · − to remove", color = Muted, fontSize = 13.sp,
+                modifier = Modifier.padding(horizontal = 12.dp))
             if (vm.widgetIds.isEmpty()) {
-                Text("None yet. Tap Add widget below.", color = Muted, fontSize = 14.sp,
+                Text("Nothing on this shelf yet. Tap Add below for Stillpoint cards and widgets.", color = Muted, fontSize = 14.sp,
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
             }
             // Widgets flow like tiles: two half-width ones sit side by side.
@@ -221,7 +222,12 @@ fun WidgetsScreen(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderInfo) ->
                                             shape = RoundedCornerShape(24.dp)
                                         }
                                     },
-                            ) { AppearIn(i) { WidgetItem(vm, id, editing, areaW, drag) { editing = true } } }
+                            ) {
+                                AppearIn(i) {
+                                    if (id < 0) BuiltInItem(vm, id, editing, areaW, drag) { editing = true }
+                                    else WidgetItem(vm, id, editing, areaW, drag) { editing = true }
+                                }
+                            }
                         }
                     }
                 }
@@ -231,7 +237,7 @@ fun WidgetsScreen(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderInfo) ->
         Row(Modifier.fillMaxWidth().padding(top = 16.dp, start = 12.dp, end = 12.dp)) {
             Text("Home", color = Muted, modifier = Modifier.clickable { vm.screen = Screen.HOME }.padding(8.dp))
             Box(Modifier.weight(1f), contentAlignment = Alignment.Center) { UndoBar(vm) }
-            Text("Add widget", color = Muted, modifier = Modifier.clickable { editing = false; picking = true }.padding(8.dp))
+            Text("Add", color = Muted, modifier = Modifier.clickable { editing = false; picking = true }.padding(8.dp))
         }
     }
 }
@@ -296,46 +302,7 @@ private fun WidgetItem(vm: LauncherViewModel, id: Int, editing: Boolean, areaW: 
             )
             if (editing) {
                 Box(Modifier.matchParentSize().border(1.dp, accent.copy(alpha = 0.5f), RoundedCornerShape(cornerFor(look) + 4.dp)))
-                // Move: the whole widget is the handle. The others glide out of the way.
-                var areaAt by remember { mutableStateOf(Offset.Zero) }
-                Box(
-                    Modifier.matchParentSize()
-                        .onGloballyPositioned { areaAt = it.boundsInRoot().topLeft }
-                        .pointerInput(id) {
-                            detectDragGestures(
-                                onDragStart = { at ->
-                                    val b = drag.bounds[id]
-                                    if (b != null) {
-                                        drag.finger = areaAt + at
-                                        drag.grab = drag.finger - b.topLeft
-                                        drag.lastSwap = null
-                                        drag.id = id
-                                    }
-                                },
-                                onDragEnd = { drag.id = null },
-                                onDragCancel = { drag.id = null },
-                                onDrag = { change, amount ->
-                                    change.consume()
-                                    if (drag.id == id) {
-                                        drag.finger += amount
-                                        drag.trySwap(id, vm)
-                                    }
-                                },
-                            )
-                        },
-                )
-                // Grab bar, top centre: a quiet sign that the widget can be moved.
-                Box(
-                    Modifier.align(Alignment.TopCenter).padding(top = 8.dp).width(34.dp).height(5.dp)
-                        .clip(RoundedCornerShape(50)).background(accent.copy(alpha = 0.9f)),
-                )
-                // Remove, top-left.
-                Box(
-                    Modifier.align(Alignment.TopStart).padding(6.dp).size(26.dp).clip(CircleShape)
-                        .background(Color(0xE6262624)).border(0.5.dp, Color.White.copy(alpha = 0.2f), CircleShape)
-                        .clickable { confirmRemove = true },
-                    contentAlignment = Alignment.Center,
-                ) { Text("−", color = Ink, fontSize = 17.sp) }
+                EditOverlay(id, drag, vm) { confirmRemove = true }
                 // Resize, bottom-right. Snaps to full width and to half (two side by side).
                 Box(
                     Modifier.align(Alignment.BottomEnd).size(40.dp).pointerInput(id, areaW) {
@@ -405,6 +372,142 @@ private fun WidgetItem(vm: LauncherViewModel, id: Int, editing: Boolean, areaW: 
     }
 }
 
+/** A Stillpoint card on the Shelf (notes, tasks, calendar...). Full width or half; arranged like widgets. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun BuiltInItem(vm: LauncherViewModel, id: Int, editing: Boolean, areaW: Dp, drag: ShelfDrag, onArrange: () -> Unit) {
+    val kind = BuiltIn.of(id)
+    if (kind == null) {
+        Text("Remove", color = Accent, fontSize = 13.sp, modifier = Modifier.clickable { vm.removeWidget(id) }.padding(6.dp))
+        return
+    }
+    val half = (areaW - 12.dp) / 2
+    val isHalf = kind.canHalf && (vm.widgetSizes[id]?.second ?: 0) > 0
+    val w by animateDpAsState(if (isHalf) half else areaW, spring<Dp>(stiffness = Spring.StiffnessMediumLow), label = "bw")
+    val look = vm.widgetLooks[id] ?: WidgetLook()
+    val accent = Accent
+    var confirmRemove by remember { mutableStateOf(false) }
+    Column(Modifier.width(w).padding(vertical = 6.dp)) {
+        Box(
+            Modifier.fillMaxWidth().widgetLook(look, accent)
+                .combinedClickable(interactionSource = remember { MutableInteractionSource() }, indication = null,
+                    onClick = {}, onLongClick = onArrange),
+        ) {
+            Column(Modifier.fillMaxWidth().padding(horizontal = if (look.style == 1) 14.dp else 4.dp,
+                vertical = if (look.style == 1) 12.dp else 2.dp)) {
+                BuiltInContent(vm, kind, id)
+            }
+            if (editing) {
+                Box(Modifier.matchParentSize().border(1.dp, accent.copy(alpha = 0.5f), RoundedCornerShape(cornerFor(look) + 4.dp)))
+                EditOverlay(id, drag, vm) { confirmRemove = true }
+            }
+        }
+        if (editing) {
+            Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                if (kind.canHalf) LookChip(if (isHalf) "Half" else "Full") { vm.setWidgetSize(id, 0, if (isHalf) 0 else 1) }
+                LookChip(listOf("Plain", "Glass", "Glow")[look.style]) { vm.setWidgetLook(id, look.copy(style = (look.style + 1) % 3)) }
+                LookChip(listOf("Square", "Soft", "Round")[look.corners]) { vm.setWidgetLook(id, look.copy(corners = (look.corners + 1) % 3)) }
+            }
+        }
+    }
+    if (confirmRemove) {
+        AlertDialog(
+            onDismissRequest = { confirmRemove = false },
+            confirmButton = { TextButton(onClick = { confirmRemove = false; vm.removeWidget(id) }) { Text("Remove") } },
+            dismissButton = { TextButton(onClick = { confirmRemove = false }) { Text("Keep") } },
+            title = { Text("Remove ${kind.title} from this shelf?") },
+            text = { Text("What's in it stays; add it again any time.") },
+        )
+    }
+}
+
+/** While arranging: the whole item is the handle to move it, a grab bar on top, and remove at the top-left. */
+@Composable
+private fun BoxScope.EditOverlay(id: Int, drag: ShelfDrag, vm: LauncherViewModel, onRemove: () -> Unit) {
+    val accent = Accent
+    var areaAt by remember { mutableStateOf(Offset.Zero) }
+    Box(
+        Modifier.matchParentSize()
+            .onGloballyPositioned { areaAt = it.boundsInRoot().topLeft }
+            .pointerInput(id) {
+                detectDragGestures(
+                    onDragStart = { at ->
+                        val b = drag.bounds[id]
+                        if (b != null) {
+                            drag.finger = areaAt + at
+                            drag.grab = drag.finger - b.topLeft
+                            drag.lastSwap = null
+                            drag.id = id
+                        }
+                    },
+                    onDragEnd = { drag.id = null },
+                    onDragCancel = { drag.id = null },
+                    onDrag = { change, amount ->
+                        change.consume()
+                        if (drag.id == id) {
+                            drag.finger += amount
+                            drag.trySwap(id, vm)
+                        }
+                    },
+                )
+            },
+    )
+    Box(
+        Modifier.align(Alignment.TopCenter).padding(top = 8.dp).width(34.dp).height(5.dp)
+            .clip(RoundedCornerShape(50)).background(accent.copy(alpha = 0.9f)),
+    )
+    Box(
+        Modifier.align(Alignment.TopStart).padding(6.dp).size(26.dp).clip(CircleShape)
+            .background(Color(0xE6262624)).border(0.5.dp, Color.White.copy(alpha = 0.2f), CircleShape)
+            .clickable(onClick = onRemove),
+        contentAlignment = Alignment.Center,
+    ) { Text("−", color = Ink, fontSize = 17.sp) }
+}
+
+/** Shelf tabs: tap one to switch, long-press to rename or delete it, + for a new shelf. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun ShelfTabs(vm: LauncherViewModel, modifier: Modifier) {
+    var renaming by remember { mutableStateOf<Int?>(null) }
+    Row(modifier.horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.Bottom) {
+        vm.shelfPages.forEachIndexed { i, p ->
+            val on = i == vm.shelfIndex
+            val size by animateFloatAsState(if (on) 34f else 20f, tween(250), label = "tab")
+            Text(p.name, fontSize = size.sp, fontWeight = FontWeight.Light, color = if (on) Ink else Muted, maxLines = 1,
+                modifier = Modifier.padding(end = 18.dp).combinedClickable(
+                    interactionSource = remember { MutableInteractionSource() }, indication = null,
+                    onClick = { vm.selectShelf(i) }, onLongClick = { renaming = i }))
+        }
+        if (vm.shelfPages.size < 9) {
+            Text("+", fontSize = 24.sp, fontWeight = FontWeight.Light, color = Muted,
+                modifier = Modifier.clip(CircleShape).clickable { vm.addShelf() }.padding(horizontal = 8.dp))
+        }
+    }
+    renaming?.let { i ->
+        val page = vm.shelfPages.getOrNull(i) ?: return@let
+        var name by remember(i) { mutableStateOf(page.name) }
+        var sure by remember(i) { mutableStateOf(false) }
+        AlertDialog(
+            onDismissRequest = { renaming = null },
+            confirmButton = { TextButton(onClick = { vm.renameShelf(i, name); renaming = null }, enabled = name.isNotBlank()) { Text("Save") } },
+            dismissButton = { TextButton(onClick = { renaming = null }) { Text("Cancel") } },
+            title = { Text("Shelf") },
+            text = {
+                Column {
+                    OutlinedTextField(value = name, onValueChange = { name = it.take(20) }, singleLine = true, label = { Text("Name") })
+                    if (vm.shelfPages.size > 1) {
+                        Text(if (sure) "Tap again to delete it and its widgets" else "Delete this shelf",
+                            color = Color(0xFFE08A78), fontSize = 14.sp,
+                            modifier = Modifier.padding(top = 14.dp).clickable {
+                                if (sure) { vm.deleteShelf(i); renaming = null } else sure = true
+                            }.padding(vertical = 6.dp))
+                    }
+                }
+            },
+        )
+    }
+}
+
 /** Other widgets glide to their new place when one is moved, instead of jumping there. */
 private fun Modifier.animatePlacement(enabled: Boolean): Modifier = composed {
     val scope = rememberCoroutineScope()
@@ -436,7 +539,7 @@ private fun AppearIn(index: Int, content: @Composable () -> Unit) {
 /** Notes: a scribble board. Type and press done to keep a line; tap one to change it; long-press to let it go (with Undo). */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun NotesBlock(vm: LauncherViewModel) {
+fun NotesBlock(vm: LauncherViewModel) {
     var input by rememberSaveable { mutableStateOf("") }
     var editingId by remember { mutableStateOf<Long?>(null) }
     var editText by remember { mutableStateOf("") }
@@ -511,7 +614,7 @@ private fun reportSize(view: AppWidgetHostView, wDp: Float, hDp: Float) {
 
 /** Widgets grouped under their app, apps A to Z, with Stillpoint's own widget first and open. */
 @Composable
-private fun WidgetPicker(vm: LauncherViewModel, onPick: (AppWidgetProviderInfo) -> Unit) {
+private fun WidgetPicker(vm: LauncherViewModel, onBuiltIn: (BuiltIn) -> Unit, onPick: (AppWidgetProviderInfo) -> Unit) {
     val context = LocalContext.current
     val pm = context.packageManager
     val own = context.packageName
@@ -526,9 +629,24 @@ private fun WidgetPicker(vm: LauncherViewModel, onPick: (AppWidgetProviderInfo) 
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
         item {
             Row(Modifier.padding(top = 20.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("Add widget", fontSize = 30.sp, fontWeight = FontWeight.Light, modifier = Modifier.weight(1f))
+                Text("Add to shelf", fontSize = 30.sp, fontWeight = FontWeight.Light, modifier = Modifier.weight(1f))
                 Text("${groups.size} apps", color = Muted, fontSize = 13.sp)
             }
+        }
+        val shelfId = vm.shelfPages.getOrNull(vm.shelfIndex)?.id ?: 0
+        val cards = BuiltIn.entries.filter { it.id(shelfId) !in vm.widgetIds }
+        if (cards.isNotEmpty()) {
+            item { Text("Stillpoint cards", color = Accent, fontSize = 17.sp, modifier = Modifier.padding(vertical = 6.dp)) }
+            items(cards, key = { "card_${it.name}" }) { b ->
+                Column(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { onBuiltIn(b) }
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                ) {
+                    Text(b.title, fontSize = 15.sp)
+                    Text(b.summary, color = Muted, fontSize = 12.sp)
+                }
+            }
+            item { Text("Widgets from your apps", color = Muted, fontSize = 13.sp, modifier = Modifier.padding(top = 18.dp, bottom = 4.dp)) }
         }
         if (groups.isEmpty()) {
             item { Text("No widgets found on this phone.", color = Muted, fontSize = 14.sp) }

@@ -416,7 +416,7 @@ private fun TasksInfo(vm: LauncherViewModel, s: LauncherSettings, modifier: Modi
 
 /** The weather now, bigger than the headline card, with when it was last fetched. */
 @Composable
-private fun WeatherInfo(vm: LauncherViewModel, s: LauncherSettings, modifier: Modifier) {
+internal fun WeatherInfo(vm: LauncherViewModel, s: LauncherSettings, modifier: Modifier) {
     val context = LocalContext.current
     val w = vm.weather ?: return
     val t = if (s.fahrenheit) w.tempC * 9 / 5 + 32 else w.tempC
@@ -433,7 +433,7 @@ private fun WeatherInfo(vm: LauncherViewModel, s: LauncherSettings, modifier: Mo
 
 /** Up to three cities: their time and how far they are from yours. */
 @Composable
-private fun WorldInfo(s: LauncherSettings, now: Long, modifier: Modifier) {
+internal fun WorldInfo(s: LauncherSettings, now: Long, modifier: Modifier) {
     val context = LocalContext.current
     val cities = s.worldClocks.mapNotNull { e -> e.split("|").takeIf { it.size == 2 } }.take(3)
     if (cities.isEmpty()) {
@@ -484,7 +484,7 @@ private val TIMELINE = listOf(Prayer.FAJR, Prayer.DHUHR, Prayer.ASR, Prayer.MAGH
  * (now in the accent, next in white, past ones faded). Tap for the Qibla compass.
  */
 @Composable
-private fun PrayerTimeline(vm: LauncherViewModel, s: LauncherSettings, now: Long, modifier: Modifier) {
+internal fun PrayerTimeline(vm: LauncherViewModel, s: LauncherSettings, now: Long, modifier: Modifier) {
     val context = LocalContext.current
     val city = s.city ?: return
     val today = LocalDate.now()
