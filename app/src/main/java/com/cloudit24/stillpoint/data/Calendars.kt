@@ -1,12 +1,13 @@
 package com.cloudit24.stillpoint.data
 
+import java.time.Year
 import java.time.LocalDate
 import java.time.chrono.HijrahDate
 import java.time.temporal.ChronoField
 import kotlin.math.floor
 import kotlin.math.sin
 
-/** Hijri (Arabic) and Tamil dates, calculated on the phone. */
+/** Hijri (Arabic), Indian national (Saka), Malayalam and Tamil dates, calculated on the phone. */
 object Calendars {
 
     /** e.g. "16 Rabi al-Akhir 1448 AH". [adjust] shifts by whole days for local moon sighting. */
@@ -37,6 +38,52 @@ object Calendars {
         // Thiruvalluvar year changes on Thai 1 (mid-January).
         val tv = date.year + 31 - if (date.monthValue <= 2 && month == 8) 1 else 0
         return "${TAMIL_MONTHS[month]} $day · $yearName · தி.பி. $tv"
+    }
+
+    /**
+     * Indian national calendar, e.g. "9 Ashvin 1948 Saka". The year starts on 22 March (21 March in leap years);
+     * Chaitra has 30 days (31 in leap years), the next five months 31, the last six 30.
+     */
+    fun saka(date: LocalDate): String {
+        fun chaitra1(y: Int) = LocalDate.of(y, 3, if (Year.isLeap(y.toLong())) 21 else 22)
+        val gy = if (date.isBefore(chaitra1(date.year))) date.year - 1 else date.year
+        val leap = Year.isLeap(gy.toLong())
+        var left = date.toEpochDay() - chaitra1(gy).toEpochDay()
+        var m = 0
+        while (true) {
+            val len = when {
+                m == 0 -> if (leap) 31 else 30
+                m <= 5 -> 31
+                else -> 30
+            }
+            if (left < len) break
+            left -= len
+            m++
+        }
+        return "${left + 1} ${SAKA_MONTHS[m]} ${gy - 78} Saka"
+    }
+
+    /**
+     * Malayalam calendar (Kollavarsham), e.g. "കന്നി 15 · കൊല്ലവർഷം 1202". Solar months like Tamil, but a month
+     * starts on the day the sun changes sign if that happens before three fifths of the daytime (at Thiruvananthapuram).
+     * The year starts on Chingam 1, in mid-August.
+     */
+    fun malayalam(date: LocalDate): String {
+        val month = signAtAparahna(date)
+        var start = date
+        while (start.isAfter(date.minusDays(33)) && signAtAparahna(start.minusDays(1)) == month) start = start.minusDays(1)
+        val day = date.toEpochDay() - start.toEpochDay() + 1
+        val year = if (month >= 4 && date.monthValue >= 8) date.year - 824 else date.year - 825
+        return "${MALAYALAM_MONTHS[month]} $day · കൊല്ലവർഷം $year"
+    }
+
+    private fun signAtAparahna(date: LocalDate): Int {
+        val t = PrayerTimes.forDate(date, TVM_LAT, TVM_LON, PrayerMethod.MWL, false)
+        val rise = t[Prayer.SUNRISE]
+        val set = t[Prayer.MAGHRIB]
+        val at = if (rise != null && set != null) rise + (set - rise) * 3 / 5
+        else date.toEpochDay() * 86_400_000L + 8 * 3_600_000L // ~13:30 IST
+        return (siderealSun(at) / 30).toInt().coerceIn(0, 11)
     }
 
     /** 0 = Mesha (Chithirai) ... 11 = Meena (Panguni), for the sun at Chennai sunset on [date]. */
@@ -74,6 +121,19 @@ object Calendars {
     }
 
     private fun sinD(d: Double) = sin(Math.toRadians(d - 360 * floor(d / 360)))
+
+    private const val TVM_LAT = 8.5241
+    private const val TVM_LON = 76.9366
+
+    private val SAKA_MONTHS = listOf(
+        "Chaitra", "Vaishakha", "Jyeshtha", "Ashadha", "Shravana", "Bhadra",
+        "Ashvin", "Kartika", "Agrahayana", "Pausha", "Magha", "Phalguna",
+    )
+
+    private val MALAYALAM_MONTHS = listOf(
+        "മേടം", "ഇടവം", "മിഥുനം", "കർക്കടകം", "ചിങ്ങം", "കന്നി",
+        "തുലാം", "വൃശ്ചികം", "ധനു", "മകരം", "കുംഭം", "മീനം",
+    )
 
     private const val CHENNAI_LAT = 13.0827
     private const val CHENNAI_LON = 80.2707

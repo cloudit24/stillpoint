@@ -140,7 +140,7 @@ import kotlinx.coroutines.launch
 /** Settings pages, grouped on the main screen under [section]. */
 private enum class SettingsPage(val section: String, val title: String, val summary: String, val icon: ImageVector) {
     APPEARANCE("Personalization", "Appearance", "Accent, icons, app style and size, edge light", Icons.Outlined.Face),
-    HOME("Personalization", "Home screen", "Headline, ring, prayer and info, apps, footer", Icons.Outlined.Home),
+    HOME("Personalization", "Home screen", "Headline, calendars, swipe cards, apps, footer", Icons.Outlined.Home),
     APPS("Personalization", "App list", "Starting tab, hidden apps", Icons.Outlined.Menu),
     GESTURES("Personalization", "Gestures and shortcuts", "Swipes, double-tap, bottom shortcuts", Icons.Outlined.ThumbUp),
     NOTIFY("Personalization", "Notification light", "Edge light, signal dot and app dots; never miss important people", Icons.Outlined.Star),
@@ -338,26 +338,43 @@ fun SettingsScreen(vm: LauncherViewModel) {
                 }
 
                 SettingsPage.HOME -> {
+                    var worldOpen by remember { mutableStateOf(false) }
                     Group("Headline") {
                         ToggleRow("Screen time card", s.showUsage) { on -> vm.updateSettings { it.copy(showUsage = on) } }
-                        ToggleRow("Hijri date card", s.hijriOn) { on -> vm.updateSettings { it.copy(hijriOn = on) } }
+                        ActionRow("Ring beside it", s.dialMode.label) { dialog = SettingsDialog.DIAL_MODE }
+                    }
+                    Group("Calendars") {
+                        ToggleRow("Hijri", s.hijriOn) { on -> vm.updateSettings { it.copy(hijriOn = on) } }
                         if (s.hijriOn) {
                             Stepper("Hijri adjustment (days)", if (s.hijriAdjust > 0) "+${s.hijriAdjust}" else "${s.hijriAdjust}",
                                 onMinus = { vm.updateSettings { it.copy(hijriAdjust = (it.hijriAdjust - 1).coerceAtLeast(-2)) } },
                                 onPlus = { vm.updateSettings { it.copy(hijriAdjust = (it.hijriAdjust + 1).coerceAtMost(2)) } })
                         }
-                        ToggleRow("Tamil date card", s.tamilOn) { on -> vm.updateSettings { it.copy(tamilOn = on) } }
-                        ActionRow("Ring beside it", s.dialMode.label) { dialog = SettingsDialog.DIAL_MODE }
+                        ToggleRow("Indian national (Saka)", s.sakaOn) { on -> vm.updateSettings { it.copy(sakaOn = on) } }
+                        ToggleRow("Malayalam (Kollavarsham)", s.malayalamOn) { on -> vm.updateSettings { it.copy(malayalamOn = on) } }
+                        ToggleRow("Tamil", s.tamilOn) { on -> vm.updateSettings { it.copy(tamilOn = on) } }
                     }
-                    Note("The headline flips between a greeting and the cards you turn on here (weather is under Extras). " +
-                        "Hijri follows the Umm al-Qura calendar; adjust if your moon sighting differs. " +
-                        "Tamil date is the solar calendar at Chennai sunset.")
-                    Group("Under the headline") {
+                    Note("Each calendar you turn on flips by in the headline and shows on the This week card. " +
+                        "Hijri follows Umm al-Qura; adjust it if your moon sighting differs. Tamil and Malayalam are the " +
+                        "solar calendars, worked out on the phone (Chennai and Thiruvananthapuram).")
+                    Group("Cards under the headline") {
                         InfoPanel.entries.filter { it != InfoPanel.PRAYER }.forEach { panel ->
                             ToggleRow(panel.label, panel in s.infoPanels) { on ->
                                 vm.updateSettings { it.copy(infoPanels = if (on) it.infoPanels + panel else it.infoPanels - panel) }
                                 if (on && panel == InfoPanel.AGENDA) vm.refresh()
+                                if (on && panel == InfoPanel.WORLD && s.worldClocks.isEmpty()) worldOpen = true
                             }
+                        }
+                        if (InfoPanel.WORLD in s.infoPanels) {
+                            ActionRow("World clock cities",
+                                s.worldClocks.joinToString(", ") { it.substringBefore("|") }.ifEmpty { "Choose up to three" }) { worldOpen = true }
+                        }
+                    }
+                    Note("Turn on more than one and swipe across them on home. Weather shows once it's on under Extras.")
+                    if (worldOpen) {
+                        WorldCitiesDialog(s.worldClocks, onDismiss = { worldOpen = false }) { list ->
+                            vm.updateSettings { it.copy(worldClocks = list) }
+                            worldOpen = false
                         }
                     }
                     Group("Footer") {
@@ -702,7 +719,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         }
                     }
                     when (s.tasksSource) {
-                        TaskSource.PHONE -> Note("Stored only on this phone. Add and tick tasks on the Shelf.")
+                        TaskSource.PHONE -> Note("Stored only on this phone. Add, tick and date tasks on the Shelf; swipe one left to delete it.")
                         TaskSource.HUB -> SyncGroup(vm, SyncFeature.TASKS, Sync.HUB, s.tasksSync) { dialog = SettingsDialog.SYNC_TASKS }
                         else -> Group("Sync") {
                             Text("${s.tasksSource.label} keeps itself in sync, for example with DAVx5. Stillpoint reads its open " +
@@ -756,11 +773,14 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         if (src == ProjectSource.HUB && !vm.hubConnected()) page = SettingsPage.HUB else vm.setProjectSource(src)
                     }
                     when (s.projectsSource) {
-                        ProjectSource.PHONE -> Note("Add projects and their next step on the Shelf. " +
-                            "Home shows the first project that has a next step.")
+                        ProjectSource.PHONE -> Note("Add projects and their steps on the Shelf; tick a step and the next " +
+                            "one moves up. Home can show the next step of the first project that has one.")
                         ProjectSource.HUB -> SyncGroup(vm, SyncFeature.PROJECTS, Sync.HUB, s.projectsSync) { dialog = SettingsDialog.SYNC_PROJECTS }
                     }
                     Group("Display") {
+                        if (s.projectsSource == ProjectSource.PHONE) {
+                            ToggleRow("Projects on the Shelf", s.showProjects) { on -> vm.updateSettings { it.copy(showProjects = on) } }
+                        }
                         ToggleRow("Next step on home", s.hubOn) { on ->
                             vm.updateSettings { it.copy(hubOn = on) }
                             if (on && s.projectsSource == ProjectSource.HUB) vm.refreshHub(force = true)

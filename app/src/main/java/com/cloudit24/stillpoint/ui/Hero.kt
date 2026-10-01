@@ -1,5 +1,11 @@
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
+import java.time.temporal.TemporalAdjusters
+import java.time.temporal.WeekFields
+import com.cloudit24.stillpoint.data.TaskSource
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.BoxWithConstraints
 import com.cloudit24.stillpoint.data.Moon
@@ -132,6 +138,14 @@ fun HeroHeader(vm: LauncherViewModel, s: LauncherSettings, now: Long) {
         if (s.tamilOn) {
             val parts = Calendars.tamil(today).split(" · ", limit = 2)
             add(HeroCard(parts[0], parts.getOrElse(1) { "" }, Ink, small = true))
+        }
+        if (s.malayalamOn) {
+            val parts = Calendars.malayalam(today).split(" · ", limit = 2)
+            add(HeroCard(parts[0], parts.getOrElse(1) { "" }, Ink, small = true))
+        }
+        if (s.sakaOn) {
+            val parts = Calendars.saka(today).split(" ")
+            add(HeroCard("${parts[0]} ${parts[1]}", "${parts[2]} Saka · Indian national", Ink, small = true))
         }
     }
 
@@ -283,20 +297,184 @@ private fun FitText(text: String, color: Color, maxSp: Float, minSp: Float) {
         onTextLayout = { if (it.hasVisualOverflow && size > minSp) size -= 1f })
 }
 
-/** The one "important info" slot under the headline: prayer times, the next calendar event, or the day and battery. */
+/**
+ * The info zone under the headline. One card, or several you swipe across (small dots show where you are).
+ * The cards share one fixed height, so nothing below moves when you swipe.
+ */
 @Composable
 private fun InfoSlot(vm: LauncherViewModel, s: LauncherSettings, now: Long, modifier: Modifier) {
-    // Prayer needs Islamic prayer switched on with a city; if it was the only choice, show the day instead.
-    val shown = InfoPanel.entries.filter { it in s.infoPanels && it != InfoPanel.PRAYER }
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(28.dp)) {
-        shown.forEach { panel ->
-            when (panel) {
-                InfoPanel.PRAYER -> PrayerTimeline(vm, s, now, Modifier)
-                InfoPanel.AGENDA -> AgendaInfo(vm, now, Modifier)
-                InfoPanel.DAY -> DayInfo(now, Modifier)
+    val shown = InfoPanel.entries.filter { p ->
+        p in s.infoPanels && p != InfoPanel.PRAYER && (p != InfoPanel.WEATHER || (s.weatherOn && vm.weather != null))
+    }
+    if (shown.isEmpty()) return
+    if (shown.size == 1) {
+        Box(modifier) { InfoPage(vm, s, now, shown[0]) }
+        return
+    }
+    val pager = rememberPagerState { shown.size }
+    val accent = Accent
+    Column(modifier) {
+        HorizontalPager(pager, Modifier.fillMaxWidth().height(100.dp), pageSpacing = 24.dp, verticalAlignment = Alignment.Top) { i ->
+            InfoPage(vm, s, now, shown[i])
+        }
+        Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+            shown.indices.forEach { i ->
+                val on = i == pager.currentPage
+                val w by animateDpAsState(if (on) 14.dp else 4.dp, tween(250), label = "page")
+                Box(Modifier.height(4.dp).width(w).clip(RoundedCornerShape(2.dp))
+                    .background(if (on) accent.copy(alpha = 0.8f) else Muted.copy(alpha = 0.3f)))
             }
         }
     }
+}
+
+@Composable
+private fun InfoPage(vm: LauncherViewModel, s: LauncherSettings, now: Long, panel: InfoPanel) {
+    when (panel) {
+        InfoPanel.PRAYER -> Unit
+        InfoPanel.AGENDA -> AgendaInfo(vm, now, Modifier)
+        InfoPanel.DAY -> DayInfo(now, Modifier)
+        InfoPanel.WEEK -> WeekInfo(s, Modifier)
+        InfoPanel.TASKS -> TasksInfo(vm, s, Modifier)
+        InfoPanel.WEATHER -> WeatherInfo(vm, s, Modifier)
+        InfoPanel.WORLD -> WorldInfo(s, now, Modifier)
+    }
+}
+
+/** This week, today in the accent, and today's date in each calendar you turned on. */
+@Composable
+private fun WeekInfo(s: LauncherSettings, modifier: Modifier) {
+    val today = LocalDate.now()
+    val locale = Locale.getDefault()
+    val weeks = WeekFields.of(locale)
+    val first = today.with(TemporalAdjusters.previousOrSame(weeks.firstDayOfWeek))
+    val accent = Accent
+    val line = remember(today, s.hijriOn, s.hijriAdjust, s.sakaOn, s.malayalamOn, s.tamilOn) {
+        buildList {
+            if (s.hijriOn) add(Calendars.hijri(today, s.hijriAdjust))
+            if (s.sakaOn) add(Calendars.saka(today))
+            if (s.malayalamOn) add(Calendars.malayalam(today).substringBefore(" · "))
+            if (s.tamilOn) add(Calendars.tamil(today).substringBefore(" · "))
+        }.ifEmpty { listOf("Week ${today.get(weeks.weekOfWeekBasedYear())}") }.joinToString("  ·  ")
+    }
+    Column(modifier.fillMaxWidth()) {
+        Row(Modifier.fillMaxWidth()) {
+            (0L..6L).forEach { i ->
+                val d = first.plusDays(i)
+                val isToday = d == today
+                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(d.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, locale), maxLines = 1,
+                        color = if (isToday) accent else Muted, fontSize = 10.sp)
+                    Box(Modifier.padding(top = 4.dp).size(32.dp).clip(CircleShape).background(if (isToday) accent else Color.Transparent),
+                        contentAlignment = Alignment.Center) {
+                        Text("${d.dayOfMonth}", fontSize = 15.sp, color = when {
+                            isToday -> Color(0xFF0B0B0A)
+                            d.isBefore(today) -> Muted
+                            else -> Ink
+                        })
+                    }
+                }
+            }
+        }
+        Text(line, color = Muted, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(top = 10.dp))
+    }
+}
+
+/** How many tasks are left, the first one, and what is late. Tap for the Shelf. */
+@Composable
+private fun TasksInfo(vm: LauncherViewModel, s: LauncherSettings, modifier: Modifier) {
+    val src = s.tasksSource
+    LaunchedEffect(src) { if (src.authority != null) vm.loadProviderTasks() }
+    val today = LocalDate.now().toEpochDay()
+    val (open, doneCount) = when {
+        src == TaskSource.HUB -> vm.hub?.tasks.orEmpty().let { l ->
+            l.filter { !it.done }.map { t ->
+                t.text to (t.due?.let { d -> runCatching { LocalDate.parse(d.take(10)).toEpochDay() }.getOrNull() } ?: -1L)
+            } to l.count { it.done }
+        }
+        src.authority != null -> vm.providerTasks.map { it.text to it.due } to 0
+        else -> sortTasks(vm.tasks.filter { !it.done }).map { it.text to it.due } to vm.tasks.count { it.done }
+    }
+    val overdue = open.count { it.second in 0 until today }
+    val dueToday = open.count { it.second == today }
+    val total = open.size + doneCount
+    InfoLayout(
+        title = if (open.isEmpty()) "All done" else if (open.size == 1) "1 task left" else "${open.size} tasks left",
+        titleExtra = null,
+        sub = open.firstOrNull()?.first ?: "Nothing left on your list",
+        right = when {
+            overdue > 0 -> "$overdue overdue"
+            dueToday > 0 -> "$dueToday today"
+            else -> ""
+        },
+        rightSub = "",
+        modifier = modifier,
+        onClick = { vm.screen = Screen.WIDGETS },
+    ) { accent -> progressTrack(accent, if (total == 0) 1f else doneCount / total.toFloat()) }
+}
+
+/** The weather now, bigger than the headline card, with when it was last fetched. */
+@Composable
+private fun WeatherInfo(vm: LauncherViewModel, s: LauncherSettings, modifier: Modifier) {
+    val context = LocalContext.current
+    val w = vm.weather ?: return
+    val t = if (s.fahrenheit) w.tempC * 9 / 5 + 32 else w.tempC
+    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        WeatherIcon(w.code, w.isDay, animate = false, modifier = Modifier.size(56.dp))
+        Column(Modifier.weight(1f).padding(start = 14.dp)) {
+            Text("${t.roundToInt()}° ${weatherKind(w.code).label}", color = Accent, fontSize = 28.sp,
+                fontWeight = FontWeight.Light, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(listOfNotNull(s.city?.name, "updated ${formatClock(context, w.fetchedAt)}").joinToString(" · "),
+                color = Muted, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
+
+/** Up to three cities: their time and how far they are from yours. */
+@Composable
+private fun WorldInfo(s: LauncherSettings, now: Long, modifier: Modifier) {
+    val context = LocalContext.current
+    val cities = s.worldClocks.mapNotNull { e -> e.split("|").takeIf { it.size == 2 } }.take(3)
+    if (cities.isEmpty()) {
+        Text("World clock: choose up to three cities in Settings, Home screen.", color = Muted, fontSize = 14.sp,
+            modifier = modifier.padding(top = 8.dp))
+        return
+    }
+    val here = ZoneId.systemDefault()
+    val at = Instant.ofEpochMilli(now)
+    val hereDate = at.atZone(here).toLocalDate()
+    val fmt = DateTimeFormatter.ofPattern(if (android.text.format.DateFormat.is24HourFormat(context)) "HH:mm" else "h:mm")
+    Row(modifier.fillMaxWidth()) {
+        cities.forEach { (label, zone) ->
+            val z = runCatching { ZoneId.of(zone) }.getOrNull() ?: return@forEach
+            val t = at.atZone(z)
+            val diffMin = (z.rules.getOffset(at).totalSeconds - here.rules.getOffset(at).totalSeconds) / 60
+            val dayShift = t.toLocalDate().compareTo(hereDate)
+            val diff = buildString {
+                if (diffMin == 0) append("same time") else {
+                    val a = kotlin.math.abs(diffMin)
+                    append(if (diffMin > 0) "+" else "−").append(a / 60).append("h")
+                    if (a % 60 != 0) append(" ").append(a % 60).append("m")
+                }
+                if (dayShift > 0) append(" · tomorrow")
+                if (dayShift < 0) append(" · yesterday")
+            }
+            Column(Modifier.weight(1f)) {
+                Text(label, color = Muted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(t.format(fmt), color = Ink, fontSize = 26.sp, fontWeight = FontWeight.Light, maxLines = 1)
+                Text(diff, color = Accent, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+    }
+}
+
+/** A plain progress line: how much is done. */
+private fun DrawScope.progressTrack(accent: Color, frac: Float) {
+    val y = size.height / 2
+    val w = size.width
+    drawLine(Color.White.copy(alpha = 0.08f), Offset(0f, y), Offset(w, y), 2.dp.toPx(), cap = StrokeCap.Round)
+    if (frac > 0f) drawLine(accent, Offset(0f, y), Offset(w * frac.coerceIn(0f, 1f), y), 3.dp.toPx(), cap = StrokeCap.Round)
 }
 
 private val TIMELINE = listOf(Prayer.FAJR, Prayer.DHUHR, Prayer.ASR, Prayer.MAGHRIB, Prayer.ISHA)

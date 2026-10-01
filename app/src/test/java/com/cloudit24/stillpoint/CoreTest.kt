@@ -1,5 +1,6 @@
 package com.cloudit24.stillpoint
 
+import com.cloudit24.stillpoint.ui.dueLabel
 import com.cloudit24.stillpoint.ui.subnet
 import com.cloudit24.stillpoint.data.Calendars
 import com.cloudit24.stillpoint.data.Moon
@@ -104,6 +105,30 @@ class CoreTest {
         assertEquals(517.25, readNumber("""[{"price":"517.25"}]""", "0.price")!!, 0.001)
         assertEquals(2648.3, readNumber("Gold: USD 2,648.30 per ounce", "")!!, 0.001)
         assertNull(readNumber("""{"data":{}}""", "data.price"))
+    }
+
+    @Test
+    fun sakaCalendar() {
+        assertEquals("9 Ashvin 1948 Saka", Calendars.saka(LocalDate.of(2026, 10, 1)))
+        assertEquals("1 Chaitra 1946 Saka", Calendars.saka(LocalDate.of(2024, 3, 21)))
+        assertEquals("30 Phalguna 1947 Saka", Calendars.saka(LocalDate.of(2026, 3, 21)))
+        assertEquals("1 Chaitra 1948 Saka", Calendars.saka(LocalDate.of(2026, 3, 22)))
+    }
+
+    @Test
+    fun malayalamCalendar() {
+        val m = Calendars.malayalam(LocalDate.of(2026, 10, 1))
+        assertTrue(m, m.startsWith("കന്നി") && m.endsWith("1202"))
+        assertTrue(Calendars.malayalam(LocalDate.of(2026, 9, 1)).startsWith("ചിങ്ങം"))
+    }
+
+    @Test
+    fun dueDayInWords() {
+        val today = LocalDate.of(2026, 10, 1)
+        assertEquals("today" to false, dueLabel(today.toEpochDay(), today))
+        assertEquals("tomorrow" to false, dueLabel(today.toEpochDay() + 1, today))
+        assertEquals("overdue" to true, dueLabel(today.toEpochDay() - 3, today))
+        assertNull(dueLabel(-1, today))
     }
 
     @Test

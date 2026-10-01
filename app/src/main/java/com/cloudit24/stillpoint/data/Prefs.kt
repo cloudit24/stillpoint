@@ -38,6 +38,8 @@ class Prefs(context: Context) {
             hijriOn = sp.getBoolean(K_HIJRI_ON, d.hijriOn),
             hijriAdjust = sp.getInt(K_HIJRI_ADJUST, d.hijriAdjust),
             tamilOn = sp.getBoolean(K_TAMIL_ON, d.tamilOn),
+            sakaOn = sp.getBoolean("saka_on", d.sakaOn),
+            malayalamOn = sp.getBoolean("malayalam_on", d.malayalamOn),
             lockOn = sp.getBoolean(K_LOCK_ON, d.lockOn),
             lockPrayer = sp.getBoolean(K_LOCK_PRAYER, d.lockPrayer),
             lockHijri = sp.getBoolean(K_LOCK_HIJRI, d.lockHijri),
@@ -70,6 +72,8 @@ class Prefs(context: Context) {
             }.toMap(),
             importantApps = sp.getStringSet("important_apps", null)?.toSet() ?: d.importantApps,
             importantPeople = (sp.getString("important_people", "") ?: "").split("\n").filter { it.isNotBlank() },
+            worldClocks = (sp.getString("world_clocks", "") ?: "").split("\n").filter { it.isNotBlank() },
+            showProjects = sp.getBoolean("show_projects", d.showProjects),
             remindEvery = sp.getInt("remind_every", d.remindEvery),
             // Before 0.17 only one could be chosen (key "info_panel").
             infoPanels = (sp.getString(K_INFO_PANELS, null) ?: sp.getString(K_INFO_PANEL, null))
@@ -135,6 +139,8 @@ class Prefs(context: Context) {
             .putBoolean(K_HIJRI_ON, s.hijriOn)
             .putInt(K_HIJRI_ADJUST, s.hijriAdjust)
             .putBoolean(K_TAMIL_ON, s.tamilOn)
+            .putBoolean("saka_on", s.sakaOn)
+            .putBoolean("malayalam_on", s.malayalamOn)
             .putBoolean(K_LOCK_ON, s.lockOn)
             .putBoolean(K_LOCK_PRAYER, s.lockPrayer)
             .putBoolean(K_LOCK_HIJRI, s.lockHijri)
@@ -157,6 +163,8 @@ class Prefs(context: Context) {
             .putString("notify_colors", s.notifyColors.entries.joinToString(";") { "${it.key}=${it.value}" })
             .putStringSet("important_apps", s.importantApps)
             .putString("important_people", s.importantPeople.joinToString("\n"))
+            .putString("world_clocks", s.worldClocks.joinToString("\n"))
+            .putBoolean("show_projects", s.showProjects)
             .putInt("remind_every", s.remindEvery)
             .putString(K_INFO_PANELS, s.infoPanels.joinToString(",") { it.name })
             .putBoolean(K_SHOW_RECENT, s.showRecent)
@@ -206,14 +214,19 @@ class Prefs(context: Context) {
             val a = JSONArray(raw)
             List(a.length()) { i ->
                 val o = a.getJSONObject(i)
-                LocalProject(o.getLong("id"), o.getString("name"), o.optString("next"))
+                val steps = o.optJSONArray("steps")
+                LocalProject(o.getLong("id"), o.getString("name"), o.optString("next"),
+                    steps?.let { a -> List(a.length()) { a.getString(it) } } ?: emptyList(), o.optInt("done"))
             }
         }.getOrNull()
     } ?: emptyList()
 
     fun saveProjects(list: List<LocalProject>) {
         val a = JSONArray()
-        list.forEach { a.put(JSONObject().put("id", it.id).put("name", it.name).put("next", it.next)) }
+        list.forEach {
+            a.put(JSONObject().put("id", it.id).put("name", it.name).put("next", it.next)
+                .put("steps", JSONArray(it.steps)).put("done", it.done))
+        }
         sp.edit().putString(K_PROJECTS, a.toString()).apply()
     }
 
@@ -236,14 +249,14 @@ class Prefs(context: Context) {
             val arr = JSONArray(raw)
             List(arr.length()) { i ->
                 val o = arr.getJSONObject(i)
-                TaskItem(o.getLong("id"), o.getString("text"), o.getBoolean("done"))
+                TaskItem(o.getLong("id"), o.getString("text"), o.getBoolean("done"), o.optLong("due", -1L))
             }
         }.getOrDefault(emptyList())
     }
 
     fun saveTasks(tasks: List<TaskItem>) {
         val arr = JSONArray()
-        tasks.forEach { arr.put(JSONObject().put("id", it.id).put("text", it.text).put("done", it.done)) }
+        tasks.forEach { arr.put(JSONObject().put("id", it.id).put("text", it.text).put("done", it.done).put("due", it.due)) }
         sp.edit().putString(K_TASKS, arr.toString()).apply()
     }
 

@@ -3,6 +3,18 @@
 Every version of Stillpoint Launcher, newest first. Each links to its APK.
 The newest is always at **[Download the latest APK](https://github.com/cloudit24/stillpoint/releases/latest/download/Stillpoint-Launcher.apk)**.
 
+## v0.31.0 · 1 Oct 2026
+- Shelf tasks, redone: round ticks, an optional day (today, tomorrow or any date), late ones marked overdue,
+  done ones folded away. Swipe left to delete, with Undo.
+- Days sync too: with Project Hub, Tasks.org or OpenTasks connected, new tasks and their days go there.
+- Projects have steps: tick the next step and the following one moves up, with a bar showing how far along you are.
+- Home: the card under the headline now swipes. Choose any of next event, day and battery, this week,
+  tasks left, weather and world clock.
+- Calendars: Indian national (Saka) and Malayalam (Kollavarsham) join Hijri and Tamil, in the headline and on This week.
+- Settings, Home screen: grouped into Headline, Calendars and Cards; Projects can be shown on the Shelf by themselves.
+
+[stillpoint-v0.31.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.31.0/stillpoint-v0.31.0.apk)
+
 ## v0.30.0 · 1 Oct 2026
 - Tools, one place for small everyday tools (Shelf → Tools, or any gesture):
   device info; password generator, hash, Base64, UUID, JSON formatter, QR code;

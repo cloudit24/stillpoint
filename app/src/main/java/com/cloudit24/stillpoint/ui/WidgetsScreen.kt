@@ -189,7 +189,7 @@ fun WidgetsScreen(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderInfo) ->
             if (vm.settings.showTasks) {
                 Column(Modifier.padding(horizontal = 12.dp).padding(bottom = 20.dp)) { TasksBlock(vm) }
             }
-            if (vm.settings.hubOn && vm.settings.projectsSource == ProjectSource.PHONE) {
+            if (vm.settings.showProjects && vm.settings.projectsSource == ProjectSource.PHONE) {
                 Column(Modifier.padding(horizontal = 12.dp).padding(bottom = 20.dp)) { ProjectsBlock(vm) }
             }
             Text(if (editing) "Widgets · drag to move, corner to resize, tap a style" else "Widgets · long-press one to arrange",
@@ -230,7 +230,7 @@ fun WidgetsScreen(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderInfo) ->
 
         Row(Modifier.fillMaxWidth().padding(top = 16.dp, start = 12.dp, end = 12.dp)) {
             Text("Home", color = Muted, modifier = Modifier.clickable { vm.screen = Screen.HOME }.padding(8.dp))
-            Spacer(Modifier.weight(1f))
+            Box(Modifier.weight(1f), contentAlignment = Alignment.Center) { UndoBar(vm) }
             Text("Add widget", color = Muted, modifier = Modifier.clickable { editing = false; picking = true }.padding(8.dp))
         }
     }
@@ -433,7 +433,7 @@ private fun AppearIn(index: Int, content: @Composable () -> Unit) {
     Box(Modifier.graphicsLayer { alpha = a.value; translationY = (1f - a.value) * 14.dp.toPx() }) { content() }
 }
 
-/** Notes: a scribble board. Type and press done to keep a line; tap one to change it; long-press to let it go. */
+/** Notes: a scribble board. Type and press done to keep a line; tap one to change it; long-press to let it go (with Undo). */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun NotesBlock(vm: LauncherViewModel) {
@@ -572,53 +572,6 @@ private fun WidgetPicker(vm: LauncherViewModel, onPick: (AppWidgetProviderInfo) 
 
 private fun appLabel(pm: PackageManager, pkg: String): String =
     runCatching { pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString() }.getOrDefault(pkg)
-
-/** Projects kept on the phone, each with its next step. Tap to edit, long-press to delete. */
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun ProjectsBlock(vm: LauncherViewModel) {
-    var editing by remember { mutableStateOf<LocalProject?>(null) }
-    var adding by remember { mutableStateOf(false) }
-    Text("Projects", color = Muted, fontSize = 13.sp)
-    vm.projects.forEach { p ->
-        Column(
-            Modifier.fillMaxWidth()
-                .combinedClickable(onClick = { editing = p }, onLongClick = { vm.deleteProject(p.id) })
-                .padding(vertical = 6.dp),
-        ) {
-            Text(p.name, fontSize = 16.sp)
-            Text(if (p.next.isBlank()) "No next step · tap to add one" else "Next: ${p.next}", color = Muted, fontSize = 13.sp)
-        }
-    }
-    Text("+ New project", color = Muted, fontSize = 15.sp, modifier = Modifier.clickable { adding = true }.padding(vertical = 8.dp))
-    val e = editing
-    if (adding || e != null) {
-        ProjectDialog(e, onDismiss = { adding = false; editing = null }) { name, next ->
-            if (e != null) vm.updateProject(e.copy(name = name, next = next)) else vm.addProject(name, next)
-            adding = false
-            editing = null
-        }
-    }
-}
-
-@Composable
-private fun ProjectDialog(initial: LocalProject?, onDismiss: () -> Unit, onSave: (String, String) -> Unit) {
-    var name by remember { mutableStateOf(initial?.name.orEmpty()) }
-    var next by remember { mutableStateOf(initial?.next.orEmpty()) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = { TextButton(onClick = { onSave(name, next) }, enabled = name.isNotBlank()) { Text("Save") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-        title = { Text(if (initial == null) "New project" else "Edit project") },
-        text = {
-            Column {
-                OutlinedTextField(value = name, onValueChange = { name = it }, singleLine = true, label = { Text("Project") })
-                OutlinedTextField(value = next, onValueChange = { next = it }, singleLine = true, label = { Text("Next step") },
-                    modifier = Modifier.padding(top = 8.dp))
-            }
-        },
-    )
-}
 
 /** Drag-to-move on the Shelf: where every widget sits, which one is moving, and where the finger is. */
 private class ShelfDrag {

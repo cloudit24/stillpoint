@@ -14,7 +14,8 @@ data class AppEntry(
     val key: String get() = "$packageName/$className#$userSerial"
 }
 
-data class TaskItem(val id: Long, val text: String, val done: Boolean)
+/** [due] is a day (epoch day), or -1 for none. */
+data class TaskItem(val id: Long, val text: String, val done: Boolean, val due: Long = -1L)
 
 data class AgendaItem(val title: String, val begin: Long, val end: Long, val allDay: Boolean)
 
@@ -158,6 +159,8 @@ data class LauncherSettings(
     /** Days added to the Hijri date for local moon sighting, -2..2. */
     val hijriAdjust: Int = 0,
     val tamilOn: Boolean = false,
+    val sakaOn: Boolean = false,
+    val malayalamOn: Boolean = false,
     // Lock screen notification (off by default). Gold is never shown there.
     val lockOn: Boolean = false,
     val lockPrayer: Boolean = true,
@@ -186,6 +189,9 @@ data class LauncherSettings(
     val remindEvery: Int = 0,
     val infoPanels: Set<InfoPanel> = setOf(InfoPanel.PRAYER),
     val showRecent: Boolean = true,
+    /** Cities for the world clock card, "Label|Zone", up to three. */
+    val worldClocks: List<String> = emptyList(),
+    val showProjects: Boolean = true,
     val dialMode: DialMode = DialMode.PRAYER,
     val compassHaptics: Boolean = true,
     // Tasks, calendar and projects: where each comes from and how it syncs.
@@ -257,6 +263,10 @@ enum class InfoPanel(val label: String) {
     PRAYER("Prayer times"),
     AGENDA("Next on your calendar"),
     DAY("Day and battery"),
+    WEEK("This week, with your calendars"),
+    TASKS("Tasks left"),
+    WEATHER("Weather now"),
+    WORLD("World clock"),
 }
 
 /** What the ring beside the headline shows. */

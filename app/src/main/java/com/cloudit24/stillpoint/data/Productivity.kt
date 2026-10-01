@@ -1,5 +1,6 @@
 package com.cloudit24.stillpoint.data
 
+import java.time.Instant
 import android.content.ContentUris
 import android.content.ContentValues
 import android.content.Context
@@ -66,7 +67,8 @@ fun intervalLabel(min: Int): String = when {
     else -> "${min / 60} hours"
 }
 
-data class LocalProject(val id: Long, val name: String, val next: String)
+/** A project on the phone: [next] is the step to do now, [steps] the ones after it, [done] how many are finished. */
+data class LocalProject(val id: Long, val name: String, val next: String, val steps: List<String> = emptyList(), val done: Int = 0)
 
 // ---- Task apps (Tasks.org, OpenTasks) through their shared task provider ----
 
@@ -87,10 +89,14 @@ class ProviderTasks(private val context: Context) {
     fun open(src: TaskSource, limit: Int = 40): List<TaskItem> {
         val out = ArrayList<TaskItem>()
         val c = context.contentResolver.query(
-            tasksUri(src), arrayOf("_id", "title", "status"), "(status IS NULL OR status < 2)", null, "due IS NULL, due ASC",
+            tasksUri(src), arrayOf("_id", "title", "status", "due"), "(status IS NULL OR status < 2)", null, "due IS NULL, due ASC",
         ) ?: throw IOException("${src.label} didn't answer. Open it once, then try again.")
         c.use {
-            while (it.moveToNext() && out.size < limit) out += TaskItem(it.getLong(0), it.getString(1) ?: "(no title)", false)
+            while (it.moveToNext() && out.size < limit) {
+                val due = if (it.isNull(3)) -1L
+                else Instant.ofEpochMilli(it.getLong(3)).atZone(ZoneId.systemDefault()).toLocalDate().toEpochDay()
+                out += TaskItem(it.getLong(0), it.getString(1) ?: "(no title)", false, due)
+            }
         }
         return out
     }
@@ -104,15 +110,24 @@ class ProviderTasks(private val context: Context) {
     }
 
     /** Adds to the app's first list. */
-    fun add(src: TaskSource, title: String) {
+    fun add(src: TaskSource, title: String, due: Long = -1L) {
         val listId = context.contentResolver.query(
             Uri.parse("content://${src.authority}/tasklists"), arrayOf("_id"), null, null, null,
         )?.use { if (it.moveToFirst()) it.getLong(0) else null }
             ?: throw IOException("${src.label} has no task list yet. Create one there first.")
-        context.contentResolver.insert(tasksUri(src), ContentValues().apply {
+        val v = ContentValues().apply {
             put("list_id", listId)
             put("title", title)
-        })
+        }
+        // An all-day due date; if the app refuses it, the task is still added without one.
+        if (due >= 0) {
+            val withDue = ContentValues(v).apply {
+                put("due", due * 86_400_000L)
+                put("is_allday", 1)
+            }
+            if (runCatching { context.contentResolver.insert(tasksUri(src), withDue) }.getOrNull() != null) return
+        }
+        context.contentResolver.insert(tasksUri(src), v)
     }
 }
 

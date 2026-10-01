@@ -1,5 +1,7 @@
 package com.cloudit24.stillpoint
 
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import com.cloudit24.stillpoint.notify.NotifyHub
 import com.cloudit24.stillpoint.notify.NotifyItem
 import androidx.compose.ui.graphics.Color
@@ -234,9 +236,10 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
 
     fun hubDone(id: String, done: Boolean = true) = hubWrite { url, key -> hubRepo.setDone(url, key, id, done) }
 
-    fun hubAdd(text: String) {
+    fun hubAdd(text: String, due: Long = -1L) {
         val t = text.trim()
-        if (t.isNotEmpty()) hubWrite { url, key -> hubRepo.addTask(url, key, t) }
+        val day = if (due >= 0) LocalDate.ofEpochDay(due).toString() else null
+        if (t.isNotEmpty()) hubWrite { url, key -> hubRepo.addTask(url, key, t, day) }
     }
 
     fun hubNotNow(id: String) {
@@ -379,9 +382,9 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
 
     fun providerDone(id: Long) = providerWrite { providerRepo.setDone(it, id, true) }
 
-    fun providerAdd(text: String) {
+    fun providerAdd(text: String, due: Long = -1L) {
         val t = text.trim()
-        if (t.isNotEmpty()) providerWrite { providerRepo.add(it, t) }
+        if (t.isNotEmpty()) providerWrite { providerRepo.add(it, t, due) }
     }
 
     private fun providerWrite(action: (TaskSource) -> Unit) {
@@ -428,10 +431,10 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         return listOf(AgendaItem(title, ms ?: 0L, ms ?: 0L, allDay = ms == null))
     }
 
-    fun addProject(name: String, next: String) {
+    fun addProject(name: String, steps: List<String>) {
         val n = name.trim()
         if (n.isEmpty()) return
-        projects = projects + LocalProject(System.currentTimeMillis(), n, next.trim())
+        projects = projects + LocalProject(System.currentTimeMillis(), n, steps.firstOrNull() ?: "", steps.drop(1))
         prefs.saveProjects(projects)
     }
 
@@ -441,16 +444,52 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun deleteProject(id: Long) {
+        val i = projects.indexOfFirst { it.id == id }
+        if (i < 0) return
+        val gone = projects[i]
         projects = projects.filter { it.id != id }
+        prefs.saveProjects(projects)
+        offerUndo("Project deleted") {
+            if (projects.none { it.id == id }) {
+                projects = projects.reinsert(i, gone)
+                prefs.saveProjects(projects)
+            }
+        }
+    }
+
+    /** The next step is done: the following step moves up. With none left, the project moves to the end. */
+    fun projectStepDone(id: Long) {
+        val p = projects.find { it.id == id } ?: return
+        val moved = p.copy(done = p.done + 1, next = p.steps.firstOrNull() ?: "", steps = p.steps.drop(1))
+        projects = if (moved.next.isBlank()) projects.filter { it.id != id } + moved
+        else projects.map { if (it.id == id) moved else it }
         prefs.saveProjects(projects)
     }
 
-    /** Clears the next step; the project moves to the end until a new step is written. */
-    fun projectStepDone(id: Long) {
-        val p = projects.find { it.id == id } ?: return
-        projects = projects.filter { it.id != id } + p.copy(next = "")
-        prefs.saveProjects(projects)
+    // ---- Undo, for a few seconds after something is deleted on the Shelf ----
+
+    class Undo(val label: String, val restore: () -> Unit)
+
+    var undo by mutableStateOf<Undo?>(null)
+        private set
+    private var undoJob: Job? = null
+
+    fun offerUndo(label: String, restore: () -> Unit) {
+        undo = Undo(label, restore)
+        undoJob?.cancel()
+        undoJob = viewModelScope.launch {
+            delay(5_000)
+            undo = null
+        }
     }
+
+    fun runUndo() {
+        undoJob?.cancel()
+        undo?.restore?.invoke()
+        undo = null
+    }
+
+    private fun <T> List<T>.reinsert(i: Int, item: T): List<T> = toMutableList().apply { add(i.coerceIn(0, size), item) }
 
     fun projectLater(id: Long) {
         val p = projects.find { it.id == id } ?: return
@@ -580,8 +619,17 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun deleteNote(id: Long) {
+        val i = notes.indexOfFirst { it.id == id }
+        if (i < 0) return
+        val gone = notes[i]
         notes = notes.filter { it.id != id }
         prefs.saveNotes(notes)
+        offerUndo("Note deleted") {
+            if (notes.none { it.id == id }) {
+                notes = notes.reinsert(i, gone)
+                prefs.saveNotes(notes)
+            }
+        }
     }
 
     /** [width]: 0 = full, -1 = the widget's own width, more = dp. */
@@ -824,11 +872,29 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
 
     // ---- Tasks ----
 
-    fun addTask(text: String) {
+    fun addTask(text: String, due: Long = -1L) {
         val t = text.trim()
         if (t.isEmpty()) return
-        tasks = tasks + TaskItem(System.currentTimeMillis(), t, false)
+        tasks = tasks + TaskItem(System.currentTimeMillis(), t, false, due)
         prefs.saveTasks(tasks)
+    }
+
+    fun updateTask(id: Long, text: String, due: Long) {
+        val t = text.trim()
+        if (t.isEmpty()) return
+        tasks = tasks.map { if (it.id == id) it.copy(text = t, due = due) else it }
+        prefs.saveTasks(tasks)
+    }
+
+    fun clearDoneTasks() {
+        val gone = tasks.filter { it.done }
+        if (gone.isEmpty()) return
+        tasks = tasks.filter { !it.done }
+        prefs.saveTasks(tasks)
+        offerUndo(if (gone.size == 1) "1 task cleared" else "${gone.size} tasks cleared") {
+            tasks = tasks + gone.filter { g -> tasks.none { it.id == g.id } }
+            prefs.saveTasks(tasks)
+        }
     }
 
     fun toggleTask(id: Long) {
@@ -837,7 +903,16 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun deleteTask(id: Long) {
+        val i = tasks.indexOfFirst { it.id == id }
+        if (i < 0) return
+        val gone = tasks[i]
         tasks = tasks.filterNot { it.id == id }
         prefs.saveTasks(tasks)
+        offerUndo("Task deleted") {
+            if (tasks.none { it.id == id }) {
+                tasks = tasks.reinsert(i, gone)
+                prefs.saveTasks(tasks)
+            }
+        }
     }
 }

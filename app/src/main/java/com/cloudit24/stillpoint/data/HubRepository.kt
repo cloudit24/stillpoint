@@ -25,8 +25,9 @@ class HubRepository {
         return call("GET", url, "/api/glance/$q", key, null)
     }
 
-    fun addTask(url: String, key: String, text: String): Result<String> =
-        call("POST", url, "/api/tasks/", key, JSONObject().put("text", text))
+    /** [due] is a date like 2026-10-01, or null. */
+    fun addTask(url: String, key: String, text: String, due: String? = null): Result<String> =
+        call("POST", url, "/api/tasks/", key, JSONObject().put("text", text).apply { if (due != null) put("due", due) })
 
     fun setDone(url: String, key: String, id: String, done: Boolean): Result<String> =
         call("POST", url, "/api/tasks/${URLEncoder.encode(id, "UTF-8")}/done/", key, JSONObject().put("done", done))
