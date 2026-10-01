@@ -1,5 +1,10 @@
 package com.cloudit24.stillpoint
 
+import com.cloudit24.stillpoint.data.HaEntity
+import com.cloudit24.stillpoint.data.KumaStatus
+import com.cloudit24.stillpoint.data.SelfMessage
+import com.cloudit24.stillpoint.data.SelfHostedConfig
+import com.cloudit24.stillpoint.data.SelfHosted
 import com.cloudit24.stillpoint.data.ShelfPage
 import com.cloudit24.stillpoint.data.BuiltIn
 import kotlinx.coroutines.Job
@@ -536,6 +541,7 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun addShelf() {
+        if (shelfPages.size >= com.cloudit24.stillpoint.ui.MAX_SHELVES) return
         val id = (0..99).first { n -> shelfPages.none { it.id == n } }
         shelfPages = shelfPages + ShelfPage(id, "Shelf ${shelfPages.size + 1}", emptyList())
         prefs.saveShelfPages(shelfPages)
@@ -571,6 +577,66 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         countdowns = countdowns + (id to (title to day))
         prefs.saveCountdowns(countdowns)
     }
+
+    // ---- Self-hosted: Home Assistant, Uptime Kuma, ntfy and Gotify. Loaded only while their cards are on screen. ----
+
+    var selfHosted by mutableStateOf(prefs.loadSelfHosted())
+        private set
+    var haStates by mutableStateOf<List<HaEntity>>(emptyList())
+        private set
+    var haError by mutableStateOf<String?>(null)
+        private set
+    var kuma by mutableStateOf<KumaStatus?>(null)
+        private set
+    var kumaError by mutableStateOf<String?>(null)
+        private set
+    var messages by mutableStateOf<List<SelfMessage>>(emptyList())
+        private set
+    var messagesError by mutableStateOf<String?>(null)
+        private set
+
+    fun saveSelfHosted(c: SelfHostedConfig) {
+        selfHosted = c
+        prefs.saveSelfHosted(c)
+    }
+
+    private suspend fun <T> io(block: () -> T): Result<T> = withContext(Dispatchers.IO) { runCatching(block) }
+
+    suspend fun loadHa() {
+        val c = selfHosted
+        if (!c.haReady) return
+        io { SelfHosted.haStates(c) }.fold({ haStates = it; haError = null }, { haError = it.message })
+    }
+
+    fun haToggle(e: HaEntity) {
+        viewModelScope.launch {
+            io { SelfHosted.haToggle(selfHosted, e) }.onFailure { haError = it.message }
+            delay(700)
+            loadHa()
+        }
+    }
+
+    suspend fun haAll(): Result<List<HaEntity>> = io { SelfHosted.haAll(selfHosted) }
+
+    suspend fun loadKuma() {
+        val c = selfHosted
+        if (!c.kumaReady) return
+        io { SelfHosted.kuma(c) }.fold({ kuma = it; kumaError = null }, { kumaError = it.message })
+    }
+
+    fun kumaPage(): String = SelfHosted.kumaPage(selfHosted)
+
+    suspend fun loadMessages() {
+        val c = selfHosted
+        if (!c.msgReady) return
+        io { SelfHosted.messages(c) }.fold({ messages = it; messagesError = null }, { messagesError = it.message })
+    }
+
+    suspend fun testHa(): String = haAll().fold({ "Connected · ${it.size} entities" }, { it.message ?: "Failed" })
+    suspend fun testKuma(): String = io { SelfHosted.kuma(selfHosted) }
+        .fold({ "Connected · ${it.monitors.size} monitors" }, { it.message ?: "Failed" })
+    suspend fun testMessages(): String = io { SelfHosted.messages(selfHosted) }
+        .fold({ "Connected · ${it.size} messages in the last day" }, { it.message ?: "Failed" })
 
     /** Where back from Tools goes: the screen it was opened from. */
     var toolsReturn = Screen.WIDGETS

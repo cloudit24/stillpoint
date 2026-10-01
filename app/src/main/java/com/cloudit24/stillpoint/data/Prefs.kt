@@ -362,6 +362,28 @@ class Prefs(context: Context) {
         }).apply()
     }
 
+    fun loadSelfHosted(): SelfHostedConfig = SelfHostedConfig(
+        haUrl = sp.getString("sh_ha_url", "") ?: "",
+        haToken = sp.getString("secret_ha_token", "") ?: "",
+        haEntities = (sp.getString("sh_ha_entities", "") ?: "").split("\n").filter { it.isNotBlank() },
+        kumaUrl = sp.getString("sh_kuma_url", "") ?: "",
+        kumaSlug = sp.getString("sh_kuma_slug", "") ?: "",
+        msgKind = runCatching { MsgKind.valueOf(sp.getString("sh_msg_kind", null)!!) }.getOrDefault(MsgKind.OFF),
+        msgUrl = sp.getString("sh_msg_url", "") ?: "",
+        msgTopic = sp.getString("sh_msg_topic", "") ?: "",
+        msgToken = sp.getString("secret_msg_token", "") ?: "",
+    )
+
+    fun saveSelfHosted(c: SelfHostedConfig) {
+        sp.edit()
+            .putString("sh_ha_url", c.haUrl).putString("secret_ha_token", c.haToken)
+            .putString("sh_ha_entities", c.haEntities.joinToString("\n"))
+            .putString("sh_kuma_url", c.kumaUrl).putString("sh_kuma_slug", c.kumaSlug)
+            .putString("sh_msg_kind", c.msgKind.name).putString("sh_msg_url", c.msgUrl)
+            .putString("sh_msg_topic", c.msgTopic).putString("secret_msg_token", c.msgToken)
+            .apply()
+    }
+
     fun loadWidgetIds(): List<Int> =
         readStringList(sp.getString(K_WIDGET_IDS, null)).mapNotNull { it.toIntOrNull() }
 

@@ -1,5 +1,7 @@
 package com.cloudit24.stillpoint
 
+import com.cloudit24.stillpoint.data.SelfHosted
+import com.cloudit24.stillpoint.data.HaEntity
 import com.cloudit24.stillpoint.data.BuiltIn
 import com.cloudit24.stillpoint.ui.dueLabel
 import com.cloudit24.stillpoint.ui.subnet
@@ -106,6 +108,31 @@ class CoreTest {
         assertEquals(517.25, readNumber("""[{"price":"517.25"}]""", "0.price")!!, 0.001)
         assertEquals(2648.3, readNumber("Gold: USD 2,648.30 per ounce", "")!!, 0.001)
         assertNull(readNumber("""{"data":{}}""", "data.price"))
+    }
+
+    @Test
+    fun selfHostedParsing() {
+        val ntfy = "{\"id\":\"a\",\"time\":1700000000,\"event\":\"open\",\"topic\":\"x\"}\n" +
+            "{\"id\":\"b\",\"time\":1700000100,\"event\":\"message\",\"topic\":\"alerts\",\"message\":\"Disk full\",\"priority\":5}\n"
+        val n = SelfHosted.parseNtfy(ntfy)
+        assertEquals(1, n.size)
+        assertEquals("alerts", n[0].title)
+        assertEquals(1700000100000L, n[0].time)
+
+        val g = SelfHosted.parseGotify("{\"messages\":[{\"id\":7,\"title\":\"Backup\",\"message\":\"Done\",\"date\":\"2026-10-01T10:00:00+04:00\",\"priority\":8}]}")
+        assertEquals("Backup", g[0].title)
+        assertEquals(5, g[0].priority)
+
+        val page = "{\"config\":{\"title\":\"Home\"},\"publicGroupList\":[{\"name\":\"S\",\"monitorList\":[{\"id\":1,\"name\":\"NAS\"},{\"id\":2,\"name\":\"Router\"}]}]}"
+        val beats = "{\"heartbeatList\":{\"1\":[{\"status\":1},{\"status\":0}],\"2\":[{\"status\":1}]},\"uptimeList\":{\"1_24\":0.98}}"
+        val k = SelfHosted.parseKuma(page, beats)
+        assertEquals("Home", k.title)
+        assertEquals(listOf(0, 1), k.monitors.map { it.status })
+        assertEquals(0.98, k.monitors[0].uptime24!!, 0.0001)
+
+        assertEquals("unlock", SelfHosted.haService(HaEntity("lock.door", "Door", "locked", "")))
+        assertEquals("turn_on", SelfHosted.haService(HaEntity("scene.night", "Night", "scening", "")))
+        assertEquals("toggle", SelfHosted.haService(HaEntity("light.desk", "Desk", "on", "")))
     }
 
     @Test

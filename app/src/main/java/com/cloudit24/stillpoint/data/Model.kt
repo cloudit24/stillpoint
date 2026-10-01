@@ -316,7 +316,10 @@ enum class BuiltIn(val code: Int, val title: String, val summary: String, val ca
     BATTERY(12, "Battery and storage", "Charge, temperature, space and memory", canHalf = true),
     WEATHER(13, "Weather", "Now, with when it was fetched"),
     PRAYER(14, "Prayer and moon", "Today's five times and tonight's moon"),
-    COUNTDOWN(15, "Countdown", "Days to a date you choose", canHalf = true);
+    COUNTDOWN(15, "Countdown", "Days to a date you choose", canHalf = true),
+    HOME_ASSISTANT(20, "Home Assistant", "Your lights, switches, scenes and sensors"),
+    UPTIME(21, "Uptime Kuma", "Which of your services are up"),
+    MESSAGES(22, "ntfy or Gotify", "The latest messages from your server");
 
     fun id(shelf: Int): Int = -(code * 100 + shelf)
 

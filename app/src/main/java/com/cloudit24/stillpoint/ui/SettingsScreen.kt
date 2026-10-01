@@ -152,6 +152,7 @@ private enum class SettingsPage(val section: String, val title: String, val summ
     WEATHER("Extras", "Weather", "Headline card · uses Open-Meteo", Icons.Outlined.LocationOn),
     GOLD("Extras", "Gold price", "Home line and widget · uses outside websites", Icons.Outlined.Star),
     HUB("Extras", "Project Hub", "Connection to your own server", Icons.Outlined.CheckCircle),
+    SELFHOSTED("Extras", "Self-hosted", "Home Assistant, Uptime Kuma, ntfy and Gotify", Icons.Outlined.Home),
     TOOLS("Extras", "Tools", "Device info, passwords, QR, ping, DNS and more", Icons.Outlined.Build),
     PRIVACY("System", "Permissions and data", "Usage access, gesture service, data usage", Icons.Outlined.Lock),
     BACKUP("System", "Backup and restore", "Keep your setup in a file, bring it to a new phone", Icons.Outlined.Send),
@@ -490,6 +491,8 @@ fun SettingsScreen(vm: LauncherViewModel) {
                     Note("The compass ticks every 10°, clicks at N, E, S and W, and taps once when you face the Qibla.")
                 }
 
+                SettingsPage.SELFHOSTED -> SelfHostedSettings(vm)
+
                 SettingsPage.TOOLS -> {
                     Group("Tools") {
                         ToggleRow("Show Tools", s.toolsOn) { on -> vm.updateSettings { it.copy(toolsOn = on) } }
@@ -585,7 +588,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
 
                 SettingsPage.BACKUP -> {
                     Group("Backup") {
-                        ActionRow("Save a backup file", "Settings, notes, tasks, projects, pinned apps, favorites, gestures") {
+                        ActionRow("Save a backup file", "Settings, notes, tasks, projects, pinned apps, favorites, gestures (no keys or tokens)") {
                             saveBackup.launch("stillpoint-backup-${java.time.LocalDate.now()}.json")
                         }
                         ActionRow("Restore from a file", "Puts a backup's setup in place, then Stillpoint restarts") {
@@ -1004,7 +1007,7 @@ private fun String.isLocalAddress(): Boolean {
 
 /** A titled rounded card holding related rows. */
 @Composable
-private fun Group(title: String, content: @Composable () -> Unit) {
+internal fun Group(title: String, content: @Composable () -> Unit) {
     Text(title.uppercase(), color = Accent, fontSize = 12.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.8.sp,
         modifier = Modifier.padding(start = 4.dp, top = 20.dp, bottom = 8.dp))
     Column(
@@ -1032,7 +1035,7 @@ private fun MenuRow(icon: ImageVector, title: String, summary: String, onClick: 
 }
 
 @Composable
-private fun Note(text: String) {
+internal fun Note(text: String) {
     Text(text, color = Muted, fontSize = 12.sp, modifier = Modifier.padding(start = 4.dp, end = 4.dp, top = 8.dp))
 }
 

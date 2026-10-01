@@ -1,5 +1,6 @@
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.animation.animateColorAsState
 import com.cloudit24.stillpoint.data.BuiltIn
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.animation.core.animateFloatAsState
@@ -184,10 +185,8 @@ fun WidgetsScreen(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderInfo) ->
                 vm.toolsReturn = Screen.WIDGETS
                 vm.screen = Screen.TOOLS
             }.padding(8.dp))
-            if (vm.widgetIds.isNotEmpty()) {
-                Text(if (editing) "Done" else "Edit", color = Muted,
-                    modifier = Modifier.clickable { editing = !editing }.padding(8.dp))
-            }
+            Text(if (editing) "Done" else "Edit", color = Muted,
+                modifier = Modifier.clickable { editing = !editing }.padding(8.dp))
         }
 
         // The Shelf: things to keep near but off the home screen. Notes, tasks, projects, then widgets.
@@ -472,13 +471,18 @@ private fun ShelfTabs(vm: LauncherViewModel, modifier: Modifier) {
     Row(modifier.horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.Bottom) {
         vm.shelfPages.forEachIndexed { i, p ->
             val on = i == vm.shelfIndex
-            val size by animateFloatAsState(if (on) 34f else 20f, tween(250), label = "tab")
-            Text(p.name, fontSize = size.sp, fontWeight = FontWeight.Light, color = if (on) Ink else Muted, maxLines = 1,
-                modifier = Modifier.padding(end = 18.dp).combinedClickable(
-                    interactionSource = remember { MutableInteractionSource() }, indication = null,
-                    onClick = { vm.selectShelf(i) }, onLongClick = { renaming = i }))
+            // The chosen shelf grows, brightens and gets a short accent line that slides out under it.
+            val size by animateFloatAsState(if (on) 34f else 18f, spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow), label = "tab")
+            val color by animateColorAsState(if (on) Ink else Muted, tween(300), label = "tabColor")
+            val line by animateDpAsState(if (on) 22.dp else 0.dp, spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessLow), label = "tabLine")
+            Column(Modifier.padding(end = 18.dp).combinedClickable(
+                interactionSource = remember { MutableInteractionSource() }, indication = null,
+                onClick = { vm.selectShelf(i) }, onLongClick = { renaming = i })) {
+                Text(p.name, fontSize = size.sp, fontWeight = FontWeight.Light, color = color, maxLines = 1)
+                Box(Modifier.padding(top = 2.dp, start = 2.dp).width(line).height(3.dp).clip(RoundedCornerShape(50)).background(Accent))
+            }
         }
-        if (vm.shelfPages.size < 9) {
+        if (vm.shelfPages.size < MAX_SHELVES) {
             Text("+", fontSize = 24.sp, fontWeight = FontWeight.Light, color = Muted,
                 modifier = Modifier.clip(CircleShape).clickable { vm.addShelf() }.padding(horizontal = 8.dp))
         }
@@ -747,3 +751,6 @@ private fun LookChip(label: String, onClick: () -> Unit) {
     Text(label, color = Accent, fontSize = 12.sp, modifier = Modifier.clip(RoundedCornerShape(50))
         .background(Color.White.copy(alpha = 0.06f)).clickable(onClick = onClick).padding(horizontal = 10.dp, vertical = 4.dp))
 }
+
+/** Three shelves at most: enough to sort things, few enough that the header always fits. */
+const val MAX_SHELVES = 3

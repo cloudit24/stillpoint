@@ -13,8 +13,9 @@ import java.time.Instant
 object Backup {
     private const val PREFS = "stillpoint"
 
-    /** Things tied to this phone or quickly fetched again. */
-    private fun skip(key: String) = key.startsWith("widget_") || key.endsWith("_cache")
+    /** Things tied to this phone, quickly fetched again, or secret (keys, tokens, private calendar links). */
+    private fun skip(key: String) = key.startsWith("widget_") || key.endsWith("_cache") ||
+        key.startsWith("secret_") || key == "hub_key" || key == "ics_url"
 
     fun export(context: Context): String {
         val sp = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)

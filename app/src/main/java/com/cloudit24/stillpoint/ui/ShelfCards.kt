@@ -82,6 +82,9 @@ fun BuiltInContent(vm: LauncherViewModel, kind: BuiltIn, id: Int) {
                 modifier = Modifier.padding(vertical = 6.dp).clickable { vm.screen = Screen.SETTINGS })
         }
         BuiltIn.COUNTDOWN -> CountdownCard(vm, id)
+        BuiltIn.HOME_ASSISTANT -> HaCard(vm)
+        BuiltIn.UPTIME -> KumaCard(vm)
+        BuiltIn.MESSAGES -> MessagesCard(vm)
     }
 }
 

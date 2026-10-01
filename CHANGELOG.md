@@ -3,6 +3,17 @@
 Every version of Stillpoint Launcher, newest first. Each links to its APK.
 The newest is always at **[Download the latest APK](https://github.com/cloudit24/stillpoint/releases/latest/download/Stillpoint-Launcher.apk)**.
 
+## v0.33.0 · 1 Oct 2026
+- Self-hosted (Settings → Extras → Self-hosted), each off until you connect it, each a card for any shelf:
+  - Home Assistant: your chosen lights, switches, scenes and sensors as tiles; tap to switch or run.
+  - Uptime Kuma: your status page at a glance, all up or what is down, a dot per service.
+  - ntfy or Gotify: the latest messages from your own server.
+- Cards refresh only while the Shelf is open. Tokens stay on the phone.
+- Shelves: up to three; Edit is always in reach, and the chosen shelf's name grows with a short accent line.
+- Backup files no longer include keys and tokens (Project Hub key, calendar link, self-hosted tokens).
+
+[stillpoint-v0.33.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.33.0/stillpoint-v0.33.0.apk)
+
 ## v0.32.0 · 1 Oct 2026
 - More shelves: tap + next to the Shelf title for another (Work, Family, Travel...). Tap a name to switch,
   long-press it to rename or delete.
