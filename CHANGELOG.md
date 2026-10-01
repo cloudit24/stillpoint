@@ -3,6 +3,14 @@
 Every version of Stillpoint Launcher, newest first. Each links to its APK.
 The newest is always at **[Download the latest APK](https://github.com/cloudit24/stillpoint/releases/latest/download/Stillpoint-Launcher.apk)**.
 
+## v0.35.0 · 2 Oct 2026
+- Notes are sticky notes now: soft colours in two columns, newest first. Tap one to open it, change its words or colour, or delete it. Hold one and tap × to throw it away. Undo brings it back.
+- Task alerts: tap a task's bell and pick a time; it rings on its due day. Bell off, no alert.
+- A new input bar for tasks: the words, a day, the bell and a round button to add.
+- Projects are gone from the Shelf and Settings. Project Hub still shows its next step on home. Projects you made stay saved on the phone.
+
+[stillpoint-v0.35.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.35.0/stillpoint-v0.35.0.apk)
+
 ## v0.34.1 · 1 Oct 2026
 - Smoother Shelf: cards glide to their new place without a flicker, and the one you drag glides into its slot when you let go.
 - The Wi-Fi tool no longer crashes on Android 16.

@@ -147,7 +147,6 @@ private enum class SettingsPage(val section: String, val title: String, val summ
     LOCK("Personalization", "Lock screen", "Next prayer and dates on the lock screen", Icons.Outlined.Notifications),
     TASKS("Productivity", "Tasks", "On this phone, Project Hub, Tasks.org or OpenTasks", Icons.Outlined.Done),
     CALENDAR("Productivity", "Calendar", "Phone calendar, Project Hub or a calendar link", Icons.Outlined.DateRange),
-    PROJECTS("Productivity", "Projects", "On this phone or Project Hub", Icons.Outlined.Build),
     PRAYER("Extras", "Islamic prayer", "Prayer times, alerts, iqama, Qibla", Icons.Outlined.Place),
     WEATHER("Extras", "Weather", "Headline card · uses Open-Meteo", Icons.Outlined.LocationOn),
     GOLD("Extras", "Gold price", "Home line and widget · uses outside websites", Icons.Outlined.Star),
@@ -793,25 +792,6 @@ fun SettingsScreen(vm: LauncherViewModel) {
                                 ctx.checkSelfPermission(Manifest.permission.READ_CALENDAR) != PackageManager.PERMISSION_GRANTED
                             if (on && needsPermission) calendarPermission.launch(Manifest.permission.READ_CALENDAR)
                             else { vm.updateSettings { it.copy(showAgenda = on) }; vm.refresh() }
-                        }
-                    }
-                }
-
-                SettingsPage.PROJECTS -> {
-                    SourcePicker(ProjectSource.entries, s.projectsSource, { it.label }, { src ->
-                        src.detail + if (src == ProjectSource.HUB && !vm.hubConnected()) " Connect it under Extras first." else ""
-                    }) { src ->
-                        if (src == ProjectSource.HUB && !vm.hubConnected()) page = SettingsPage.HUB else vm.setProjectSource(src)
-                    }
-                    when (s.projectsSource) {
-                        ProjectSource.PHONE -> Note("Add projects and their steps on the Shelf; tick a step and the next " +
-                            "one moves up. Home can show the next step of the first project that has one.")
-                        ProjectSource.HUB -> SyncGroup(vm, SyncFeature.PROJECTS, Sync.HUB, s.projectsSync) { dialog = SettingsDialog.SYNC_PROJECTS }
-                    }
-                    Group("Display") {
-                        ToggleRow("Next step on home", s.hubOn) { on ->
-                            vm.updateSettings { it.copy(hubOn = on) }
-                            if (on && s.projectsSource == ProjectSource.HUB) vm.refreshHub(force = true)
                         }
                     }
                 }

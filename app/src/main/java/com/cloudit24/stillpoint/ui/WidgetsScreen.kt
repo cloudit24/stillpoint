@@ -565,47 +565,6 @@ private fun AppearIn(index: Int, content: @Composable () -> Unit) {
     Box(Modifier.graphicsLayer { alpha = a.value; translationY = (1f - a.value) * 14.dp.toPx() }) { content() }
 }
 
-/** Notes: a scribble board. Type and press done to keep a line; tap one to change it; long-press to let it go (with Undo). */
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-fun NotesBlock(vm: LauncherViewModel) {
-    var input by rememberSaveable { mutableStateOf("") }
-    var editingId by remember { mutableStateOf<Long?>(null) }
-    var editText by remember { mutableStateOf("") }
-    val accent = Accent
-    Text("Notes", color = Muted, fontSize = 13.sp)
-    vm.notes.forEach { n ->
-        key(n.id) {
-            if (editingId == n.id) {
-                BasicTextField(
-                    value = editText, onValueChange = { editText = it },
-                    textStyle = TextStyle(color = Ink, fontSize = 16.sp), cursorBrush = SolidColor(accent),
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = { vm.updateNote(n.id, editText); editingId = null }),
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-                )
-            } else {
-                Text(n.text, fontSize = 16.sp, color = Ink, modifier = Modifier.fillMaxWidth()
-                    .combinedClickable(onClick = { editingId = n.id; editText = n.text }, onLongClick = { vm.deleteNote(n.id) })
-                    .padding(vertical = 6.dp))
-            }
-        }
-    }
-    BasicTextField(
-        value = input, onValueChange = { input = it }, singleLine = true,
-        textStyle = TextStyle(color = Ink, fontSize = 16.sp), cursorBrush = SolidColor(accent),
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-        keyboardActions = KeyboardActions(onDone = { vm.addNote(input); input = "" }),
-        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-        decorationBox = { inner ->
-            Box {
-                if (input.isEmpty()) Text("Write a note", color = Muted, fontSize = 16.sp)
-                inner()
-            }
-        },
-    )
-}
-
 private class NaturalSize(val width: Int, val height: Int, val minHeight: Int, val maxHeight: Int, val fullWidth: Boolean)
 
 /**
@@ -663,7 +622,7 @@ private fun WidgetPicker(vm: LauncherViewModel, onBuiltIn: (BuiltIn) -> Unit, on
             }
         }
         val shelfId = vm.shelfPages.getOrNull(vm.shelfIndex)?.id ?: 0
-        val cards = BuiltIn.entries.filter { it.id(shelfId) !in vm.widgetIds }
+        val cards = BuiltIn.entries.filter { !it.retired && it.id(shelfId) !in vm.widgetIds }
         if (cards.isNotEmpty()) {
             item { Text("Stillpoint cards", color = Accent, fontSize = 17.sp, modifier = Modifier.padding(vertical = 6.dp)) }
             items(cards, key = { "card_${it.name}" }) { b ->

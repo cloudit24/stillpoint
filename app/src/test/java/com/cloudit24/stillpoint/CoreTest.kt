@@ -189,4 +189,15 @@ class CoreTest {
         assertFalse(isNewerVersion("0.27.0", "0.27.0"))
         assertFalse(isNewerVersion("0.9.0", "0.10.0"))
     }
+
+    @Test
+    fun taskAlertTime() {
+        val day = java.time.LocalDate.of(2026, 10, 2).toEpochDay()
+        val t = com.cloudit24.stillpoint.data.TaskItem(1, "Pay bill", false, day, 18 * 60)
+        val at = com.cloudit24.stillpoint.widget.TaskAlerts.at(t)
+        assertEquals(java.time.LocalDateTime.of(2026, 10, 2, 18, 0),
+            java.time.LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(at), java.time.ZoneId.systemDefault()))
+        assertEquals(-1L, com.cloudit24.stillpoint.widget.TaskAlerts.at(t.copy(remind = -1)))
+        assertEquals(-1L, com.cloudit24.stillpoint.widget.TaskAlerts.at(t.copy(done = true)))
+    }
 }

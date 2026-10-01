@@ -21,6 +21,7 @@ object Refresh {
         runCatching { PrayerWidget.updateAll(context) }
         runCatching { LockNotification.update(context) }
         runCatching { PrayerAlerts.schedule(context) }
+        runCatching { TaskAlerts.schedule(context) }
         schedule(context)
     }
 

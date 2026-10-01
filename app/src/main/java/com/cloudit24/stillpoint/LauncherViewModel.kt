@@ -1,5 +1,7 @@
 package com.cloudit24.stillpoint
 
+import java.time.LocalTime
+import com.cloudit24.stillpoint.widget.TaskAlerts
 import com.cloudit24.stillpoint.data.HaEntity
 import com.cloudit24.stillpoint.data.KumaStatus
 import com.cloudit24.stillpoint.data.SelfMessage
@@ -725,16 +727,16 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     var notes by mutableStateOf(prefs.loadNotes())
         private set
 
-    fun addNote(text: String) {
+    fun addNote(text: String, color: Int = 0) {
         val t = text.trim()
         if (t.isEmpty()) return
-        notes = notes + Note(System.currentTimeMillis(), t)
+        notes = notes + Note(System.currentTimeMillis(), t, color)
         prefs.saveNotes(notes)
     }
 
-    fun updateNote(id: Long, text: String) {
+    fun updateNote(id: Long, text: String, color: Int) {
         val t = text.trim()
-        notes = if (t.isEmpty()) notes.filter { it.id != id } else notes.map { if (it.id == id) it.copy(text = t) else it }
+        notes = if (t.isEmpty()) notes.filter { it.id != id } else notes.map { if (it.id == id) it.copy(text = t, color = color) else it }
         prefs.saveNotes(notes)
     }
 
@@ -992,34 +994,54 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
 
     // ---- Tasks ----
 
-    fun addTask(text: String, due: Long = -1L) {
-        val t = text.trim()
-        if (t.isEmpty()) return
-        tasks = tasks + TaskItem(System.currentTimeMillis(), t, false, due)
+    /** Saves the tasks and moves the next alert. */
+    private fun saveTasks() {
         prefs.saveTasks(tasks)
+        runCatching { TaskAlerts.schedule(getApplication<Application>()) }
     }
 
-    fun updateTask(id: Long, text: String, due: Long) {
+    /** An alert needs a day: without one it takes today, or tomorrow when that time has passed. */
+    private fun dayFor(due: Long, remind: Int): Long {
+        if (remind < 0 || due >= 0) return due
+        val now = LocalTime.now()
+        val today = LocalDate.now().toEpochDay()
+        return if (now.hour * 60 + now.minute < remind) today else today + 1
+    }
+
+    fun addTask(text: String, due: Long = -1L, remind: Int = -1) {
         val t = text.trim()
         if (t.isEmpty()) return
-        tasks = tasks.map { if (it.id == id) it.copy(text = t, due = due) else it }
-        prefs.saveTasks(tasks)
+        tasks = tasks + TaskItem(System.currentTimeMillis(), t, false, dayFor(due, remind), remind)
+        saveTasks()
+    }
+
+    fun updateTask(id: Long, text: String, due: Long, remind: Int) {
+        val t = text.trim()
+        if (t.isEmpty()) return
+        tasks = tasks.map { if (it.id == id) it.copy(text = t, due = dayFor(due, remind), remind = remind) else it }
+        saveTasks()
+    }
+
+    /** The bell: a minute of the day to ring, or -1 for no alert. */
+    fun setTaskRemind(id: Long, remind: Int) {
+        tasks = tasks.map { if (it.id == id) it.copy(remind = remind, due = dayFor(it.due, remind)) else it }
+        saveTasks()
     }
 
     fun clearDoneTasks() {
         val gone = tasks.filter { it.done }
         if (gone.isEmpty()) return
         tasks = tasks.filter { !it.done }
-        prefs.saveTasks(tasks)
+        saveTasks()
         offerUndo(if (gone.size == 1) "1 task cleared" else "${gone.size} tasks cleared") {
             tasks = tasks + gone.filter { g -> tasks.none { it.id == g.id } }
-            prefs.saveTasks(tasks)
+            saveTasks()
         }
     }
 
     fun toggleTask(id: Long) {
         tasks = tasks.map { if (it.id == id) it.copy(done = !it.done) else it }
-        prefs.saveTasks(tasks)
+        saveTasks()
     }
 
     fun deleteTask(id: Long) {
@@ -1027,11 +1049,11 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         if (i < 0) return
         val gone = tasks[i]
         tasks = tasks.filterNot { it.id == id }
-        prefs.saveTasks(tasks)
+        saveTasks()
         offerUndo("Task deleted") {
             if (tasks.none { it.id == id }) {
                 tasks = tasks.reinsert(i, gone)
-                prefs.saveTasks(tasks)
+                saveTasks()
             }
         }
     }

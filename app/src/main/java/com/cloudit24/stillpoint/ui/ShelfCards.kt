@@ -59,8 +59,7 @@ fun BuiltInContent(vm: LauncherViewModel, kind: BuiltIn, id: Int) {
     when (kind) {
         BuiltIn.NOTES -> NotesCard(vm)
         BuiltIn.TASKS -> TasksBlock(vm)
-        BuiltIn.PROJECTS -> if (s.projectsSource == ProjectSource.PHONE) ProjectsBlock(vm) else CardHint(
-            "Projects", "Your projects come from Project Hub. The next step shows on home.")
+        BuiltIn.PROJECTS -> Unit // Retired.
         BuiltIn.CALENDAR -> MonthCard(s)
         BuiltIn.CLOCKS -> {
             val now by rememberTicker(30_000)

@@ -251,14 +251,14 @@ class Prefs(context: Context) {
             val arr = JSONArray(raw)
             List(arr.length()) { i ->
                 val o = arr.getJSONObject(i)
-                TaskItem(o.getLong("id"), o.getString("text"), o.getBoolean("done"), o.optLong("due", -1L))
+                TaskItem(o.getLong("id"), o.getString("text"), o.getBoolean("done"), o.optLong("due", -1L), o.optInt("remind", -1))
             }
         }.getOrDefault(emptyList())
     }
 
     fun saveTasks(tasks: List<TaskItem>) {
         val arr = JSONArray()
-        tasks.forEach { arr.put(JSONObject().put("id", it.id).put("text", it.text).put("done", it.done).put("due", it.due)) }
+        tasks.forEach { arr.put(JSONObject().put("id", it.id).put("text", it.text).put("done", it.done).put("due", it.due).put("remind", it.remind)) }
         sp.edit().putString(K_TASKS, arr.toString()).apply()
     }
 
@@ -304,12 +304,12 @@ class Prefs(context: Context) {
 
     fun loadNotes(): List<Note> = runCatching {
         val a = JSONArray(sp.getString("notes", "[]"))
-        (0 until a.length()).map { i -> a.getJSONObject(i).let { Note(it.getLong("id"), it.getString("text")) } }
+        (0 until a.length()).map { i -> a.getJSONObject(i).let { Note(it.getLong("id"), it.getString("text"), it.optInt("color", 0)) } }
     }.getOrDefault(emptyList())
 
     fun saveNotes(notes: List<Note>) {
         val a = JSONArray()
-        notes.forEach { a.put(JSONObject().put("id", it.id).put("text", it.text)) }
+        notes.forEach { a.put(JSONObject().put("id", it.id).put("text", it.text).put("color", it.color)) }
         sp.edit().putString("notes", a.toString()).apply()
     }
 
@@ -326,13 +326,14 @@ class Prefs(context: Context) {
                     val items = o.getJSONArray("items")
                     ShelfPage(o.getInt("id"), o.getString("name"), List(items.length()) { j -> items.getInt(j) })
                 }
-            }.getOrNull()?.takeIf { it.isNotEmpty() }?.let { return it }
+            }.getOrNull()?.takeIf { it.isNotEmpty() }?.let { pages ->
+                return pages.map { pg -> pg.copy(items = pg.items.filter { i -> BuiltIn.of(i)?.retired != true }) }
+            }
         }
         val s = loadSettings()
         val cards = buildList {
             add(BuiltIn.NOTES.id(0))
             if (s.showTasks) add(BuiltIn.TASKS.id(0))
-            if (s.showProjects && s.projectsSource == ProjectSource.PHONE) add(BuiltIn.PROJECTS.id(0))
         }
         return listOf(ShelfPage(0, "Shelf", cards + loadWidgetIds()))
     }

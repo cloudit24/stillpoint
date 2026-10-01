@@ -293,7 +293,7 @@ fun HomeScreen(vm: LauncherViewModel) {
 
         Column(Modifier.padding(top = 28.dp)) {
             if (s.hubOn) {
-                if (s.projectsSource == ProjectSource.HUB) HubCard(vm, now) else LocalProjectCard(vm)
+                if (s.projectsSource == ProjectSource.HUB) HubCard(vm, now)
             }
             if (s.showAgenda) AgendaBlock(context, vm.agenda)
         }

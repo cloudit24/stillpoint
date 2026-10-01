@@ -1,5 +1,23 @@
 package com.cloudit24.stillpoint.ui
 
+import android.Manifest
+import android.app.TimePickerDialog
+import android.text.format.DateFormat
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Notifications as BellOn
+import androidx.compose.material.icons.outlined.Notifications as BellOff
+import androidx.compose.material.icons.outlined.DateRange
+import androidx.compose.material3.Icon
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.runtime.mutableIntStateOf
+import java.time.LocalTime
+import java.time.format.FormatStyle
+import com.cloudit24.stillpoint.widget.LockNotification
 import android.app.DatePickerDialog
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
@@ -60,7 +78,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cloudit24.stillpoint.LauncherViewModel
-import com.cloudit24.stillpoint.data.LocalProject
 import com.cloudit24.stillpoint.data.TaskItem
 import com.cloudit24.stillpoint.data.TaskSource
 import kotlinx.coroutines.delay
@@ -147,7 +164,10 @@ private fun DueChip(label: String, late: Boolean) {
 
 /** One task: tick, text, due day. Ticking fills the circle, then the task folds away. */
 @Composable
-private fun TaskRow(text: String, done: Boolean, due: Pair<String, Boolean>?, onTick: () -> Unit, onOpen: (() -> Unit)?) {
+private fun TaskRow(
+    text: String, done: Boolean, due: Pair<String, Boolean>?, onTick: () -> Unit, onOpen: (() -> Unit)?,
+    bell: (@Composable () -> Unit)? = null,
+) {
     var ticking by remember { mutableStateOf(false) }
     LaunchedEffect(ticking) {
         if (ticking) {
@@ -163,6 +183,7 @@ private fun TaskRow(text: String, done: Boolean, due: Pair<String, Boolean>?, on
             textDecoration = if (done) TextDecoration.LineThrough else null,
             modifier = Modifier.weight(1f).padding(start = 4.dp, top = 6.dp, bottom = 6.dp))
         if (!done && due != null) DueChip(due.first, due.second)
+        bell?.invoke()
     }
 }
 
@@ -178,6 +199,23 @@ fun TasksBlock(vm: LauncherViewModel) {
     LaunchedEffect(src) { if (provider) vm.loadProviderTasks() }
     var editing by remember { mutableStateOf<TaskItem?>(null) }
     var showDone by rememberSaveable { mutableStateOf(false) }
+    val ctx = LocalContext.current
+    var afterAllow by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val allow = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
+        val f = afterAllow
+        afterAllow = null
+        if (ok) f?.invoke() else vm.blockedMessage = "Allow notifications for Stillpoint to get task alerts."
+    }
+    // Picks the alert time; asks for notifications first if Android needs that.
+    val pickAlert: (Int, (Int) -> Unit) -> Unit = { start, then ->
+        val show = {
+            TimePickerDialog(ctx, { _, hh, mm -> then(hh * 60 + mm) }, start / 60, start % 60, DateFormat.is24HourFormat(ctx)).show()
+        }
+        if (LockNotification.canPost(ctx)) show() else {
+            afterAllow = show
+            allow.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
 
     Column(Modifier.animateContentSize()) {
         when {
@@ -215,7 +253,15 @@ fun TasksBlock(vm: LauncherViewModel) {
                 open.forEach { t ->
                     key(t.id) {
                         SwipeToDelete({ vm.deleteTask(t.id) }) {
-                            TaskRow(t.text, false, dueLabel(t.due), onTick = { vm.toggleTask(t.id) }, onOpen = { editing = t })
+                            val due = dueLabel(t.due)?.let { (l, late) -> (if (t.remind >= 0) "$l · ${remindLabel(t.remind)}" else l) to late }
+                            TaskRow(t.text, false, due, onTick = { vm.toggleTask(t.id) }, onOpen = { editing = t },
+                                bell = if (t.due < 0 && t.remind < 0) null else {
+                                    {
+                                        BellButton(t.remind >= 0) {
+                                            if (t.remind >= 0) vm.setTaskRemind(t.id, -1) else pickAlert(9 * 60) { vm.setTaskRemind(t.id, it) }
+                                        }
+                                    }
+                                })
                         }
                     }
                 }
@@ -237,42 +283,66 @@ fun TasksBlock(vm: LauncherViewModel) {
                 }
             }
         }
-        if (src != TaskSource.HUB || hub) AddLine("Add a task", withDue = !hub && !provider) { text, due ->
+        if (src != TaskSource.HUB || hub) AddLine("Add a task", withDue = !hub && !provider, pickAlert) { text, due, remind ->
             when {
                 hub -> vm.hubAdd(text)
                 provider -> vm.providerAdd(text)
-                else -> vm.addTask(text, due)
+                else -> vm.addTask(text, due, remind)
             }
         }
     }
     editing?.let { t ->
-        TaskDialog(t, onDismiss = { editing = null }) { text, due ->
-            vm.updateTask(t.id, text, due)
+        TaskDialog(t, pickAlert, onDismiss = { editing = null }) { text, due, remind ->
+            vm.updateTask(t.id, text, due, remind)
             editing = null
         }
     }
 }
 
-/** "+ Add a task": type and press done. With [withDue], Today and Tomorrow appear while typing. */
+/** An alert time in the phone's style: 9:00 or 9:00 AM. */
+internal fun remindLabel(minutes: Int): String =
+    LocalTime.of(minutes / 60, minutes % 60).format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))
+
+/** The bell: lit, the task rings on its day; off, no alert. */
 @Composable
-private fun AddLine(hint: String, withDue: Boolean, onAdd: (String, Long) -> Unit) {
+private fun BellButton(on: Boolean, onClick: () -> Unit) {
+    val tint by animateColorAsState(if (on) Accent else Muted.copy(alpha = 0.5f), tween(200), label = "bell")
+    Box(Modifier.size(36.dp).clip(CircleShape).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
+        Icon(if (on) Icons.Filled.BellOn else Icons.Outlined.BellOff, contentDescription = if (on) "Alert on" else "Alert off",
+            tint = tint, modifier = Modifier.size(19.dp))
+    }
+}
+
+/** The input: one rounded bar. With [withDue], a day and a bell sit beside the words; the round button adds. */
+@Composable
+private fun AddLine(hint: String, withDue: Boolean, pickAlert: (Int, (Int) -> Unit) -> Unit, onAdd: (String, Long, Int) -> Unit) {
     var input by rememberSaveable { mutableStateOf("") }
     var due by rememberSaveable { mutableLongStateOf(-1L) }
+    var remind by rememberSaveable { mutableIntStateOf(-1) }
+    var menu by remember { mutableStateOf(false) }
+    val context = LocalContext.current
     val focus = LocalFocusManager.current
+    val accent = Accent
     val today = LocalDate.now().toEpochDay()
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { Text("+", color = Muted, fontSize = 20.sp) }
+    val ready = input.isNotBlank()
+    val submit = {
+        if (input.isNotBlank()) onAdd(input, due, remind)
+        input = ""
+        due = -1L
+        remind = -1
+        focus.clearFocus()
+    }
+    Row(
+        Modifier.fillMaxWidth().padding(top = 10.dp).clip(RoundedCornerShape(50)).background(Color(0xFF1A1A18))
+            .padding(start = 16.dp, end = 5.dp, top = 5.dp, bottom = 5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         BasicTextField(
             value = input, onValueChange = { input = it }, singleLine = true,
-            textStyle = TextStyle(color = Ink, fontSize = 16.sp), cursorBrush = SolidColor(Accent),
+            textStyle = TextStyle(color = Ink, fontSize = 16.sp), cursorBrush = SolidColor(accent),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(onDone = {
-                if (input.isNotBlank()) onAdd(input, due)
-                input = ""
-                due = -1L
-                focus.clearFocus()
-            }),
-            modifier = Modifier.weight(1f).padding(start = 4.dp, top = 8.dp, bottom = 8.dp),
+            keyboardActions = KeyboardActions(onDone = { submit() }),
+            modifier = Modifier.weight(1f).padding(vertical = 8.dp),
             decorationBox = { inner ->
                 Box {
                     if (input.isEmpty()) Text(hint, color = Muted, fontSize = 16.sp)
@@ -280,12 +350,35 @@ private fun AddLine(hint: String, withDue: Boolean, onAdd: (String, Long) -> Uni
                 }
             },
         )
-    }
-    if (withDue && input.isNotEmpty()) {
-        Row(Modifier.padding(start = 40.dp, bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            DuePick("Today", due == today) { due = if (due == today) -1L else today }
-            DuePick("Tomorrow", due == today + 1) { due = if (due == today + 1) -1L else today + 1 }
+        if (withDue) {
+            Box {
+                Row(
+                    Modifier.clip(RoundedCornerShape(50)).background(Color(0xFF262624)).clickable { menu = true }
+                        .padding(horizontal = 10.dp, vertical = 7.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(Icons.Outlined.DateRange, contentDescription = "Day", tint = if (due >= 0) accent else Muted, modifier = Modifier.size(15.dp))
+                    dueLabel(due)?.let { Text(it.first, color = Ink, fontSize = 12.sp, modifier = Modifier.padding(start = 5.dp)) }
+                }
+                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    DropdownMenuItem(text = { Text("No day") }, onClick = { due = -1L; menu = false })
+                    DropdownMenuItem(text = { Text("Today") }, onClick = { due = today; menu = false })
+                    DropdownMenuItem(text = { Text("Tomorrow") }, onClick = { due = today + 1; menu = false })
+                    DropdownMenuItem(text = { Text("Pick a day") }, onClick = {
+                        menu = false
+                        val d = LocalDate.now()
+                        DatePickerDialog(context, { _, y, mo, dd -> due = LocalDate.of(y, mo + 1, dd).toEpochDay() },
+                            d.year, d.monthValue - 1, d.dayOfMonth).show()
+                    })
+                }
+            }
+            BellButton(remind >= 0) { if (remind >= 0) remind = -1 else pickAlert(9 * 60) { remind = it } }
         }
+        Box(
+            Modifier.padding(start = 4.dp).size(34.dp).clip(CircleShape).background(if (ready) accent else Color(0xFF262624))
+                .clickable(enabled = ready) { submit() },
+            contentAlignment = Alignment.Center,
+        ) { Text("↑", color = if (ready) Color(0xFF0B0B0A) else Muted, fontSize = 18.sp, fontWeight = FontWeight.Medium) }
     }
 }
 
@@ -298,14 +391,15 @@ private fun DuePick(label: String, on: Boolean, onClick: () -> Unit) {
 
 /** Change a task's words or its day. */
 @Composable
-private fun TaskDialog(initial: TaskItem, onDismiss: () -> Unit, onSave: (String, Long) -> Unit) {
+private fun TaskDialog(initial: TaskItem, pickAlert: (Int, (Int) -> Unit) -> Unit, onDismiss: () -> Unit, onSave: (String, Long, Int) -> Unit) {
     val context = LocalContext.current
     var text by remember { mutableStateOf(initial.text) }
     var due by remember { mutableLongStateOf(initial.due) }
+    var remind by remember { mutableIntStateOf(initial.remind) }
     val today = LocalDate.now().toEpochDay()
     AlertDialog(
         onDismissRequest = onDismiss,
-        confirmButton = { TextButton(onClick = { onSave(text, due) }, enabled = text.isNotBlank()) { Text("Save") } },
+        confirmButton = { TextButton(onClick = { onSave(text, due, remind) }, enabled = text.isNotBlank()) { Text("Save") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
         title = { Text("Task") },
         text = {
@@ -324,101 +418,11 @@ private fun TaskDialog(initial: TaskItem, onDismiss: () -> Unit, onSave: (String
                             d.year, d.monthValue - 1, d.dayOfMonth).show()
                     }
                 }
-            }
-        },
-    )
-}
-
-/**
- * Projects kept on the phone. Each has steps: the first is the next one. Tick it and the following step moves up;
- * the bar shows how far along the project is. Tap to edit, swipe left to delete.
- */
-@Composable
-fun ProjectsBlock(vm: LauncherViewModel) {
-    var editing by remember { mutableStateOf<LocalProject?>(null) }
-    var adding by remember { mutableStateOf(false) }
-    Column(Modifier.animateContentSize()) {
-        BlockHeader("Projects", if (vm.projects.isEmpty()) "" else "${vm.projects.size}")
-        vm.projects.forEach { p ->
-            key(p.id) {
-                SwipeToDelete({ vm.deleteProject(p.id) }) { ProjectRow(vm, p) { editing = p } }
-            }
-        }
-        Row(Modifier.fillMaxWidth().clickable { adding = true }, verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { Text("+", color = Muted, fontSize = 20.sp) }
-            Text("New project", color = Muted, fontSize = 16.sp, modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 8.dp))
-        }
-    }
-    val e = editing
-    if (adding || e != null) {
-        ProjectDialog(e, onDismiss = { adding = false; editing = null }) { name, steps, resetDone ->
-            if (e != null) vm.updateProject(e.copy(name = name, next = steps.firstOrNull() ?: "", steps = steps.drop(1),
-                done = if (resetDone) 0 else e.done))
-            else vm.addProject(name, steps)
-            adding = false
-            editing = null
-        }
-    }
-}
-
-@Composable
-private fun ProjectRow(vm: LauncherViewModel, p: LocalProject, onOpen: () -> Unit) {
-    var ticking by remember(p.next) { mutableStateOf(false) }
-    LaunchedEffect(ticking) {
-        if (ticking) {
-            delay(420)
-            vm.projectStepDone(p.id)
-        }
-    }
-    val total = p.done + (if (p.next.isNotBlank()) 1 else 0) + p.steps.size
-    val frac by animateFloatAsState(if (total == 0) 0f else p.done / total.toFloat(), tween(500), label = "progress")
-    val accent = Accent
-    Row(Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(vertical = 4.dp)) {
-        if (p.next.isNotBlank()) TickCircle(ticking) { ticking = true }
-        else Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) {
-            Box(Modifier.size(6.dp).clip(CircleShape).background(Muted.copy(alpha = 0.5f)))
-        }
-        Column(Modifier.weight(1f).padding(start = 4.dp, top = 6.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(p.name, fontSize = 16.sp, color = Ink, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                if (total > 0) Text("${p.done} of $total", color = Muted, fontSize = 11.sp, modifier = Modifier.padding(start = 8.dp))
-            }
-            Text(if (p.next.isBlank()) "Add the next step" else p.next, color = Muted, fontSize = 14.sp,
-                maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 1.dp))
-            if (total > 0) {
-                Box(Modifier.padding(top = 8.dp, bottom = 6.dp).fillMaxWidth().height(3.dp).clip(RoundedCornerShape(2.dp))
-                    .background(Color.White.copy(alpha = 0.08f))) {
-                    Box(Modifier.fillMaxWidth(frac).fillMaxHeight().clip(RoundedCornerShape(2.dp)).background(accent))
-                }
-            } else Spacer(Modifier.height(6.dp))
-        }
-    }
-}
-
-@Composable
-private fun ProjectDialog(initial: LocalProject?, onDismiss: () -> Unit, onSave: (String, List<String>, Boolean) -> Unit) {
-    var name by remember { mutableStateOf(initial?.name.orEmpty()) }
-    var steps by remember {
-        mutableStateOf((listOfNotNull(initial?.next?.takeIf { it.isNotBlank() }) + initial?.steps.orEmpty()).joinToString("\n"))
-    }
-    var reset by remember { mutableStateOf(false) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(onClick = { onSave(name.trim(), steps.lines().map { it.trim() }.filter { it.isNotEmpty() }, reset) },
-                enabled = name.isNotBlank()) { Text("Save") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-        title = { Text(if (initial == null) "New project" else "Project") },
-        text = {
-            Column {
-                OutlinedTextField(value = name, onValueChange = { name = it }, singleLine = true, label = { Text("Name") })
-                OutlinedTextField(value = steps, onValueChange = { steps = it }, minLines = 3, maxLines = 8,
-                    label = { Text("Steps, one per line") }, modifier = Modifier.padding(top = 8.dp))
-                Text("The first line is the next step.", color = Muted, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
-                if (initial != null && initial.done > 0) {
-                    Text(if (reset) "Done count will start again" else "${initial.done} done so far · start again",
-                        color = Accent, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp).clickable { reset = !reset })
+                Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    DuePick(if (remind >= 0) "Alert at ${remindLabel(remind)}" else "No alert", remind >= 0) {
+                        pickAlert(if (remind >= 0) remind else 9 * 60) { remind = it }
+                    }
+                    if (remind >= 0) DuePick("Turn off", false) { remind = -1 }
                 }
             }
         },

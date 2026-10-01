@@ -130,6 +130,11 @@
             android:name=".widget.PrayerAlertReceiver"
             android:exported="false" />
 
+        <!-- Task alerts (the bell on a task). -->
+        <receiver
+            android:name=".widget.TaskAlertReceiver"
+            android:exported="false" />
+
         <!-- Optional: the notification light. Reads notifications on the phone only; nothing is kept or sent. -->
         <service
             android:name=".notify.NotifyListener"

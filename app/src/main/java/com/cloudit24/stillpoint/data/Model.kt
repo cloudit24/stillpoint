@@ -15,7 +15,8 @@ data class AppEntry(
 }
 
 /** [due] is a day (epoch day), or -1 for none. */
-data class TaskItem(val id: Long, val text: String, val done: Boolean, val due: Long = -1L)
+/** [due]: epoch day or -1. [remind]: minute of the day to ring on the due day, or -1 for no alert. */
+data class TaskItem(val id: Long, val text: String, val done: Boolean, val due: Long = -1L, val remind: Int = -1)
 
 data class AgendaItem(val title: String, val begin: Long, val end: Long, val allDay: Boolean)
 
@@ -289,7 +290,7 @@ enum class AppFont(val label: String) {
 }
 
 /** A line kept on the Shelf. */
-data class Note(val id: Long, val text: String)
+data class Note(val id: Long, val text: String, val color: Int = 0)
 
 /** How one widget on the Shelf looks. style: 0 plain, 1 glass, 2 glow. corners: 0 square, 1 soft, 2 round. */
 data class WidgetLook(val style: Int = 0, val corners: Int = 1, val alpha: Int = 100)
@@ -307,10 +308,11 @@ data class ShelfPage(val id: Int, val name: String, val items: List<Int>)
  * Stillpoint's own cards for the Shelf. On a shelf each has the id -(code * 100 + shelf id),
  * so it never collides with a widget id (always positive) and can appear once per shelf.
  */
-enum class BuiltIn(val code: Int, val title: String, val summary: String, val canHalf: Boolean = false) {
+/** [retired]: no longer offered or shown; kept so old ids still mean the same thing. */
+enum class BuiltIn(val code: Int, val title: String, val summary: String, val canHalf: Boolean = false, val retired: Boolean = false) {
     NOTES(1, "Notes", "A scribble board"),
     TASKS(2, "Tasks", "Round ticks and days; syncs with Project Hub or your task app"),
-    PROJECTS(3, "Projects", "Steps and how far along you are"),
+    PROJECTS(3, "Projects", "Steps and how far along you are", retired = true),
     CALENDAR(10, "Calendar", "This month, with your calendars"),
     CLOCKS(11, "World clock", "Your cities at a glance"),
     BATTERY(12, "Battery and storage", "Charge, temperature, space and memory", canHalf = true),
