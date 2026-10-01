@@ -3,6 +3,12 @@
 Every version of Stillpoint Launcher, newest first. Each links to its APK.
 The newest is always at **[Download the latest APK](https://github.com/cloudit24/stillpoint/releases/latest/download/Stillpoint-Launcher.apk)**.
 
+## v0.34.1 · 1 Oct 2026
+- Smoother Shelf: cards glide to their new place without a flicker, and the one you drag glides into its slot when you let go.
+- The Wi-Fi tool no longer crashes on Android 16.
+
+[stillpoint-v0.34.1.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.34.1/stillpoint-v0.34.1.apk)
+
 ## v0.34.0 · 1 Oct 2026
 - A shorter Settings:
   - Productivity is one row of three: Tasks, Calendar, Projects.
