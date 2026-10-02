@@ -3,6 +3,15 @@
 Every version of Stillpoint Launcher, newest first. Each links to its APK.
 The newest is always at **[Download the latest APK](https://github.com/cloudit24/stillpoint/releases/latest/download/Stillpoint-Launcher.apk)**.
 
+## v0.36.0 · 3 Oct 2026
+- Search remembers: apps you opened from search are listed under Recent when you start a new search. Clear wipes the list.
+- Search from home opens smoothly: the keyboard waits until the page has slid in.
+- The three shelves have their own short names: Today, Work and Home. Long-press one to rename it.
+- Tasks look like the sketch: the day and alert time sit under each task, every task has a bell, and done tasks stay below, crossed out, until you clear them.
+- Notes show a short hint while you only have a few.
+
+[stillpoint-v0.36.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.36.0/stillpoint-v0.36.0.apk)
+
 ## v0.35.2 · 2 Oct 2026
 - Qibla compass: it now reads the magnetic sensor and gravity directly instead of the phone's combined rotation sensor, which turned the wrong way on some phones. It also shows which way your phone faces, in degrees, so you can check it against another compass.
 

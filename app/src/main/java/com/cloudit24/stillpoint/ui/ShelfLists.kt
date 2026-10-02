@@ -155,6 +155,12 @@ private fun BlockHeader(title: String, count: String) {
     }
 }
 
+/** A thin line between tasks, starting under the words. */
+@Composable
+private fun Hairline() {
+    Box(Modifier.fillMaxWidth().padding(start = 40.dp).height(0.5.dp).background(Color(0xFF232321)))
+}
+
 @Composable
 private fun DueChip(label: String, late: Boolean) {
     Text(label, color = if (late) Overdue else Muted, fontSize = 11.sp, maxLines = 1,
@@ -179,11 +185,14 @@ private fun TaskRow(
     Row(Modifier.fillMaxWidth().then(if (onOpen != null) Modifier.clickable(onClick = onOpen) else Modifier),
         verticalAlignment = Alignment.CenterVertically) {
         TickCircle(done || ticking) { if (done) onTick() else ticking = true }
-        Text(text, fontSize = 16.sp, color = if (done) Muted else Ink, maxLines = 2, overflow = TextOverflow.Ellipsis,
-            textDecoration = if (done) TextDecoration.LineThrough else null,
-            modifier = Modifier.weight(1f).padding(start = 4.dp, top = 6.dp, bottom = 6.dp))
-        if (!done && due != null) DueChip(due.first, due.second)
-        bell?.invoke()
+        Column(Modifier.weight(1f).padding(start = 4.dp, top = 8.dp, bottom = 8.dp)) {
+            Text(text, fontSize = 16.sp, color = if (done) Muted else Ink, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                textDecoration = if (done) TextDecoration.LineThrough else null)
+            // The day (and alert time) under the words: late in red, today in the accent.
+            if (!done && due != null) Text(due.first.replaceFirstChar { it.uppercase() }, fontSize = 12.sp, maxLines = 1,
+                color = when { due.second -> Overdue; due.first.startsWith("today") -> Accent; else -> Muted })
+        }
+        if (!done) bell?.invoke()
     }
 }
 
@@ -250,35 +259,36 @@ fun TasksBlock(vm: LauncherViewModel) {
                 val open = sortTasks(vm.tasks.filter { !it.done })
                 val done = vm.tasks.filter { it.done }
                 BlockHeader("Tasks", if (open.isNotEmpty()) "${open.size} left" else if (done.isNotEmpty()) "All done" else "")
-                open.forEach { t ->
+                open.forEachIndexed { i, t ->
                     key(t.id) {
+                        if (i > 0) Hairline()
                         SwipeToDelete({ vm.deleteTask(t.id) }) {
                             val due = dueLabel(t.due)?.let { (l, late) -> (if (t.remind >= 0) "$l · ${remindLabel(t.remind)}" else l) to late }
                             TaskRow(t.text, false, due, onTick = { vm.toggleTask(t.id) }, onOpen = { editing = t },
-                                bell = if (t.due < 0 && t.remind < 0) null else {
-                                    {
-                                        BellButton(t.remind >= 0) {
-                                            if (t.remind >= 0) vm.setTaskRemind(t.id, -1) else pickAlert(9 * 60) { vm.setTaskRemind(t.id, it) }
-                                        }
+                                bell = {
+                                    BellButton(t.remind >= 0) {
+                                        if (t.remind >= 0) vm.setTaskRemind(t.id, -1) else pickAlert(9 * 60) { vm.setTaskRemind(t.id, it) }
                                     }
                                 })
                         }
                     }
                 }
                 if (done.isNotEmpty()) {
-                    Row(Modifier.fillMaxWidth().padding(start = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text((if (showDone) "▾ " else "▸ ") + "${done.size} done", color = Muted, fontSize = 13.sp,
-                            modifier = Modifier.clickable { showDone = !showDone }.padding(vertical = 8.dp))
-                        Spacer(Modifier.weight(1f))
-                        if (showDone) Text("Clear", color = Accent, fontSize = 13.sp,
-                            modifier = Modifier.clickable { vm.clearDoneTasks() }.padding(8.dp))
-                    }
-                    if (showDone) done.forEach { t ->
+                    // Done tasks stay below, crossed out, until cleared. The latest three, or all of them.
+                    if (open.isNotEmpty()) Hairline()
+                    done.asReversed().let { if (showDone) it else it.take(3) }.forEach { t ->
                         key(t.id) {
                             SwipeToDelete({ vm.deleteTask(t.id) }) {
                                 TaskRow(t.text, true, null, onTick = { vm.toggleTask(t.id) }, onOpen = null)
                             }
                         }
+                    }
+                    Row(Modifier.fillMaxWidth().padding(start = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        if (done.size > 3) Text(if (showDone) "Show fewer" else "Show all ${done.size} done", color = Muted, fontSize = 13.sp,
+                            modifier = Modifier.clickable { showDone = !showDone }.padding(vertical = 8.dp))
+                        Spacer(Modifier.weight(1f))
+                        Text("Clear done", color = Accent, fontSize = 13.sp,
+                            modifier = Modifier.clickable { vm.clearDoneTasks() }.padding(8.dp))
                     }
                 }
             }

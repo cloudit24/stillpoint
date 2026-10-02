@@ -1,5 +1,6 @@
 package com.cloudit24.stillpoint
 
+import com.cloudit24.stillpoint.data.SHELF_NAMES
 import java.time.LocalTime
 import com.cloudit24.stillpoint.widget.TaskAlerts
 import com.cloudit24.stillpoint.data.HaEntity
@@ -113,6 +114,16 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     var blockedMessage by mutableStateOf<String?>(null)
     /** Set by the home search pill; the app list opens straight into search. */
     var openSearch = false
+
+    /** True while the search page is open, so an app opened there joins the search history. */
+    var inSearch = false
+    var searchHistory by mutableStateOf(prefs.searchHistory())
+        private set
+
+    fun clearSearchHistory() {
+        searchHistory = emptyList()
+        prefs.saveSearchHistory(searchHistory)
+    }
 
     var apps by mutableStateOf<List<AppEntry>>(emptyList())
         private set
@@ -545,7 +556,8 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     fun addShelf() {
         if (shelfPages.size >= com.cloudit24.stillpoint.ui.MAX_SHELVES) return
         val id = (0..99).first { n -> shelfPages.none { it.id == n } }
-        shelfPages = shelfPages + ShelfPage(id, "Shelf ${shelfPages.size + 1}", emptyList())
+        val name = SHELF_NAMES.firstOrNull { n -> shelfPages.none { it.name == n } } ?: "Shelf ${shelfPages.size + 1}"
+        shelfPages = shelfPages + ShelfPage(id, name, emptyList())
         prefs.saveShelfPages(shelfPages)
         selectShelf(shelfPages.lastIndex)
     }
@@ -936,6 +948,10 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun launch(app: AppEntry) {
+        if (inSearch) {
+            searchHistory = (listOf(app.key) + searchHistory.filter { it != app.key }).take(8)
+            prefs.saveSearchHistory(searchHistory)
+        }
         // Stillpoint itself, from the app list: open its settings.
         if (app.packageName == getApplication<Application>().packageName) {
             screen = Screen.SETTINGS

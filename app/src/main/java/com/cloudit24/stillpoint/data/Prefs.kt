@@ -327,7 +327,12 @@ class Prefs(context: Context) {
                     ShelfPage(o.getInt("id"), o.getString("name"), List(items.length()) { j -> items.getInt(j) })
                 }
             }.getOrNull()?.takeIf { it.isNotEmpty() }?.let { pages ->
-                return pages.map { pg -> pg.copy(items = pg.items.filter { i -> BuiltIn.of(i)?.retired != true }) }
+                return pages.mapIndexed { idx, pg ->
+                    // Shelves still called "Shelf" or "Shelf 2" take their own short name.
+                    val plain = pg.name == "Shelf" || Regex("""Shelf \d+""").matches(pg.name)
+                    pg.copy(name = if (plain) SHELF_NAMES.getOrElse(idx) { pg.name } else pg.name,
+                        items = pg.items.filter { i -> BuiltIn.of(i)?.retired != true })
+                }
             }
         }
         val s = loadSettings()
@@ -335,7 +340,14 @@ class Prefs(context: Context) {
             add(BuiltIn.NOTES.id(0))
             if (s.showTasks) add(BuiltIn.TASKS.id(0))
         }
-        return listOf(ShelfPage(0, "Shelf", cards + loadWidgetIds()))
+        return listOf(ShelfPage(0, SHELF_NAMES[0], cards + loadWidgetIds()))
+    }
+
+    /** Apps opened from search, newest first (app keys). */
+    fun searchHistory(): List<String> = sp.getString("search_history", "").orEmpty().split('\n').filter { it.isNotBlank() }
+
+    fun saveSearchHistory(keys: List<String>) {
+        sp.edit().putString("search_history", keys.joinToString("\n")).apply()
     }
 
     fun saveShelfPages(pages: List<ShelfPage>) {

@@ -301,6 +301,9 @@ enum class NotifyStyle(val label: String) {
     BLINK("Blink, like BlackBerry"),
 }
 
+/** Names for the three shelves, in order. Each can be renamed with a long-press. */
+val SHELF_NAMES = listOf("Today", "Work", "Home")
+
 /** One shelf: its name and what's on it, in order (widget ids, and Stillpoint cards as negative ids). */
 data class ShelfPage(val id: Int, val name: String, val items: List<Int>)
 

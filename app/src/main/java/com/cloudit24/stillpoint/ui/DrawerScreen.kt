@@ -2,6 +2,8 @@
 
 package com.cloudit24.stillpoint.ui
 
+import kotlinx.coroutines.delay
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -105,6 +107,7 @@ private sealed interface DrawerDialog {
 @Composable
 fun DrawerScreen(vm: LauncherViewModel) {
     var query by rememberSaveable { mutableStateOf("") }
+    val fromHome = remember { vm.openSearch }
     var searching by rememberSaveable { mutableStateOf(vm.openSearch.also { vm.openSearch = false }) }
     var menuFor by remember { mutableStateOf<String?>(null) }
     var dialog by remember { mutableStateOf<DrawerDialog?>(null) }
@@ -120,6 +123,11 @@ fun DrawerScreen(vm: LauncherViewModel) {
     }
 
     BackHandler(enabled = searching) { searching = false; query = "" }
+    DisposableEffect(searching) {
+        vm.inSearch = searching
+        onDispose { vm.inSearch = false }
+    }
+    val history = remember(vm.searchHistory, apps) { vm.searchHistory.mapNotNull { k -> apps.firstOrNull { it.key == k } } }
 
     // Swipe right past the first tab, or pull down at the top of a list, to go back home.
     val backThreshold = with(LocalDensity.current) { 96.dp.toPx() }
@@ -163,6 +171,10 @@ fun DrawerScreen(vm: LauncherViewModel) {
                 query = query,
                 onQuery = { query = it },
                 results = filtered,
+                history = history,
+                onClearHistory = { vm.clearSearchHistory() },
+                // From home the page is still sliding in; opening the keyboard then makes it jump.
+                focusDelay = if (fromHome) 320L else 0L,
                 onGo = { filtered.firstOrNull()?.let { vm.launch(it) } },
                 onClose = { searching = false; query = "" },
                 row = { row(it, null, "s_") },
@@ -254,13 +266,19 @@ private fun SearchPanel(
     query: String,
     onQuery: (String) -> Unit,
     results: List<AppEntry>,
+    history: List<AppEntry>,
+    onClearHistory: () -> Unit,
+    focusDelay: Long,
     onGo: () -> Unit,
     onClose: () -> Unit,
     row: @Composable (AppEntry) -> Unit,
 ) {
     val focusRequester = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
-    LaunchedEffect(Unit) { runCatching { focusRequester.requestFocus() } }
+    LaunchedEffect(Unit) {
+        delay(focusDelay)
+        runCatching { focusRequester.requestFocus() }
+    }
     val close = { keyboard?.hide(); onClose() }
 
     Column(Modifier.fillMaxSize()) {
@@ -271,6 +289,15 @@ private fun SearchPanel(
                 item { Text("No apps match.", color = Muted, fontSize = 15.sp, modifier = Modifier.padding(vertical = 8.dp)) }
             }
             if (query.isNotBlank()) items(results, key = { it.key }) { row(it) }
+            else if (history.isNotEmpty()) {
+                item(key = "recent") {
+                    Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text("Recent", color = Muted, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                        Text("Clear", color = Accent, fontSize = 13.sp, modifier = Modifier.clickable(onClick = onClearHistory).padding(8.dp))
+                    }
+                }
+                items(history, key = { "h_" + it.key }) { row(it) }
+            }
         }
         // Search box sits at the bottom, just above the keyboard, within thumb reach.
         Row(

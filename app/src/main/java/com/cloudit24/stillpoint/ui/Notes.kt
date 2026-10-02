@@ -116,6 +116,8 @@ fun NotesBlock(vm: LauncherViewModel) {
                 if (row.size == 1) Spacer(Modifier.weight(1f))
             }
         }
+        if (list.size in 1..3 && picked == null) Text("Tap to open · hold to throw away", color = Muted, fontSize = 12.sp,
+            modifier = Modifier.padding(top = 8.dp))
     }
     val e = open
     if (adding || e != null) {
