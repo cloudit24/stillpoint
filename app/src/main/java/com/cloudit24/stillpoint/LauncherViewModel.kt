@@ -115,6 +115,9 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     /** Set by the home search pill; the app list opens straight into search. */
     var openSearch = false
 
+    /** A new version to announce once on home, or null. */
+    var updatePopup by mutableStateOf<String?>(null)
+
     /** True while the search page is open, so an app opened there joins the search history. */
     var inSearch = false
     var searchHistory by mutableStateOf(prefs.searchHistory())
@@ -819,7 +822,10 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
             refreshLive()
             refreshHub()
             Sync.schedule(getApplication())
-            UpdateNotice.check()?.let { UpdateNotice.notifyOnce(getApplication(), it) }
+            UpdateNotice.check()?.let {
+                UpdateNotice.notifyOnce(getApplication(), it)
+                if (UpdateNotice.popupDue(getApplication(), it.version)) updatePopup = it.version
+            }
             if (settings.tasksSource.authority != null) loadProviderTasks()
             if (settings.calendarSource == CalendarSource.ICS) {
                 Sync.run(getApplication(), force = false, only = SyncFeature.CALENDAR)

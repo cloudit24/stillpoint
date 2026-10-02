@@ -35,6 +35,14 @@ object UpdateNotice {
         return a
     }
 
+    /** True the first time a version is seen; the home popup shows once per version. */
+    fun popupDue(context: Context, version: String): Boolean {
+        val sp = context.getSharedPreferences("update", Context.MODE_PRIVATE)
+        if (sp.getString("popped", null) == version) return false
+        sp.edit().putString("popped", version).apply()
+        return true
+    }
+
     fun notifyOnce(context: Context, a: UpdateCheck.Available) {
         val sp = context.getSharedPreferences("update", Context.MODE_PRIVATE)
         if (sp.getString("notified", null) == a.version || !LockNotification.canPost(context)) return

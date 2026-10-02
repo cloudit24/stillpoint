@@ -179,6 +179,16 @@ private fun LauncherRoot(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderI
         }
     }
 
+    vm.updatePopup?.takeIf { vm.screen == Screen.HOME }?.let { version ->
+        AlertDialog(
+            onDismissRequest = { vm.updatePopup = null },
+            title = { Text("Update available") },
+            text = { Text("Stillpoint Launcher $version is ready. You have ${BuildConfig.VERSION_NAME}.") },
+            confirmButton = { TextButton(onClick = { vm.updatePopup = null; vm.screen = Screen.SETTINGS }) { Text("Update") } },
+            dismissButton = { TextButton(onClick = { vm.updatePopup = null }) { Text("Later") } },
+        )
+    }
+
     vm.blockedMessage?.let { msg ->
         AlertDialog(
             onDismissRequest = { vm.blockedMessage = null },

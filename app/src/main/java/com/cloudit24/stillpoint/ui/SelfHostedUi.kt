@@ -267,9 +267,7 @@ fun SelfHostedSettings(vm: LauncherViewModel) {
             }
         }
     }
-    Note("Each one talks only to the address you enter. Tokens stay on this phone and are left out of backup files. " +
-        "Put the cards on any shelf: open the Shelf, tap Add, then Stillpoint cards. They refresh while the Shelf is open, " +
-        "so they cost no battery the rest of the time; for instant alerts, keep the ntfy or Gotify app as well.")
+    Note("Each connects only to the address you enter. Tokens stay on this phone and aren't backed up. Add the cards from Shelf › Add.")
 
     field?.let { f ->
         var text by remember(f) { mutableStateOf(f.initial) }

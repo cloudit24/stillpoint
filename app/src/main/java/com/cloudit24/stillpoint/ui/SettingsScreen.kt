@@ -339,15 +339,12 @@ fun SettingsScreen(vm: LauncherViewModel) {
                                 onPlus = { vm.updateSettings { it.copy(edgeWarnMin = (it.edgeWarnMin + 5).coerceAtMost(60)) } })
                         }
                     }
-                    Note(s.edgeStyle.detail + if (s.edgeStyle == EdgeStyle.OFF) "" else " One line in your accent colour: the " +
-                        "bright part is the next prayer, growing and pushing out the dim part, what's left of the current " +
-                        "prayer. It blinks before a prayer ends and glows from the adhan to the iqama." +
-                        if (!s.prayerOn || s.city == null) " Needs Islamic prayer (Extras) with a city." else "")
+                    Note(s.edgeStyle.detail + if (s.edgeStyle == EdgeStyle.OFF) "" else " Bright: the next prayer. Dim: what's left of this one." +
+                        if (!s.prayerOn || s.city == null) " Needs Islamic prayer with a city." else "")
                     Group("Motion") {
                         ToggleRow("Animations", s.edgeMotion) { on -> vm.updateSettings { it.copy(edgeMotion = on) } }
                     }
-                    Note("The edge light's spark and blink and the ring's pulse. They run only while home is on screen, " +
-                        "at a low frame rate. Turn off to keep everything still.")
+                    Note("Spark, blink and pulse. They run only while home is open.")
                 }
 
                 SettingsPage.HOME -> {
@@ -370,9 +367,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         ToggleRow("Malayalam (Kollavarsham)", s.malayalamOn) { on -> vm.updateSettings { it.copy(malayalamOn = on) } }
                         ToggleRow("Tamil", s.tamilOn) { on -> vm.updateSettings { it.copy(tamilOn = on) } }
                     }
-                    Note("Each calendar you turn on flips by in the headline and shows on the This week card. " +
-                        "Hijri follows Umm al-Qura; adjust it if your moon sighting differs. Tamil and Malayalam are the " +
-                        "solar calendars, worked out on the phone (Chennai and Thiruvananthapuram).")
+                    Note("Shown in the headline and on the week card. Hijri uses Umm al-Qura; adjust it to your moon sighting.")
                     Group("Cards under the headline") {
                         InfoPanel.entries.filter { it != InfoPanel.PRAYER }.forEach { panel ->
                             ToggleRow(panel.label, panel in s.infoPanels) { on ->
@@ -386,7 +381,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
                                 s.worldClocks.joinToString(", ") { it.substringBefore("|") }.ifEmpty { "Choose up to three" }) { worldOpen = true }
                         }
                     }
-                    Note("Turn on more than one and swipe across them on home. Weather shows once it's on under Extras.")
+                    Note("Swipe between cards on home. Weather appears once it's on in Extras.")
                     if (worldOpen) {
                         WorldCitiesDialog(s.worldClocks, onDismiss = { worldOpen = false }) { list ->
                             vm.updateSettings { it.copy(worldClocks = list) }
@@ -398,8 +393,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         ToggleRow("Local IP address", s.showLocalIp) { on -> vm.updateSettings { it.copy(showLocalIp = on) } }
                         ToggleRow("Public IP address", s.publicIpOn) { on -> vm.updateSettings { it.copy(publicIpOn = on) } }
                     }
-                    Note("The public IP comes from api.ipify.org (open source), only when your network changes. " +
-                        "Tap the network figures for data usage per app.")
+                    Note("Public IP from api.ipify.org, checked only when your network changes.")
                     Group("Apps") {
                         ToggleRow("Recently used (24 h)", s.showRecent) { on -> vm.updateSettings { it.copy(showRecent = on) } }
                         ToggleRow("Most used today", s.homeMode == HomeMode.AUTO) { on ->
@@ -409,8 +403,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
                             onMinus = { vm.updateSettings { it.copy(homeCount = (it.homeCount - 1).coerceAtLeast(3)) } },
                             onPlus = { vm.updateSettings { it.copy(homeCount = (it.homeCount + 1).coerceAtMost(9)) } })
                     }
-                    Note("Pinned apps show when Most used is off, or before usage data exists. Pin from the app list by " +
-                        "long-pressing. Recently used and Most used need usage access.")
+                    Note("Long-press an app to pin it. Most used and Recent need usage access.")
                     Group("Widgets") {
                         Text("Swipe right on home for the Shelf. Add more shelves with +, and put Stillpoint cards " +
                             "(notes, tasks, calendar, countdown...) or any app's widgets on them. Stillpoint's own widgets: Stillpoint Widget " +
@@ -454,8 +447,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
                     Group("Gesture service") {
                         ActionRow(
                             "Status: ${if (a11yOn) "on" else "off"}",
-                            "Needed only for Lock screen and Notifications. If the switch is greyed out: " +
-                                "App info, menu, Allow restricted settings.",
+                            "For the Lock screen and Notifications gestures.",
                         ) { ctx.safeStart(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
                     }
                 }
@@ -493,9 +485,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
                                 onPlus = { vm.updateSettings { it.copy(iqama = it.iqama + (p to (it.iqamaMin(p) + 5).coerceAtMost(60))) } })
                         }
                     }
-                    Note("Iqama times differ by mosque; set yours. The prayer alert counts down to the iqama. " +
-                        "To use an adhan recording, pick it as the sound in Android settings. On Motorola, turn on " +
-                        "Edge lighting for Stillpoint in the Moto app and the curved edges light up with each alert.")
+                    Note("Set your mosque's iqama times. For an adhan, pick it as the alert sound in Android settings.")
                     Group("Feel") {
                         ActionRow("Edge light", s.edgeStyle.label) { page = SettingsPage.APPEARANCE }
                         ToggleRow("Vibrate on the Qibla compass", s.compassHaptics) { on ->
@@ -515,9 +505,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
                             vm.screen = Screen.TOOLS
                         }
                     }
-                    Note("Small everyday tools in one place, so you need fewer little apps: device info; password, hash, " +
-                        "Base64, UUID, JSON and QR code; your addresses, subnet, ping, port check, DNS lookup, Wi-Fi and " +
-                        "Wake-on-LAN. When on, open them from the top of the Shelf, or set a gesture to Tools.")
+                    Note("Device info, passwords, QR codes and network tools. Open them from the Shelf or a gesture.")
                 }
 
                 SettingsPage.WEATHER -> {
@@ -531,9 +519,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
                             vm.updateSettings { it.copy(fahrenheit = !it.fahrenheit) }
                         }
                     }
-                    Note("Shown as one of the flipping cards on home. From Open-Meteo (free and open source): only the " +
-                        "city's rounded position is sent, at most every 30 minutes while home is open. " +
-                        "The city is shared with prayer times.")
+                    Note("From Open-Meteo. Only the city's rounded position is sent, at most every 30 minutes.")
                 }
 
                 SettingsPage.GOLD -> {
@@ -576,8 +562,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
                             "or from any launcher. Tap the widget to refresh.", color = Muted, fontSize = 14.sp,
                             modifier = Modifier.padding(vertical = 12.dp))
                     }
-                    Note("Extras use outside websites. " + s.goldSource.detail + ". Other currencies use European Central Bank rates via Frankfurter; " +
-                        "AED and SAR use the official fixed rate. Jewellery adds making charges on top.")
+                    Note("Price: " + s.goldSource.detail + ". Exchange rates: European Central Bank. Jewellery adds making charges.")
                 }
 
                 SettingsPage.HUB -> {
@@ -596,8 +581,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
                             }
                         }
                     }
-                    Note("Project Hub is a server you run yourself. Stillpoint talks only to the address you enter and nothing " +
-                        "else. Choose what uses it under Productivity: Tasks, Calendar and Projects. Use https unless the hub is on your home network.")
+                    Note("Your own server. Stillpoint connects only to this address. Use https outside your home network.")
                 }
 
                 SettingsPage.BACKUP -> {
@@ -610,20 +594,18 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         }
                     }
                     backupNote?.let { Note(it) }
-                    Note("You choose where the file goes; Stillpoint uploads nothing. It includes your Project Hub key " +
-                        "and calendar link if you set them, so keep it private. Widgets aren't included: they belong " +
-                        "to one phone, so add them again on the new one.")
+                    Note("Saved where you choose; nothing is uploaded. Keys and tokens are left out. Widgets aren't included.")
                 }
 
                 SettingsPage.NOTIFY -> {
                     val access = remember(vm.resumeTick) { NotifyHub.hasAccess(ctx) }
                     Group("Notification access") {
                         ActionRow(if (access) "Allowed" else "Not allowed · tap to allow",
-                            "Stillpoint reads notifications on the phone only, to light up and remind you. Nothing is kept or sent.") {
+                            "Read on the phone only. Nothing is kept or sent.") {
                             ctx.safeStart(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
                         }
                     }
-                    if (!access) Note("If the switch is greyed out: App info, menu (⋮), Allow restricted settings, then try again.")
+                    if (!access) Note("Switch greyed out? App info › ⋮ › Allow restricted settings.")
                     Group("Show") {
                         ToggleRow("Edge light", s.notifyLight) { on -> vm.updateSettings { it.copy(notifyLight = on) } }
                         ActionRow("Style", s.notifyStyle.label) {
@@ -633,8 +615,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         ToggleRow("Dots on apps", s.notifyAppDots) { on -> vm.updateSettings { it.copy(notifyAppDots = on) } }
                         ActionRow("Send a test notification", "Then go home to see the light and the dots") { NotifyTest.send(ctx) }
                     }
-                    Note("The light uses the edge style under Appearance, in each app's colour. Several apps take turns. " +
-                        "It moves only while home is on screen; with Animations off it stays softly lit.")
+                    Note("Uses the edge style from Appearance, in each app's colour.")
                     Group("Never miss") {
                         ActionRow("Remind again while unread", if (s.remindEvery == 0) "Off" else "Every ${s.remindEvery} min, up to 3 times") {
                             vm.updateSettings { it.copy(remindEvery = when (it.remindEvery) { 0 -> 5; 5 -> 10; 10 -> 15; else -> 0 }) }
@@ -651,8 +632,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
                             }
                         }
                     }
-                    Note("Important apps (★ below) and people shine brighter; reminders come as Stillpoint notifications " +
-                        "that open the original message.")
+                    Note("Important apps (★) and people shine brighter.")
                     Group("Apps") {
                         val seen = vm.notifySeenApps()
                         if (seen.isEmpty()) Text("Apps appear here after they show a notification.", color = Muted, fontSize = 14.sp,
@@ -683,10 +663,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
                             )
                         }
                     }
-                    Note("Android doesn't let an app read its own battery figure, so it's on Android's page. Processor " +
-                        "time is the best sign of battery use: Stillpoint works only while you look at it, and wakes " +
-                        "briefly at prayer times, at midnight and for syncs you switched on. Memory includes app icons " +
-                        "kept ready so lists open instantly; Android takes it back when another app needs it.")
+                    Note("Android shows battery use on its own page. Stillpoint works only while open and wakes briefly for alerts and syncs.")
                 }
 
                 SettingsPage.SOURCES -> {
@@ -705,8 +682,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         ActionRow("Calendar link", vm.icsUrl()?.let { maskUrl(it) } ?: "Not set") { page = SettingsPage.CALENDAR }
                         ActionRow("Project Hub", vm.hubUrl() ?: "Not connected") { page = SettingsPage.HUB }
                     }
-                    Note("Leave an address empty (Default) to use the built-in service. Nothing else goes online: " +
-                        "prayer times, Qibla, moon phase and dates are calculated on the phone.")
+                    Note("Leave empty for the default. Prayer times, Qibla and dates are calculated on the phone.")
                 }
 
                 SettingsPage.LOCK -> {
@@ -723,10 +699,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         ToggleRow("Hijri date", s.lockHijri) { on -> vm.updateSettings { it.copy(lockHijri = on) }; Refresh.all(ctx) }
                         ToggleRow("Tamil date", s.lockTamil) { on -> vm.updateSettings { it.copy(lockTamil = on) }; Refresh.all(ctx) }
                     }
-                    Note("A silent notification that stays on the lock screen. The countdown is kept by Android, " +
-                        "so nothing runs in the background. The gold price is never shown here. If it doesn't appear, " +
-                        "check that your phone shows notifications on the lock screen. The prayer uses the city set " +
-                        "under Islamic prayer.")
+                    Note("A silent lock-screen notification. Android keeps the countdown, so nothing runs in the background.")
                 }
 
                 SettingsPage.TASKS -> {
@@ -751,7 +724,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         }
                     }
                     when (s.tasksSource) {
-                        TaskSource.PHONE -> Note("Stored only on this phone. Add, tick and date tasks on the Shelf; swipe one left to delete it.")
+                        TaskSource.PHONE -> Note("Stored on this phone. Swipe a task left to delete it.")
                         TaskSource.HUB -> SyncGroup(vm, SyncFeature.TASKS, Sync.HUB, s.tasksSync) { dialog = SettingsDialog.SYNC_TASKS }
                         else -> Group("Sync") {
                             Text("${s.tasksSource.label} keeps itself in sync, for example with DAVx5. Stillpoint reads its open " +
@@ -760,7 +733,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
                             ActionRow("Read now", vm.providerError ?: "${vm.providerTasks.size} open tasks") { vm.loadProviderTasks() }
                         }
                     }
-                    Note("Tasks can go on any shelf: open the Shelf, tap Add, then Tasks under Stillpoint cards.")
+                    Note("Add Tasks to any shelf: Shelf › Add › Stillpoint cards.")
                 }
 
                 SettingsPage.CALENDAR -> {

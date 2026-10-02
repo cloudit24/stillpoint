@@ -3,6 +3,12 @@
 Every version of Stillpoint Launcher, newest first. Each links to its APK.
 The newest is always at **[Download the latest APK](https://github.com/cloudit24/stillpoint/releases/latest/download/Stillpoint-Launcher.apk)**.
 
+## v0.37.0 · 3 Oct 2026
+- When a new version is ready, home shows it once in a small window: Update or Later. It also stays at the top of Settings.
+- Settings reads shorter: the long explanations are now one or two plain lines.
+
+[stillpoint-v0.37.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.37.0/stillpoint-v0.37.0.apk)
+
 ## v0.36.0 · 3 Oct 2026
 - Search remembers: apps you opened from search are listed under Recent when you start a new search. Clear wipes the list.
 - Search from home opens smoothly: the keyboard waits until the page has slid in.
