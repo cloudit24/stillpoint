@@ -1,5 +1,6 @@
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.material.icons.outlined.Person
 import com.cloudit24.stillpoint.data.AccentStyle
 import androidx.compose.foundation.layout.height
 import com.cloudit24.stillpoint.notify.NotifyTest
@@ -146,6 +147,7 @@ private enum class SettingsPage(val section: String, val title: String, val summ
     APPS("Personalization", "App list", "Starting tab, hidden apps", Icons.Outlined.Menu),
     GESTURES("Personalization", "Gestures and shortcuts", "Swipes, double-tap, bottom shortcuts", Icons.Outlined.ThumbUp),
     NOTIFY("Personalization", "Notification", "Edge light, signal dot and app dots; never miss important people", Icons.Outlined.Star),
+    SENIOR("Personalization", "Senior mode", "Big text, six large tiles, no hidden gestures", Icons.Outlined.Person),
     LOCK("Personalization", "Lock screen", "Next prayer and dates on the lock screen", Icons.Outlined.Notifications),
     TASKS("Productivity", "Tasks", "On this phone, Project Hub, Tasks.org or OpenTasks", Icons.Outlined.Done),
     CALENDAR("Productivity", "Calendar", "Phone calendar, Project Hub or a calendar link", Icons.Outlined.DateRange),
@@ -186,6 +188,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
     var picking by remember { mutableStateOf<GestureSlot?>(null) }
     var dialog by remember { mutableStateOf<SettingsDialog?>(null) }
     var textEdit by remember { mutableStateOf<TextEdit?>(null) }
+    var seniorPick by remember { mutableStateOf<Int?>(null) }
     var backupNote by remember { mutableStateOf<String?>(null) }
     var restored by remember { mutableStateOf(false) }
     val saveBackup = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
@@ -508,6 +511,30 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         }
                     }
                     Note("The compass ticks every 10°, clicks at N, E, S and W, and taps once when you face the Qibla.")
+                }
+
+                SettingsPage.SENIOR -> {
+                    Group("Senior mode") {
+                        ToggleRow("Senior mode", s.seniorMode) { on -> vm.setSeniorMode(on) }
+                    }
+                    Note("Big text, six large tiles and a simple app list. Hold the clock on home to open Settings.")
+                    Group("Tiles") {
+                        (0 until 6).forEach { i ->
+                            ActionRow("Tile ${i + 1}", vm.seniorApp(i)?.label ?: "Empty") { seniorPick = i }
+                        }
+                    }
+                    Group("Call button") {
+                        ActionRow("Name", s.seniorCallName.ifBlank { "Not set" }) {
+                            textEdit = TextEdit("Name on the button", "For example Mum or Ahmed.", s.seniorCallName, "Name") { v ->
+                                vm.updateSettings { it.copy(seniorCallName = v) }
+                            }
+                        }
+                        ActionRow("Phone number", s.seniorCallNumber.ifBlank { "Not set" }) {
+                            textEdit = TextEdit("Phone number", "Opens the phone app with this number.", s.seniorCallNumber, "+971 50 123 4567") { v ->
+                                vm.updateSettings { it.copy(seniorCallNumber = v) }
+                            }
+                        }
+                    }
                 }
 
                 SettingsPage.SELFHOSTED -> SelfHostedSettings(vm)
@@ -870,6 +897,9 @@ fun SettingsScreen(vm: LauncherViewModel) {
         )
     }
 
+    seniorPick?.let { i ->
+        SeniorAppPicker(vm, onDismiss = { seniorPick = null }) { app -> vm.setSeniorApp(i, app?.key); seniorPick = null }
+    }
     textEdit?.let { t ->
         TextSettingDialog(t, onDismiss = { textEdit = null })
     }

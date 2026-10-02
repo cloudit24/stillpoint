@@ -3,6 +3,11 @@
 Every version of Stillpoint Launcher, newest first. Each links to its APK.
 The newest is always at **[Download the latest APK](https://github.com/cloudit24/stillpoint/releases/latest/download/Stillpoint-Launcher.apk)**.
 
+## v0.39.0 · 3 Oct 2026
+- Senior mode (Settings, Personalization): bigger text everywhere, a big clock and date, six large app tiles, an optional call button for one person, and a simple app list with big rows. No hidden gestures; holding a tile does nothing. Hold the clock to open Settings.
+
+[stillpoint-v0.39.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.39.0/stillpoint-v0.39.0.apk)
+
 ## v0.38.0 · 3 Oct 2026
 - Favorites are live tiles, Windows style: small, medium or wide, with the name in the corner. Folders are tiles too, showing four of their apps; tap one to open it.
 - An app with unread notifications flips its tile every few seconds to show how many.

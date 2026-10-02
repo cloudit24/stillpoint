@@ -60,6 +60,10 @@ class Prefs(context: Context) {
             edgeMotion = sp.getBoolean(K_EDGE_MOTION, d.edgeMotion),
             edgeRight = sp.getBoolean(K_EDGE_RIGHT, d.edgeRight),
             iconTint = runCatching { IconTint.valueOf(sp.getString(K_ICON_TINT, null)!!) }.getOrDefault(d.iconTint),
+            seniorMode = sp.getBoolean("senior_mode", d.seniorMode),
+            seniorApps = (sp.getString("senior_apps", "") ?: "").split("\n").let { l -> if (l.all { it.isEmpty() }) emptyList() else l },
+            seniorCallName = sp.getString("senior_call_name", "") ?: "",
+            seniorCallNumber = sp.getString("senior_call_number", "") ?: "",
             accentStyle = runCatching { AccentStyle.valueOf(sp.getString("accent_style", null)!!) }.getOrDefault(d.accentStyle),
             tileSizes = (sp.getString("tile_sizes", "") ?: "").split(";").mapNotNull { e ->
                 val (k, v) = e.split("=").takeIf { it.size == 2 } ?: return@mapNotNull null
@@ -161,6 +165,10 @@ class Prefs(context: Context) {
             .putBoolean(K_EDGE_RIGHT, s.edgeRight)
             .putString(K_ICON_TINT, s.iconTint.name)
             .putString("accent_style", s.accentStyle.name)
+            .putBoolean("senior_mode", s.seniorMode)
+            .putString("senior_apps", s.seniorApps.joinToString("\n"))
+            .putString("senior_call_name", s.seniorCallName)
+            .putString("senior_call_number", s.seniorCallNumber)
             .putString("tile_sizes", s.tileSizes.entries.joinToString(";") { "${it.key}=${it.value}" })
             .putString("app_font", s.font.name)
             .putBoolean("notify_light", s.notifyLight)

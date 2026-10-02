@@ -1,5 +1,10 @@
 package com.cloudit24.stillpoint
 
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
+import androidx.compose.runtime.CompositionLocalProvider
+import com.cloudit24.stillpoint.ui.SeniorHome
+import com.cloudit24.stillpoint.ui.SeniorApps
 import com.cloudit24.stillpoint.ui.ToolsScreen
 import com.cloudit24.stillpoint.update.UpdateNotice
 import com.cloudit24.stillpoint.widget.Refresh
@@ -164,11 +169,15 @@ private fun LauncherRoot(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderI
     // Launcher never finishes on back; back always returns to home.
     BackHandler { vm.screen = Screen.HOME }
 
+    // Senior mode: every text a fifth bigger.
+    val base = LocalDensity.current
+    val density = if (vm.settings.seniorMode) Density(base.density, base.fontScale * 1.2f) else base
+    CompositionLocalProvider(LocalDensity provides density) {
     Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
         AnimatedContent(targetState = vm.screen, transitionSpec = { screenTransition(initialState, targetState) }, label = "screen") { screen ->
         when (screen) {
-            Screen.HOME -> HomeScreen(vm)
-            Screen.DRAWER -> DrawerScreen(vm)
+            Screen.HOME -> if (vm.settings.seniorMode) SeniorHome(vm) else HomeScreen(vm)
+            Screen.DRAWER -> if (vm.settings.seniorMode) SeniorApps(vm) else DrawerScreen(vm)
             Screen.FOCUS -> FocusScreen(vm)
             Screen.SETTINGS -> SettingsScreen(vm)
             Screen.WIDGETS -> WidgetsScreen(vm, onAddWidget)
@@ -177,6 +186,7 @@ private fun LauncherRoot(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderI
             Screen.TOOLS -> ToolsScreen(vm)
         }
         }
+    }
     }
 
     vm.updatePopup?.takeIf { vm.screen == Screen.HOME }?.let { version ->

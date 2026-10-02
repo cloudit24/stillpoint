@@ -146,6 +146,11 @@ data class LauncherSettings(
     /** ARGB accent colour, see [ACCENTS]. */
     val accent: Long = 0xFF1BA1E2,
     val accentStyle: AccentStyle = AccentStyle.SOLID,
+    /** Senior mode: big text, six tiles (app keys, "" for empty) and one person to call. */
+    val seniorMode: Boolean = false,
+    val seniorApps: List<String> = emptyList(),
+    val seniorCallName: String = "",
+    val seniorCallNumber: String = "",
     /** Favorites tile sizes by app key or "folder:<id>": 0 small, 1 medium, 2 wide. */
     val tileSizes: Map<String, Int> = emptyMap(),
     val clockStyle: ClockStyle = ClockStyle.MINIMAL,

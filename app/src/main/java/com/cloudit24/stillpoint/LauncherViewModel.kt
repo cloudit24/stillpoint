@@ -726,6 +726,21 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
 
     fun litNotifications(): List<NotifyItem> = notifyItems.filter { it.pkg !in settings.notifyOff }
 
+    fun seniorApp(i: Int): AppEntry? = settings.seniorApps.getOrNull(i)?.takeIf { it.isNotEmpty() }?.let { k -> apps.firstOrNull { it.key == k } }
+
+    fun setSeniorApp(i: Int, key: String?) = updateSettings { s ->
+        val l = s.seniorApps.toMutableList()
+        while (l.size < 6) l += ""
+        l[i] = key.orEmpty()
+        s.copy(seniorApps = l)
+    }
+
+    /** Turning senior mode on for the first time fills the tiles with pinned apps and favorites. */
+    fun setSeniorMode(on: Boolean) = updateSettings { s ->
+        val empty = s.seniorApps.all { it.isEmpty() }
+        s.copy(seniorMode = on, seniorApps = if (on && empty) (s.pinned + s.favorites).distinct().take(6) else s.seniorApps)
+    }
+
     /** Unread notifications from an app, for its live tile. */
     fun notifyCount(pkg: String): Int = if (pkg in settings.notifyOff) 0 else notifyItems.count { it.pkg == pkg }
 
