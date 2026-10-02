@@ -145,6 +145,7 @@ private fun ColumnScope.QiblaCompass(lat: Double, lon: Double, haptics: Boolean)
         },
         color = if (facing) PrayerText else Muted, fontSize = 14.sp,
     )
+    if (h != null) Text("Your phone faces ${h.roundToInt() % 360}° ${cardinal(h)}", color = Muted, fontSize = 12.sp)
 
     Canvas(Modifier.padding(vertical = 20.dp).size(260.dp).align(Alignment.CenterHorizontally)) {
         val r = size.minDimension / 2
@@ -196,6 +197,10 @@ internal fun compassHeading(r: FloatArray): Double {
     return (Math.toDegrees(kotlin.math.atan2(east.toDouble(), north.toDouble())) + 360) % 360
 }
 
+/** N, NE, E, SE, S, SW, W or NW for a direction in degrees. */
+internal fun cardinal(deg: Double): String =
+    listOf("N", "NE", "E", "SE", "S", "SW", "W", "NW")[(((deg % 360 + 360) % 360 + 22.5) / 45).toInt() % 8]
+
 /** Degrees from true north the phone faces; null without a compass. Sensor on only while resumed. */
 @Composable
 private fun rememberTrueHeading(lat: Double, lon: Double, calibrate: MutableState<Boolean>): State<Double?> {
@@ -203,7 +208,13 @@ private fun rememberTrueHeading(lat: Double, lon: Double, calibrate: MutableStat
     val heading = remember { mutableStateOf<Double?>(null) }
     LifecycleResumeEffect(lat, lon) {
         val sm = context.getSystemService(SensorManager::class.java)
-        val sensor = sm?.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
+        // The magnetic sensor and gravity, read directly: the combined rotation sensor turns the wrong way on some phones.
+        val mag = sm?.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
+        val down = sm?.getDefaultSensor(Sensor.TYPE_GRAVITY) ?: sm?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        val g = FloatArray(3)
+        val m = FloatArray(3)
+        var haveG = false
+        var haveM = false
         val declination = GeomagneticField(lat.toFloat(), lon.toFloat(), 0f, System.currentTimeMillis()).declination
         val raw = FloatArray(9)
         val rot = FloatArray(9)
@@ -211,7 +222,15 @@ private fun rememberTrueHeading(lat: Double, lon: Double, calibrate: MutableStat
         val turn = (context.getSystemService(WindowManager::class.java)?.defaultDisplay?.rotation) ?: Surface.ROTATION_0
         val listener = object : SensorEventListener {
             override fun onSensorChanged(e: SensorEvent) {
-                SensorManager.getRotationMatrixFromVector(raw, e.values)
+                // A little smoothing of each reading, then both together give the phone's orientation.
+                if (e.sensor.type == Sensor.TYPE_MAGNETIC_FIELD) {
+                    for (i in 0..2) m[i] = if (haveM) m[i] + (e.values[i] - m[i]) * 0.25f else e.values[i]
+                    haveM = true
+                } else {
+                    for (i in 0..2) g[i] = if (haveG) g[i] + (e.values[i] - g[i]) * 0.25f else e.values[i]
+                    haveG = true
+                }
+                if (!haveG || !haveM || !SensorManager.getRotationMatrix(raw, null, g, m)) return
                 // When the screen is turned sideways, "up the screen" is a different side of the phone.
                 when (turn) {
                     Surface.ROTATION_90 -> SensorManager.remapCoordinateSystem(raw, SensorManager.AXIS_Y, SensorManager.AXIS_MINUS_X, rot)
@@ -225,10 +244,13 @@ private fun rememberTrueHeading(lat: Double, lon: Double, calibrate: MutableStat
                 heading.value = if (prev == null) deg else (prev + (((deg - prev + 540) % 360) - 180) * 0.15 + 360) % 360
             }
             override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
-                calibrate.value = accuracy == SensorManager.SENSOR_STATUS_UNRELIABLE || accuracy == SensorManager.SENSOR_STATUS_ACCURACY_LOW
+                if (sensor?.type == Sensor.TYPE_MAGNETIC_FIELD) calibrate.value = accuracy == SensorManager.SENSOR_STATUS_UNRELIABLE || accuracy == SensorManager.SENSOR_STATUS_ACCURACY_LOW
             }
         }
-        if (sensor != null) sm.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_UI)
+        if (mag != null && down != null) {
+            sm.registerListener(listener, mag, SensorManager.SENSOR_DELAY_GAME)
+            sm.registerListener(listener, down, SensorManager.SENSOR_DELAY_GAME)
+        }
         onPauseOrDispose { sm?.unregisterListener(listener) }
     }
     return heading

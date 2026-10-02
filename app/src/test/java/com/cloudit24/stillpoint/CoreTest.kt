@@ -88,6 +88,8 @@ class CoreTest {
         assertEquals(0.0, com.cloudit24.stillpoint.ui.compassHeading(floatArrayOf(1f, 0f, 0f, 0f, 1f, 0f, 0f, 0f, 1f)), 0.5)
         // Upright, camera to the east: the top points at the sky.
         assertEquals(90.0, com.cloudit24.stillpoint.ui.compassHeading(floatArrayOf(0f, 0f, -1f, -1f, 0f, 0f, 0f, 1f, 0f)), 0.5)
+        assertEquals("W", com.cloudit24.stillpoint.ui.cardinal(258.0))
+        assertEquals("N", com.cloudit24.stillpoint.ui.cardinal(359.0))
         // Flat, top to the west.
         assertEquals(270.0, com.cloudit24.stillpoint.ui.compassHeading(floatArrayOf(0f, -1f, 0f, 1f, 0f, 0f, 0f, 0f, 1f)), 0.5)
     }

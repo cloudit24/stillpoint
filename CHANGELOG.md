@@ -3,6 +3,11 @@
 Every version of Stillpoint Launcher, newest first. Each links to its APK.
 The newest is always at **[Download the latest APK](https://github.com/cloudit24/stillpoint/releases/latest/download/Stillpoint-Launcher.apk)**.
 
+## v0.35.2 · 2 Oct 2026
+- Qibla compass: it now reads the magnetic sensor and gravity directly instead of the phone's combined rotation sensor, which turned the wrong way on some phones. It also shows which way your phone faces, in degrees, so you can check it against another compass.
+
+[stillpoint-v0.35.2.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.35.2/stillpoint-v0.35.2.apk)
+
 ## v0.35.1 · 2 Oct 2026
 - Qibla compass fixed: it now points right however you hold the phone, flat, tilted or upright, and when the screen is turned sideways. It tells you when the compass needs calibrating.
 
