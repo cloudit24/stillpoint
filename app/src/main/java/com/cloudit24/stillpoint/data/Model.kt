@@ -145,6 +145,9 @@ data class LauncherSettings(
     val drawerStart: DrawerTab = DrawerTab.ALL,
     /** ARGB accent colour, see [ACCENTS]. */
     val accent: Long = 0xFF1BA1E2,
+    val accentStyle: AccentStyle = AccentStyle.SOLID,
+    /** Favorites tile sizes by app key or "folder:<id>": 0 small, 1 medium, 2 wide. */
+    val tileSizes: Map<String, Int> = emptyMap(),
     val clockStyle: ClockStyle = ClockStyle.MINIMAL,
     /** Live network speed and RAM line under the date. */
     val showStats: Boolean = false,
@@ -253,6 +256,9 @@ enum class EdgeStyle(val label: String, val detail: String) {
     FLAT("Inner sides", "Lines just inside both sides, clear of the rounded corners. For flat screens."),
     BOTTOM("Bottom bar", "A line along the bottom of the screen. Works on any phone."),
 }
+
+/** How the accent fills tiles and squares: flat, or one of three soft gradients. */
+enum class AccentStyle(val label: String) { SOLID("Solid"), SOFT("Soft"), DUO("Duo"), GLOW("Glow") }
 
 enum class IconTint(val label: String) {
     ORIGINAL("Original colours"),

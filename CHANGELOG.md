@@ -3,6 +3,14 @@
 Every version of Stillpoint Launcher, newest first. Each links to its APK.
 The newest is always at **[Download the latest APK](https://github.com/cloudit24/stillpoint/releases/latest/download/Stillpoint-Launcher.apk)**.
 
+## v0.38.0 · 3 Oct 2026
+- Favorites are live tiles, Windows style: small, medium or wide, with the name in the corner. Folders are tiles too, showing four of their apps; tap one to open it.
+- An app with unread notifications flips its tile every few seconds to show how many.
+- Accent styles (Settings, Appearance): Solid, Soft, Duo or Glow, for tiles, folders and letter squares.
+- A cleaner app list: rounded letter squares, a rounded search bar at the bottom and a settings button beside it.
+
+[stillpoint-v0.38.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.38.0/stillpoint-v0.38.0.apk)
+
 ## v0.37.0 · 3 Oct 2026
 - When a new version is ready, home shows it once in a small window: Update or Later. It also stays at the top of Settings.
 - Settings reads shorter: the long explanations are now one or two plain lines.

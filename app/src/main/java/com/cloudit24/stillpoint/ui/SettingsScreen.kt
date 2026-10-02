@@ -1,5 +1,7 @@
 package com.cloudit24.stillpoint.ui
 
+import com.cloudit24.stillpoint.data.AccentStyle
+import androidx.compose.foundation.layout.height
 import com.cloudit24.stillpoint.notify.NotifyTest
 import com.cloudit24.stillpoint.notify.NotifyHub
 import com.cloudit24.stillpoint.data.NotifyStyle
@@ -312,6 +314,19 @@ fun SettingsScreen(vm: LauncherViewModel) {
                                 Text(ACCENTS.firstOrNull { it.argb == s.accent }?.name ?: "Custom", color = Muted, fontSize = 13.sp)
                             }
                             Box(Modifier.size(28.dp).clip(CircleShape).background(Color(s.accent)))
+                        }
+                        // Accent style: four swatches in the chosen colour.
+                        Row(Modifier.fillMaxWidth().padding(bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            AccentStyle.entries.forEach { st ->
+                                val on = s.accentStyle == st
+                                val shape = RoundedCornerShape(12.dp)
+                                Column(Modifier.weight(1f).clip(shape).clickable { vm.updateSettings { it.copy(accentStyle = st) } },
+                                    horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Box(Modifier.fillMaxWidth().height(44.dp).clip(shape).background(accentBrush(Color(s.accent), st))
+                                        .then(if (on) Modifier.border(2.dp, Ink, shape) else Modifier))
+                                    Text(st.label, fontSize = 12.sp, color = if (on) Ink else Muted, modifier = Modifier.padding(top = 4.dp))
+                                }
+                            }
                         }
                         ActionRow("Icon colours", s.iconTint.label) { dialog = SettingsDialog.ICON_TINT }
                         ActionRow("Font", s.font.label) { dialog = SettingsDialog.FONT }

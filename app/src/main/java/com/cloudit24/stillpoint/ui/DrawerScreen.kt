@@ -2,6 +2,11 @@
 
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Settings
 import kotlinx.coroutines.delay
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -197,21 +202,35 @@ fun DrawerScreen(vm: LauncherViewModel) {
                                 else items(vm.recentApps(), key = { it.key }) { row(it, formatAge(it.installedAt), "") }
                             }
                             DrawerTab.ALL -> AlphabetList(apps) { row(it, null, "") }
-                            DrawerTab.FAVORITES -> FavoritesTab(
+                            DrawerTab.FAVORITES -> FavoritesTiles(
                                 vm = vm,
-                                row = row,
                                 onNewFolder = { dialog = DrawerDialog.NewFolder(null) },
                                 onRename = { dialog = DrawerDialog.Rename(it) },
+                                onPickFolder = { dialog = DrawerDialog.PickFolder(it) },
                             )
                         }
                     }
                 }
             }
-            Text("settings", color = Muted, fontSize = 15.sp,
-                modifier = Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = 20.dp)
-                    .clickable { vm.screen = Screen.SETTINGS }.padding(12.dp))
-            RoundButton(Modifier.align(Alignment.BottomEnd).padding(end = 20.dp, bottom = 20.dp), filled = true,
-                onClick = { searching = true; menuFor = null }) { SearchGlyph() }
+            // A rounded search bar within thumb reach, with Settings beside it.
+            Row(
+                Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(start = 20.dp, end = 20.dp, bottom = 20.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Row(
+                    Modifier.weight(1f).height(52.dp).clip(RoundedCornerShape(50)).background(Color(0xFF1A1A18))
+                        .clickable { searching = true; menuFor = null }.padding(horizontal = 18.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    SearchGlyph()
+                    Text("Search apps", color = Muted, fontSize = 17.sp, modifier = Modifier.padding(start = 12.dp))
+                }
+                Box(
+                    Modifier.padding(start = 10.dp).size(52.dp).clip(CircleShape).background(Color(0xFF1A1A18))
+                        .clickable { vm.screen = Screen.SETTINGS },
+                    contentAlignment = Alignment.Center,
+                ) { Icon(Icons.Outlined.Settings, contentDescription = "Settings", tint = Muted) }
+            }
         }
     }
 
@@ -313,7 +332,7 @@ private fun SearchPanel(
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
                 keyboardActions = KeyboardActions(onGo = { onGo() }),
                 modifier = Modifier.weight(1f).focusRequester(focusRequester)
-                    .border(1.dp, Muted.copy(alpha = 0.6f)).padding(horizontal = 12.dp, vertical = 12.dp),
+                    .clip(RoundedCornerShape(50)).background(Color(0xFF1A1A18)).padding(horizontal = 18.dp, vertical = 13.dp),
                 decorationBox = { inner ->
                     if (query.isEmpty()) Text("Search apps", color = Muted, fontSize = 22.sp)
                     inner()
@@ -345,8 +364,8 @@ private fun SearchGlyph() {
         val stroke = 2.4.dp.toPx()
         val r = size.minDimension * 0.33f
         val c = Offset(r + stroke, r + stroke)
-        drawCircle(Color.White, r, c, style = Stroke(stroke))
-        drawLine(Color.White, Offset(c.x + r * 0.72f, c.y + r * 0.72f),
+        drawCircle(Muted, r, c, style = Stroke(stroke))
+        drawLine(Muted, Offset(c.x + r * 0.72f, c.y + r * 0.72f),
             Offset(size.width - stroke / 2, size.height - stroke / 2), stroke, cap = StrokeCap.Round)
     }
 }
@@ -392,6 +411,7 @@ private fun sectionOf(label: String): String {
 @Composable
 private fun AlphabetList(apps: List<AppEntry>, row: @Composable (AppEntry) -> Unit) {
     val accent = Accent
+    val fill = AccentFill
     val sections = remember(apps) {
         apps.groupBy { sectionOf(it.label) }.toList().sortedBy { (k, _) -> if (k == "#") "" else k }
     }
@@ -417,7 +437,7 @@ private fun AlphabetList(apps: List<AppEntry>, row: @Composable (AppEntry) -> Un
                 item(key = "h_$letter") {
                     // Tap a letter tile for the jump grid, like Windows Phone.
                     Box(
-                        Modifier.padding(top = 14.dp, bottom = 4.dp).size(42.dp).background(accent)
+                        Modifier.padding(top = 14.dp, bottom = 4.dp).size(42.dp).clip(RoundedCornerShape(10.dp)).background(fill)
                             .clickable { jumpOpen = true },
                         contentAlignment = Alignment.BottomStart,
                     ) {
@@ -447,7 +467,7 @@ private fun AlphabetList(apps: List<AppEntry>, row: @Composable (AppEntry) -> Un
         val bubble = touched ?: scrolledSection?.takeIf { listState.isScrollInProgress }
         if (bubble != null && !jumpOpen) {
             Box(
-                Modifier.align(Alignment.Center).size(88.dp).background(accent),
+                Modifier.align(Alignment.Center).size(88.dp).clip(RoundedCornerShape(20.dp)).background(fill),
                 contentAlignment = Alignment.BottomStart,
             ) {
                 Text(bubble.lowercase(), fontSize = 48.sp, fontWeight = FontWeight.Light, color = Color.White,
@@ -473,7 +493,8 @@ private fun AlphabetList(apps: List<AppEntry>, row: @Composable (AppEntry) -> Un
                     letters.forEach { l ->
                         val has = l in headerIndex
                         Box(
-                            Modifier.size(62.dp).background(if (has) accent else Color(0xFF1E1E1C))
+                            Modifier.size(62.dp).clip(RoundedCornerShape(14.dp))
+                                .then(if (has) Modifier.background(fill) else Modifier.background(Color(0xFF1E1E1C)))
                                 .clickable(enabled = has) {
                                     jumpOpen = false
                                     headerIndex[l]?.let { scope.launch { listState.scrollToItem(it) } }
@@ -522,74 +543,6 @@ private fun IndexBar(letters: List<String>, modifier: Modifier, onLetter: (Strin
             Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Text(l, color = Muted, fontSize = 11.sp)
             }
-        }
-    }
-}
-
-// ---- Favorites: folders + loose apps ----
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun FavoritesTab(
-    vm: LauncherViewModel,
-    row: @Composable (AppEntry, String?, String) -> Unit,
-    onNewFolder: () -> Unit,
-    onRename: (FavFolder) -> Unit,
-) {
-    var open by remember { mutableStateOf(setOf<Long>()) }
-    var folderMenu by remember { mutableStateOf<Long?>(null) }
-    val folders = vm.settings.folders
-    val loose = vm.favoriteApps()
-
-    LazyColumn(Modifier.fillMaxSize().padding(end = 16.dp), contentPadding = ListBottom) {
-        if (folders.isEmpty() && loose.isEmpty()) {
-            item {
-                Text("No favorites yet. Long-press any app and choose Add to Favorites.",
-                    color = Muted, fontSize = 15.sp, modifier = Modifier.padding(vertical = 12.dp))
-            }
-        }
-        folders.forEach { f ->
-            val isOpen = f.id in open
-            val inside = vm.folderApps(f)
-            item(key = "folder_${f.id}") {
-                Box {
-                    Text(
-                        (if (isOpen) "▾  " else "▸  ") + f.name + "  · " + inside.size,
-                        fontSize = 19.sp,
-                        color = Accent,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .combinedClickable(
-                                onClick = { open = if (isOpen) open - f.id else open + f.id },
-                                onLongClick = { folderMenu = f.id },
-                            )
-                            .padding(vertical = 10.dp),
-                    )
-                    DropdownMenu(expanded = folderMenu == f.id, onDismissRequest = { folderMenu = null }) {
-                        DropdownMenuItem(text = { Text("Rename") }, onClick = { folderMenu = null; onRename(f) })
-                        DropdownMenuItem(
-                            text = { Text("Delete folder (apps stay in Favorites)") },
-                            onClick = { folderMenu = null; vm.deleteFolder(f.id) },
-                        )
-                    }
-                }
-            }
-            if (isOpen) {
-                if (inside.isEmpty()) {
-                    item(key = "empty_${f.id}") {
-                        Text("Empty. Long-press an app and choose Move to folder.", color = Muted, fontSize = 14.sp,
-                            modifier = Modifier.padding(start = 20.dp, bottom = 8.dp))
-                    }
-                }
-                items(inside, key = { "f${f.id}_${it.key}" }) { app ->
-                    Box(Modifier.padding(start = 20.dp)) { row(app, null, "f${f.id}_") }
-                }
-            }
-        }
-        items(loose, key = { "fav_${it.key}" }) { row(it, null, "fav_") }
-        item(key = "new_folder") {
-            Text("+ New folder", color = Muted, fontSize = 15.sp,
-                modifier = Modifier.clickable(onClick = onNewFolder).padding(vertical = 14.dp))
         }
     }
 }

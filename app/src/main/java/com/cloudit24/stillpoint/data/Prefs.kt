@@ -60,6 +60,11 @@ class Prefs(context: Context) {
             edgeMotion = sp.getBoolean(K_EDGE_MOTION, d.edgeMotion),
             edgeRight = sp.getBoolean(K_EDGE_RIGHT, d.edgeRight),
             iconTint = runCatching { IconTint.valueOf(sp.getString(K_ICON_TINT, null)!!) }.getOrDefault(d.iconTint),
+            accentStyle = runCatching { AccentStyle.valueOf(sp.getString("accent_style", null)!!) }.getOrDefault(d.accentStyle),
+            tileSizes = (sp.getString("tile_sizes", "") ?: "").split(";").mapNotNull { e ->
+                val (k, v) = e.split("=").takeIf { it.size == 2 } ?: return@mapNotNull null
+                v.toIntOrNull()?.let { k to it }
+            }.toMap(),
             font = runCatching { AppFont.valueOf(sp.getString("app_font", null)!!) }.getOrDefault(d.font),
             notifyLight = sp.getBoolean("notify_light", d.notifyLight),
             notifyStyle = runCatching { NotifyStyle.valueOf(sp.getString("notify_style", null)!!) }.getOrDefault(d.notifyStyle),
@@ -155,6 +160,8 @@ class Prefs(context: Context) {
             .putBoolean(K_EDGE_MOTION, s.edgeMotion)
             .putBoolean(K_EDGE_RIGHT, s.edgeRight)
             .putString(K_ICON_TINT, s.iconTint.name)
+            .putString("accent_style", s.accentStyle.name)
+            .putString("tile_sizes", s.tileSizes.entries.joinToString(";") { "${it.key}=${it.value}" })
             .putString("app_font", s.font.name)
             .putBoolean("notify_light", s.notifyLight)
             .putString("notify_style", s.notifyStyle.name)

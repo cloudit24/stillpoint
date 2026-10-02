@@ -1,5 +1,15 @@
 package com.cloudit24.stillpoint.ui
 
+import com.cloudit24.stillpoint.data.AccentStyle
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.ShaderBrush
+import androidx.compose.ui.graphics.Shader
+import androidx.compose.ui.graphics.RadialGradientShader
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.remember
@@ -27,6 +37,31 @@ val Muted = Color(0xFF7D7A74)
 val Slate = Color(0xFF9FB4C7)
 
 val LocalAccent = staticCompositionLocalOf { Slate }
+val LocalAccentStyle = staticCompositionLocalOf { AccentStyle.SOLID }
+
+/** The accent as a fill for tiles and squares, in the chosen style. */
+val AccentFill: Brush
+    @Composable @ReadOnlyComposable get() = accentBrush(LocalAccent.current, LocalAccentStyle.current)
+
+private fun shiftHue(c: Color, deg: Float): Color {
+    val hsv = FloatArray(3)
+    android.graphics.Color.colorToHSV(c.toArgb(), hsv)
+    hsv[0] = (hsv[0] + deg + 360f) % 360f
+    return Color(android.graphics.Color.HSVToColor(hsv))
+}
+
+/** A soft light from the top-left corner, fading to a deeper shade. */
+private class GlowBrush(private val colors: List<Color>) : ShaderBrush() {
+    override fun createShader(size: Size): Shader =
+        RadialGradientShader(Offset(size.width * 0.25f, size.height * 0.2f), size.maxDimension * 0.95f, colors)
+}
+
+fun accentBrush(c: Color, style: AccentStyle): Brush = when (style) {
+    AccentStyle.SOLID -> SolidColor(c)
+    AccentStyle.SOFT -> Brush.linearGradient(listOf(lerp(c, Color.White, 0.22f), lerp(c, Color.Black, 0.32f)))
+    AccentStyle.DUO -> Brush.linearGradient(listOf(c, shiftHue(c, 38f)))
+    AccentStyle.GLOW -> GlowBrush(listOf(lerp(c, Color.White, 0.3f), c, lerp(c, Color.Black, 0.45f)))
+}
 
 /** The user's accent colour (Settings > Appearance), Windows Phone style. */
 val Accent: Color
@@ -63,7 +98,7 @@ private fun Typography.withFont(ff: FontFamily): Typography {
 }
 
 @Composable
-fun StillpointTheme(accent: Color = Slate, font: AppFont = AppFont.SYSTEM, content: @Composable () -> Unit) {
+fun StillpointTheme(accent: Color = Slate, accentStyle: AccentStyle = AccentStyle.SOLID, font: AppFont = AppFont.SYSTEM, content: @Composable () -> Unit) {
     val typography = remember(font) { Typography().withFont(fontFamilyFor(font)) }
     MaterialTheme(
         typography = typography,
@@ -78,7 +113,7 @@ fun StillpointTheme(accent: Color = Slate, font: AppFont = AppFont.SYSTEM, conte
             onSurface = Ink,
         ),
     ) {
-        CompositionLocalProvider(LocalAccent provides accent) {
+        CompositionLocalProvider(LocalAccent provides accent, LocalAccentStyle provides accentStyle) {
             Surface(Modifier.fillMaxSize(), color = Color.Black, contentColor = Ink) { content() }
         }
     }

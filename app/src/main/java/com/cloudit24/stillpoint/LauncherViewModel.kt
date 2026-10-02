@@ -726,6 +726,11 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
 
     fun litNotifications(): List<NotifyItem> = notifyItems.filter { it.pkg !in settings.notifyOff }
 
+    /** Unread notifications from an app, for its live tile. */
+    fun notifyCount(pkg: String): Int = if (pkg in settings.notifyOff) 0 else notifyItems.count { it.pkg == pkg }
+
+    fun setTileSize(key: String, size: Int) = updateSettings { it.copy(tileSizes = it.tileSizes + (key to size)) }
+
     fun notifyColor(pkg: String): Color = settings.notifyColors[pkg]?.let { Color(it) } ?: Color(settings.accent)
 
     /** The colour of the small dot on an app with something new, or null. */
