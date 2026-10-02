@@ -83,6 +83,16 @@ class CoreTest {
     }
 
     @Test
+    fun compassHeadingAnyHold() {
+        // Flat, top to the north.
+        assertEquals(0.0, com.cloudit24.stillpoint.ui.compassHeading(floatArrayOf(1f, 0f, 0f, 0f, 1f, 0f, 0f, 0f, 1f)), 0.5)
+        // Upright, camera to the east: the top points at the sky.
+        assertEquals(90.0, com.cloudit24.stillpoint.ui.compassHeading(floatArrayOf(0f, 0f, -1f, -1f, 0f, 0f, 0f, 1f, 0f)), 0.5)
+        // Flat, top to the west.
+        assertEquals(270.0, com.cloudit24.stillpoint.ui.compassHeading(floatArrayOf(0f, -1f, 0f, 1f, 0f, 0f, 0f, 0f, 1f)), 0.5)
+    }
+
+    @Test
     fun hijriDate() {
         assertEquals("18 Rabi al-Akhir 1448 AH", Calendars.hijri(LocalDate.of(2026, 9, 29), 0))
     }

@@ -1,5 +1,8 @@
 package com.cloudit24.stillpoint.ui
 
+import android.view.Surface
+import android.view.WindowManager
+import androidx.compose.runtime.MutableState
 import android.os.Build
 import android.view.HapticFeedbackConstants
 import androidx.compose.ui.platform.LocalView
@@ -126,7 +129,8 @@ fun PrayerScreen(vm: LauncherViewModel) {
 @Composable
 private fun ColumnScope.QiblaCompass(lat: Double, lon: Double, haptics: Boolean) {
     val qibla = remember(lat, lon) { PrayerTimes.qibla(lat, lon) }
-    val heading by rememberTrueHeading(lat, lon)
+    val calibrate = remember { mutableStateOf(false) }
+    val heading by rememberTrueHeading(lat, lon, calibrate)
     val h = heading
     if (haptics && h != null) CompassHaptics(h, qibla)
 
@@ -174,31 +178,55 @@ private fun ColumnScope.QiblaCompass(lat: Double, lon: Double, haptics: Boolean)
         drawLine(Slate, Offset(c.x, c.y - r - 2.dp.toPx()), Offset(c.x, c.y - r + 20.dp.toPx()), strokeWidth = 3.dp.toPx())
         drawCircle(Ink, 5.dp.toPx(), c)
     }
-    Text("Hold the phone flat, away from metal and magnets. If it seems off, move the phone in a figure 8 to calibrate.",
+    if (calibrate.value) Text("The compass needs calibrating: move the phone in a figure 8 a few times.",
+        color = PrayerText, fontSize = 13.sp)
+    Text("Keep away from metal, magnets and magnetic phone cases. If it seems off, move the phone in a figure 8 to calibrate.",
         color = Muted, fontSize = 12.sp)
 }
 
-/** Degrees from true north the top of the phone points to; null without a compass. Sensor on only while resumed. */
+/**
+ * Degrees clockwise from magnetic north that the phone faces, from a rotation matrix (device to east, north, up).
+ * Uses where the top of the phone points, flattened onto the ground, plus where its back (the camera) looks:
+ * flat on a table the top counts, held upright the back counts, and tilted in between both agree.
+ * Android's own azimuth only works with the phone flat, which made the needle swing wildly when held up.
+ */
+internal fun compassHeading(r: FloatArray): Double {
+    val east = r[1] - r[2]
+    val north = r[4] - r[5]
+    return (Math.toDegrees(kotlin.math.atan2(east.toDouble(), north.toDouble())) + 360) % 360
+}
+
+/** Degrees from true north the phone faces; null without a compass. Sensor on only while resumed. */
 @Composable
-private fun rememberTrueHeading(lat: Double, lon: Double): State<Double?> {
+private fun rememberTrueHeading(lat: Double, lon: Double, calibrate: MutableState<Boolean>): State<Double?> {
     val context = LocalContext.current
     val heading = remember { mutableStateOf<Double?>(null) }
     LifecycleResumeEffect(lat, lon) {
         val sm = context.getSystemService(SensorManager::class.java)
         val sensor = sm?.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
         val declination = GeomagneticField(lat.toFloat(), lon.toFloat(), 0f, System.currentTimeMillis()).declination
+        val raw = FloatArray(9)
         val rot = FloatArray(9)
-        val ori = FloatArray(3)
+        @Suppress("DEPRECATION")
+        val turn = (context.getSystemService(WindowManager::class.java)?.defaultDisplay?.rotation) ?: Surface.ROTATION_0
         val listener = object : SensorEventListener {
             override fun onSensorChanged(e: SensorEvent) {
-                SensorManager.getRotationMatrixFromVector(rot, e.values)
-                SensorManager.getOrientation(rot, ori)
-                val deg = (Math.toDegrees(ori[0].toDouble()) + declination + 360) % 360
+                SensorManager.getRotationMatrixFromVector(raw, e.values)
+                // When the screen is turned sideways, "up the screen" is a different side of the phone.
+                when (turn) {
+                    Surface.ROTATION_90 -> SensorManager.remapCoordinateSystem(raw, SensorManager.AXIS_Y, SensorManager.AXIS_MINUS_X, rot)
+                    Surface.ROTATION_180 -> SensorManager.remapCoordinateSystem(raw, SensorManager.AXIS_MINUS_X, SensorManager.AXIS_MINUS_Y, rot)
+                    Surface.ROTATION_270 -> SensorManager.remapCoordinateSystem(raw, SensorManager.AXIS_MINUS_Y, SensorManager.AXIS_X, rot)
+                    else -> raw.copyInto(rot)
+                }
+                val deg = (compassHeading(rot) + declination + 360) % 360
                 val prev = heading.value
                 // Smooth the jitter, going the short way round past north.
                 heading.value = if (prev == null) deg else (prev + (((deg - prev + 540) % 360) - 180) * 0.15 + 360) % 360
             }
-            override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
+            override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
+                calibrate.value = accuracy == SensorManager.SENSOR_STATUS_UNRELIABLE || accuracy == SensorManager.SENSOR_STATUS_ACCURACY_LOW
+            }
         }
         if (sensor != null) sm.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_UI)
         onPauseOrDispose { sm?.unregisterListener(listener) }

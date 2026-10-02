@@ -3,6 +3,11 @@
 Every version of Stillpoint Launcher, newest first. Each links to its APK.
 The newest is always at **[Download the latest APK](https://github.com/cloudit24/stillpoint/releases/latest/download/Stillpoint-Launcher.apk)**.
 
+## v0.35.1 · 2 Oct 2026
+- Qibla compass fixed: it now points right however you hold the phone, flat, tilted or upright, and when the screen is turned sideways. It tells you when the compass needs calibrating.
+
+[stillpoint-v0.35.1.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.35.1/stillpoint-v0.35.1.apk)
+
 ## v0.35.0 · 2 Oct 2026
 - Notes are sticky notes now: soft colours in two columns, newest first. Tap one to open it, change its words or colour, or delete it. Hold one and tap × to throw it away. Undo brings it back.
 - Task alerts: tap a task's bell and pick a time; it rings on its due day. Bell off, no alert.
