@@ -3,6 +3,11 @@
 Every version of Stillpoint Launcher, newest first. Each links to its APK.
 The newest is always at **[Download the latest APK](https://github.com/cloudit24/stillpoint/releases/latest/download/Stillpoint-Launcher.apk)**.
 
+## v0.41.1 · 3 Oct 2026
+- Silence during prayer is gone; Android's own Do Not Disturb (for example flip to silence) does it better. Stillpoint no longer asks for Do Not Disturb access.
+
+[stillpoint-v0.41.1.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.41.1/stillpoint-v0.41.1.apk)
+
 ## v0.41.0 · 3 Oct 2026
 - Prayer popup: at the adhan and the iqama, a full-screen alert shows even over the lock screen, like an alarm clock (Settings, Prayer, Alerts). In a meeting, tap Remind in 5 min; it's offered only while the iqama is more than 5 minutes away, so it can't make you miss the prayer.
 - Remind before: a quiet heads-up 5 to 30 minutes before each prayer.

@@ -17,9 +17,8 @@
         android:name="android.permission.SCHEDULE_EXACT_ALARM"
         android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <!-- Prayer popup over the lock screen, and Do Not Disturb during prayer (both optional). -->
+    <!-- Prayer popup over the lock screen (optional). -->
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
-    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
     <!-- Only when Tasks.org or OpenTasks is chosen as the task source (asked at that moment). -->
     <uses-permission android:name="org.tasks.permission.READ_TASKS" />
     <uses-permission android:name="org.tasks.permission.WRITE_TASKS" />

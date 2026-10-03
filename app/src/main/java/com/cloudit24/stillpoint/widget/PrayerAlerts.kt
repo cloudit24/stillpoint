@@ -37,7 +37,6 @@ object PrayerAlerts {
     const val EXTRA_KIND = "kind"
     const val EXTRA_AT = "at"
     const val EXTRA_PRAYER_AT = "prayer_at"
-    const val EXTRA_SILENCED = "silenced"
     private const val ACTION_SNOOZE = "com.cloudit24.stillpoint.PRAYER_SNOOZE"
     private const val ACTION_UNSILENCE = "com.cloudit24.stillpoint.PRAYER_UNSILENCE"
     private const val K_SILENCED = "prayer_silenced"
@@ -83,11 +82,6 @@ object PrayerAlerts {
         if (Build.VERSION.SDK_INT >= 34) Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, Uri.parse("package:${context.packageName}"))
         else Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
 
-    fun canSilence(context: Context): Boolean =
-        context.getSystemService(NotificationManager::class.java)?.isNotificationPolicyAccessGranted == true
-
-    fun silenceSettings(): Intent = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
-
     /** The five prayers for [date]; on Fridays a set Jumu'ah time replaces Dhuhr. */
     private fun times(s: LauncherSettings, date: LocalDate): Map<Prayer, Long> {
         val city = s.city ?: return emptyMap()
@@ -105,15 +99,14 @@ object PrayerAlerts {
 
     private fun next(s: LauncherSettings, now: Long): Alert? {
         if (s.city == null) return null
-        val silence = s.prayerSilence > 0
-        if (!s.adhanAlert && !s.iqamaAlert && s.remindBefore <= 0 && !silence) return null
+        if (!s.adhanAlert && !s.iqamaAlert && s.remindBefore <= 0) return null
         val today = LocalDate.now()
         return (-1L..1L).flatMap { d ->
             times(s, today.plusDays(d)).flatMap { (p, t) ->
                 listOfNotNull(
                     if (s.remindBefore > 0) Alert(p, Kind.BEFORE, t - s.remindBefore * 60_000L, t) else null,
                     if (s.adhanAlert) Alert(p, Kind.ADHAN, t, t) else null,
-                    if (s.iqamaAlert || silence) Alert(p, Kind.IQAMA, iqamaAt(s, p, t), t) else null,
+                    if (s.iqamaAlert) Alert(p, Kind.IQAMA, iqamaAt(s, p, t), t) else null,
                 )
             }
         }.filter { it.at > now }.minByOrNull { it.at }
@@ -158,18 +151,9 @@ object PrayerAlerts {
         setAlarm(context, at, pending(context, 5, intent))
     }
 
-    /** Do Not Disturb (priority only) at the iqama, undone after [minutes] unless the user changed it. */
-    private fun silence(context: Context, minutes: Int): Boolean {
-        val nm = context.getSystemService(NotificationManager::class.java) ?: return false
-        if (minutes <= 0 || !nm.isNotificationPolicyAccessGranted) return false
-        if (nm.currentInterruptionFilter != NotificationManager.INTERRUPTION_FILTER_ALL) return false
-        runCatching { nm.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_PRIORITY) }.getOrElse { return false }
-        context.getSharedPreferences("stillpoint", Context.MODE_PRIVATE).edit().putBoolean(K_SILENCED, true).apply()
-        val intent = Intent(context, PrayerAlertReceiver::class.java).setAction(ACTION_UNSILENCE)
-        setAlarm(context, System.currentTimeMillis() + minutes * 60_000L, pending(context, 6, intent))
-        return true
     }
 
+    /** v0.41.0 could turn on Do Not Disturb at the iqama; this undoes one still pending after updating. */
     private fun unsilence(context: Context) {
         val sp = context.getSharedPreferences("stillpoint", Context.MODE_PRIVATE)
         if (!sp.getBoolean(K_SILENCED, false)) return
@@ -198,7 +182,6 @@ object PrayerAlerts {
         val now = System.currentTimeMillis()
         if (now - at > 20 * 60_000L) return // The phone was off; too late to be useful.
         val s = Prefs(context).loadSettings()
-        val silenced = kind == Kind.IQAMA && silence(context, s.prayerSilence)
         when (kind) {
             Kind.BEFORE -> if (s.remindBefore <= 0) return
             Kind.ADHAN -> if (!s.adhanAlert) return
@@ -225,7 +208,7 @@ object PrayerAlerts {
             kind == Kind.IQAMA -> b.setContentTitle("Iqama · $name")
                 .setContentText("${prayer.arabic} · the prayer is starting")
                 .setTimeoutAfter(20 * 60_000L)
-            s.iqamaAlert || s.prayerSilence > 0 -> b.setContentTitle("$name · $time")
+            s.iqamaAlert -> b.setContentTitle("$name · $time")
                 // Android counts down to the iqama on its own.
                 .setContentText("${prayer.arabic} · iqama in ${s.iqamaMin(prayer)} min")
                 .setWhen(iqamaAt).setShowWhen(true).setUsesChronometer(true).setChronometerCountDown(true)
@@ -243,7 +226,7 @@ object PrayerAlerts {
             val popup = Intent(context, PrayerPopupActivity::class.java)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_USER_ACTION)
                 .putExtra(EXTRA_PRAYER, prayer.name).putExtra(EXTRA_KIND, kind.name)
-                .putExtra(EXTRA_PRAYER_AT, prayerAt).putExtra(EXTRA_SILENCED, silenced)
+                .putExtra(EXTRA_PRAYER_AT, prayerAt)
             val pi = PendingIntent.getActivity(context, 7, popup, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
             b.setFullScreenIntent(pi, true).setContentIntent(pi)
         }
@@ -251,7 +234,7 @@ object PrayerAlerts {
     }
 }
 
-/** Fires at each prayer alert, and for "Remind in 5 min" and the end of the prayer silence. */
+/** Fires at each prayer alert, and for "Remind in 5 min" and to undo a silence set by v0.41.0. */
 class PrayerAlertReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         runCatching { PrayerAlerts.handle(context, intent) }

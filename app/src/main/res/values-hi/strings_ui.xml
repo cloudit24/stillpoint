@@ -327,17 +327,14 @@
     <string name="s_full_screen_popup">फ़ुल-स्क्रीन पॉपअप</string>
     <string name="s_allow_full_screen_alerts">फ़ुल-स्क्रीन अलर्ट की अनुमति दें</string>
     <string name="s_remind_before">पहले याद दिलाएँ</string>
-    <string name="s_silence_during_prayer">नमाज़ के समय साइलेंट</string>
-    <string name="s_allow_do_not_disturb">डू नॉट डिस्टर्ब की अनुमति दें</string>
     <string name="s_friday_jumuah">शुक्रवार: जुमा</string>
     <string name="s_same_as_dhuhr">ज़ुहर जैसा</string>
     <string name="s_off">बंद</string>
     <string name="s_n_min">%1$d मिनट</string>
-    <string name="s_popup_note">पॉपअप लॉक स्क्रीन पर दिखता है। 5 मिनट बाद याद दिलाना तभी मिलता है जब इक़ामत 5 मिनट से ज़्यादा दूर हो। साइलेंट इक़ामत पर डू नॉट डिस्टर्ब चालू करता है और बाद में बंद करता है।</string>
+    <string name="s_popup_note">पॉपअप लॉक स्क्रीन पर दिखता है। 5 मिनट बाद याद दिलाना तभी मिलता है जब इक़ामत 5 मिनट से ज़्यादा दूर हो।</string>
     <string name="s_remind_in_5_min">5 मिनट में याद दिलाएँ</string>
     <string name="s_iqama_is_near">इक़ामत क़रीब है</string>
     <string name="s_until_iqama">इक़ामत तक</string>
     <string name="s_iqama">इक़ामत</string>
     <string name="s_the_prayer_is_starting">नमाज़ शुरू हो रही है</string>
-    <string name="s_phone_silent_for">फ़ोन %1$d मिनट साइलेंट</string>
 </resources>

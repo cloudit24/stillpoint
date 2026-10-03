@@ -194,7 +194,6 @@ fun SettingsScreen(vm: LauncherViewModel) {
     val s = vm.settings
     val a11yOn = remember(vm.resumeTick) { LockAccessibilityService.isEnabled(ctx) }
     val popupOk = remember(vm.resumeTick) { PrayerAlerts.canPopup(ctx) }
-    val silenceOk = remember(vm.resumeTick) { PrayerAlerts.canSilence(ctx) }
     var page by rememberSaveable { mutableStateOf<SettingsPage?>(null) }
     var picking by remember { mutableStateOf<GestureSlot?>(null) }
     var dialog by remember { mutableStateOf<SettingsDialog?>(null) }
@@ -247,7 +246,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
         }
     }
     // Any change to the city, method or alerts moves the next alert.
-    LaunchedEffect(s.city, s.prayerMethod, s.asrHanafi, s.adhanAlert, s.iqamaAlert, s.iqama, s.remindBefore, s.prayerSilence, s.jumuah) {
+    LaunchedEffect(s.city, s.prayerMethod, s.asrHanafi, s.adhanAlert, s.iqamaAlert, s.iqama, s.remindBefore, s.jumuah) {
         PrayerAlerts.schedule(ctx)
     }
 
@@ -517,12 +516,6 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         Stepper(stringResource(R.string.s_remind_before), minText(s.remindBefore),
                             onMinus = { vm.updateSettings { it.copy(remindBefore = before.lastOrNull { m -> m < it.remindBefore } ?: 0) } },
                             onPlus = { vm.updateSettings { it.copy(remindBefore = before.firstOrNull { m -> m > it.remindBefore } ?: 30) } })
-                        val quiet = listOf(0, 10, 15, 20, 30, 45)
-                        Stepper(stringResource(R.string.s_silence_during_prayer), minText(s.prayerSilence),
-                            onMinus = { vm.updateSettings { it.copy(prayerSilence = quiet.lastOrNull { m -> m < it.prayerSilence } ?: 0) } },
-                            onPlus = { vm.updateSettings { it.copy(prayerSilence = quiet.firstOrNull { m -> m > it.prayerSilence } ?: 45) } })
-                        if (s.prayerSilence > 0 && !silenceOk) {
-                            ActionRow(stringResource(R.string.s_allow_do_not_disturb), "Android settings") { ctx.safeStart(PrayerAlerts.silenceSettings()) }
                         }
                         ActionRow(stringResource(R.string.s_friday_jumuah),
                             if (s.jumuah < 0) stringResource(R.string.s_same_as_dhuhr) else "%d:%02d".format(s.jumuah / 60, s.jumuah % 60)) {

@@ -327,17 +327,14 @@
     <string name="s_full_screen_popup">نافذة بملء الشاشة</string>
     <string name="s_allow_full_screen_alerts">السماح بالتنبيهات بملء الشاشة</string>
     <string name="s_remind_before">التذكير قبل</string>
-    <string name="s_silence_during_prayer">الصامت أثناء الصلاة</string>
-    <string name="s_allow_do_not_disturb">السماح بالوصول إلى عدم الإزعاج</string>
     <string name="s_friday_jumuah">الجمعة: صلاة الجمعة</string>
     <string name="s_same_as_dhuhr">نفس وقت الظهر</string>
     <string name="s_off">إيقاف</string>
     <string name="s_n_min">%1$d د</string>
-    <string name="s_popup_note">تظهر النافذة فوق شاشة القفل. يتاح التذكير بعد 5 دقائق فقط إذا كانت الإقامة بعد أكثر من 5 دقائق. الصامت يشغّل عدم الإزعاج عند الإقامة ثم يوقفه.</string>
+    <string name="s_popup_note">تظهر النافذة فوق شاشة القفل. يتاح التذكير بعد 5 دقائق فقط إذا كانت الإقامة بعد أكثر من 5 دقائق.</string>
     <string name="s_remind_in_5_min">ذكّرني بعد 5 دقائق</string>
     <string name="s_iqama_is_near">الإقامة قريبة</string>
     <string name="s_until_iqama">حتى الإقامة</string>
     <string name="s_iqama">الإقامة</string>
     <string name="s_the_prayer_is_starting">الصلاة تبدأ الآن</string>
-    <string name="s_phone_silent_for">الهاتف صامت %1$d د</string>
 </resources>

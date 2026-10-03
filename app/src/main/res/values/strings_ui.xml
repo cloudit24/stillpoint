@@ -329,17 +329,14 @@
     <string name="s_full_screen_popup">Full-screen popup</string>
     <string name="s_allow_full_screen_alerts">Allow full-screen alerts</string>
     <string name="s_remind_before">Remind before</string>
-    <string name="s_silence_during_prayer">Silence during prayer</string>
-    <string name="s_allow_do_not_disturb">Allow Do Not Disturb access</string>
     <string name="s_friday_jumuah">Friday: Jumu\'ah</string>
     <string name="s_same_as_dhuhr">Same as Dhuhr</string>
     <string name="s_off">Off</string>
     <string name="s_n_min">%1$d min</string>
-    <string name="s_popup_note">The popup shows over the lock screen. Remind in 5 min is offered only while the iqama is more than 5 minutes away. Silence turns on Do Not Disturb at the iqama and back off after.</string>
+    <string name="s_popup_note">The popup shows over the lock screen. Remind in 5 min is offered only while the iqama is more than 5 minutes away.</string>
     <string name="s_remind_in_5_min">Remind in 5 min</string>
     <string name="s_iqama_is_near">Iqama is near</string>
     <string name="s_until_iqama">until iqama</string>
     <string name="s_iqama">Iqama</string>
     <string name="s_the_prayer_is_starting">The prayer is starting</string>
-    <string name="s_phone_silent_for">Phone silent for %1$d min</string>
 </resources>

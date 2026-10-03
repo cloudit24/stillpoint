@@ -73,7 +73,6 @@ class PrayerPopupActivity : ComponentActivity() {
             ?: return finish()
         val iqama = intent.getStringExtra(PrayerAlerts.EXTRA_KIND) == PrayerAlerts.Kind.IQAMA.name
         val prayerAt = intent.getLongExtra(PrayerAlerts.EXTRA_PRAYER_AT, System.currentTimeMillis())
-        val silenced = intent.getBooleanExtra(PrayerAlerts.EXTRA_SILENCED, false)
         val s = Prefs(this).loadSettings()
         val close = {
             getSystemService(NotificationManager::class.java)?.cancel(PrayerAlerts.ID)
@@ -86,7 +85,6 @@ class PrayerPopupActivity : ComponentActivity() {
                     arabic = prayer.arabic,
                     iqama = iqama,
                     iqamaAt = PrayerAlerts.iqamaAt(s, prayer, prayerAt),
-                    silenceMin = if (silenced) s.prayerSilence else 0,
                     canSnooze = { PrayerAlerts.canSnooze(s, prayer, prayerAt) },
                     onSnooze = { PrayerAlerts.snooze(this, prayer, prayerAt); finish() },
                     onClose = close,
@@ -98,7 +96,7 @@ class PrayerPopupActivity : ComponentActivity() {
 
 @Composable
 private fun PrayerPopup(
-    name: String, arabic: String, iqama: Boolean, iqamaAt: Long, silenceMin: Int,
+    name: String, arabic: String, iqama: Boolean, iqamaAt: Long,
     canSnooze: () -> Boolean, onSnooze: () -> Unit, onClose: () -> Unit,
 ) {
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -119,8 +117,6 @@ private fun PrayerPopup(
         Spacer(Modifier.weight(1f))
         if (iqama) {
             Text(stringResource(R.string.s_the_prayer_is_starting), color = Color.White, fontSize = 20.sp)
-            if (silenceMin > 0) Text(stringResource(R.string.s_phone_silent_for, silenceMin), color = Color(0xFFAAAAAA),
-                fontSize = 15.sp, modifier = Modifier.padding(top = 8.dp))
         } else if (left > 0) {
             Box(Modifier.size(170.dp).border(3.dp, green, CircleShape), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
