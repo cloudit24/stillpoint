@@ -81,7 +81,7 @@ class PrayerPopupActivity : ComponentActivity() {
         setContent {
             StillpointTheme(accent = Color(s.accent), accentStyle = s.accentStyle, font = s.font) {
                 PrayerPopup(
-                    name = if (prayer == Prayer.DHUHR && s.jumuah >= 0 && LocalDate.now().dayOfWeek == DayOfWeek.FRIDAY) "Jumu'ah" else prayer.label,
+                    name = if (prayer == Prayer.DHUHR && s.jumuahAt != null && LocalDate.now().dayOfWeek == DayOfWeek.FRIDAY) "Jumu'ah" else prayer.label,
                     arabic = prayer.arabic,
                     iqama = iqama,
                     iqamaAt = PrayerAlerts.iqamaAt(s, prayer, prayerAt),

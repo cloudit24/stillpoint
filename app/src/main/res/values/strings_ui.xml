@@ -329,7 +329,7 @@
     <string name="s_full_screen_popup">Full-screen popup</string>
     <string name="s_allow_full_screen_alerts">Allow full-screen alerts</string>
     <string name="s_remind_before">Remind before</string>
-    <string name="s_friday_jumuah">Friday: Jumu\'ah</string>
+    <string name="s_friday_jumuah">Friday: Jumu\'ah (UAE)</string>
     <string name="s_same_as_dhuhr">Same as Dhuhr</string>
     <string name="s_off">Off</string>
     <string name="s_n_min">%1$d min</string>

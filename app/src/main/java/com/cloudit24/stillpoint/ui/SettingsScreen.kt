@@ -516,15 +516,17 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         Stepper(stringResource(R.string.s_remind_before), minText(s.remindBefore),
                             onMinus = { vm.updateSettings { it.copy(remindBefore = before.lastOrNull { m -> m < it.remindBefore } ?: 0) } },
                             onPlus = { vm.updateSettings { it.copy(remindBefore = before.firstOrNull { m -> m > it.remindBefore } ?: 30) } })
-                        ActionRow(stringResource(R.string.s_friday_jumuah),
-                            if (s.jumuah < 0) stringResource(R.string.s_same_as_dhuhr) else "%d:%02d".format(s.jumuah / 60, s.jumuah % 60)) {
-                            val start = if (s.jumuah < 0) 13 * 60 + 15 else s.jumuah
-                            android.app.TimePickerDialog(ctx, { _, h, m -> vm.updateSettings { it.copy(jumuah = h * 60 + m) } },
-                                start / 60, start % 60, android.text.format.DateFormat.is24HourFormat(ctx)).apply {
-                                setButton(android.content.DialogInterface.BUTTON_NEUTRAL, ctx.getString(R.string.s_same_as_dhuhr)) { _, _ ->
-                                    vm.updateSettings { it.copy(jumuah = -1) }
-                                }
-                            }.show()
+                        if (s.inUae) {
+                            ActionRow(stringResource(R.string.s_friday_jumuah),
+                                if (s.jumuah < 0) stringResource(R.string.s_same_as_dhuhr) else "%d:%02d".format(s.jumuah / 60, s.jumuah % 60)) {
+                                val start = if (s.jumuah < 0) 12 * 60 + 45 else s.jumuah
+                                android.app.TimePickerDialog(ctx, { _, h, m -> vm.updateSettings { it.copy(jumuah = h * 60 + m) } },
+                                    start / 60, start % 60, android.text.format.DateFormat.is24HourFormat(ctx)).apply {
+                                    setButton(android.content.DialogInterface.BUTTON_NEUTRAL, ctx.getString(R.string.s_same_as_dhuhr)) { _, _ ->
+                                        vm.updateSettings { it.copy(jumuah = -1) }
+                                    }
+                                }.show()
+                            }
                         }
                     }
                     Note(stringResource(R.string.s_popup_note))

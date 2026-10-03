@@ -82,12 +82,13 @@ object PrayerAlerts {
         if (Build.VERSION.SDK_INT >= 34) Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, Uri.parse("package:${context.packageName}"))
         else Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
 
-    /** The five prayers for [date]; on Fridays a set Jumu'ah time replaces Dhuhr. */
+    /** The five prayers for [date]; on Fridays in the UAE the fixed Jumu'ah time replaces Dhuhr. */
     private fun times(s: LauncherSettings, date: LocalDate): Map<Prayer, Long> {
         val city = s.city ?: return emptyMap()
         val t = PrayerTimes.forDate(date, city.lat, city.lon, s.prayerMethod, s.asrHanafi).filterKeys { it.isPrayer }
-        if (s.jumuah < 0 || date.dayOfWeek != DayOfWeek.FRIDAY) return t
-        val at = date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli() + s.jumuah * 60_000L
+        val jumuah = s.jumuahAt
+        if (jumuah == null || date.dayOfWeek != DayOfWeek.FRIDAY) return t
+        val at = date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli() + jumuah * 60_000L
         return t + (Prayer.DHUHR to at)
     }
 
@@ -188,7 +189,7 @@ object PrayerAlerts {
         if (!LockNotification.canPost(context)) return
         channels(context)
 
-        val name = if (prayer == Prayer.DHUHR && s.jumuah >= 0 &&
+        val name = if (prayer == Prayer.DHUHR && s.jumuahAt != null &&
             LocalDate.now().dayOfWeek == DayOfWeek.FRIDAY) "Jumu'ah" else prayer.label
         val time = DateFormat.getTimeFormat(context).format(Date(prayerAt))
         val iqamaAt = iqamaAt(s, prayer, prayerAt)

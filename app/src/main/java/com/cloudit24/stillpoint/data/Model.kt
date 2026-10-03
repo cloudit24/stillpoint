@@ -180,10 +180,10 @@ data class LauncherSettings(
     val iqamaAlert: Boolean = false,
     val iqama: Map<Prayer, Int> = DEFAULT_IQAMA,
     // Full-screen popup at adhan and iqama, minutes of warning before,
-    // and the Friday Jumu'ah time in minutes after midnight (-1 = same as Dhuhr).
+    // and the UAE's fixed Friday Jumu'ah time in minutes after midnight (-1 = same as Dhuhr).
     val prayerPopup: Boolean = true,
     val remindBefore: Int = 0,
-    val jumuah: Int = -1,
+    val jumuah: Int = 12 * 60 + 45,
     val edgeStyle: EdgeStyle = EdgeStyle.FLAT,
     val edgeBright: Int = 2,
     val edgeWarnMin: Int = 15,
@@ -240,6 +240,12 @@ data class LauncherSettings(
     val focusEndsAt: Long = 0L,
 ) {
     fun gesture(slot: GestureSlot): String = gestures[slot] ?: DEFAULT_GESTURES.getValue(slot)
+
+    /** The UAE holds Jumu'ah at one fixed time nationwide; elsewhere (Bahrain, Qatar, India...) it follows Dhuhr. */
+    val inUae: Boolean get() = city?.country?.let { "Emirates" in it || it.endsWith("UAE") } == true
+
+    /** Today's Jumu'ah in minutes after midnight, or null when it's at the calculated Dhuhr time. */
+    val jumuahAt: Int? get() = if (inUae && jumuah >= 0) jumuah else null
 
     fun iqamaMin(p: Prayer): Int = iqama[p] ?: DEFAULT_IQAMA[p] ?: 0
 

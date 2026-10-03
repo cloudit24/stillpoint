@@ -3,6 +3,11 @@
 Every version of Stillpoint Launcher, newest first. Each links to its APK.
 The newest is always at **[Download the latest APK](https://github.com/cloudit24/stillpoint/releases/latest/download/Stillpoint-Launcher.apk)**.
 
+## v0.41.2 · 4 Oct 2026
+- Jumu'ah: in the UAE it's at the fixed national time, 12:45 PM by default (change it in Settings, Prayer, Alerts if it moves). Anywhere else, Bahrain for example, Friday simply follows the calculated Dhuhr time and the setting is hidden.
+
+[stillpoint-v0.41.2.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.41.2/stillpoint-v0.41.2.apk)
+
 ## v0.41.1 · 3 Oct 2026
 - Silence during prayer is gone; Android's own Do Not Disturb (for example flip to silence) does it better. Stillpoint no longer asks for Do Not Disturb access.
 

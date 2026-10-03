@@ -580,7 +580,7 @@ class Prefs(context: Context) {
         const val K_IQAMA = "iqama_minutes"
         const val K_PRAYER_POPUP = "prayer_popup"
         const val K_REMIND_BEFORE = "prayer_remind_before"
-        const val K_JUMUAH = "prayer_jumuah"
+        const val K_JUMUAH = "prayer_jumuah_uae"
         const val K_EDGE_LIGHT = "edge_light"
         const val K_EDGE_STYLE = "edge_style"
         const val K_EDGE_BRIGHT = "edge_bright"
