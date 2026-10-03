@@ -17,6 +17,9 @@
         android:name="android.permission.SCHEDULE_EXACT_ALARM"
         android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Prayer popup over the lock screen, and Do Not Disturb during prayer (both optional). -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
     <!-- Only when Tasks.org or OpenTasks is chosen as the task source (asked at that moment). -->
     <uses-permission android:name="org.tasks.permission.READ_TASKS" />
     <uses-permission android:name="org.tasks.permission.WRITE_TASKS" />
@@ -124,6 +127,15 @@
                 <action android:name="android.intent.action.TIMEZONE_CHANGED" />
             </intent-filter>
         </receiver>
+
+        <!-- Full-screen prayer alert, opened by the adhan and iqama notifications. -->
+        <activity
+            android:name=".ui.PrayerPopupActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleInstance"
+            android:taskAffinity=""
+            android:theme="@style/Theme.Stillpoint" />
 
         <!-- Prayer time and iqama alerts. -->
         <receiver

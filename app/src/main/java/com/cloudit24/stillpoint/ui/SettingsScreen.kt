@@ -193,6 +193,8 @@ fun SettingsScreen(vm: LauncherViewModel) {
     val ctx = LocalContext.current
     val s = vm.settings
     val a11yOn = remember(vm.resumeTick) { LockAccessibilityService.isEnabled(ctx) }
+    val popupOk = remember(vm.resumeTick) { PrayerAlerts.canPopup(ctx) }
+    val silenceOk = remember(vm.resumeTick) { PrayerAlerts.canSilence(ctx) }
     var page by rememberSaveable { mutableStateOf<SettingsPage?>(null) }
     var picking by remember { mutableStateOf<GestureSlot?>(null) }
     var dialog by remember { mutableStateOf<SettingsDialog?>(null) }
@@ -245,7 +247,9 @@ fun SettingsScreen(vm: LauncherViewModel) {
         }
     }
     // Any change to the city, method or alerts moves the next alert.
-    LaunchedEffect(s.city, s.prayerMethod, s.asrHanafi, s.adhanAlert, s.iqamaAlert, s.iqama) { PrayerAlerts.schedule(ctx) }
+    LaunchedEffect(s.city, s.prayerMethod, s.asrHanafi, s.adhanAlert, s.iqamaAlert, s.iqama, s.remindBefore, s.prayerSilence, s.jumuah) {
+        PrayerAlerts.schedule(ctx)
+    }
 
     var pendingTaskSource by remember { mutableStateOf<TaskSource?>(null) }
     val taskPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
@@ -503,8 +507,35 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         ToggleRow(stringResource(R.string.s_iqama_alert), s.iqamaAlert) { on -> alertToggle(on) { it.copy(iqamaAlert = on) } }
                         if (s.adhanAlert || s.iqamaAlert) {
                             ActionRow(stringResource(R.string.s_alert_sound_and_vibration), "Android settings") { ctx.safeStart(PrayerAlerts.soundSettings(ctx)) }
+                            ToggleRow(stringResource(R.string.s_full_screen_popup), s.prayerPopup) { on -> vm.updateSettings { it.copy(prayerPopup = on) } }
+                            if (s.prayerPopup && !popupOk) {
+                                ActionRow(stringResource(R.string.s_allow_full_screen_alerts), "Android settings") { ctx.safeStart(PrayerAlerts.popupSettings(ctx)) }
+                            }
+                        }
+                        val minText: (Int) -> String = { m -> if (m <= 0) ctx.getString(R.string.s_off) else ctx.getString(R.string.s_n_min, m) }
+                        val before = listOf(0, 5, 10, 15, 20, 30)
+                        Stepper(stringResource(R.string.s_remind_before), minText(s.remindBefore),
+                            onMinus = { vm.updateSettings { it.copy(remindBefore = before.lastOrNull { m -> m < it.remindBefore } ?: 0) } },
+                            onPlus = { vm.updateSettings { it.copy(remindBefore = before.firstOrNull { m -> m > it.remindBefore } ?: 30) } })
+                        val quiet = listOf(0, 10, 15, 20, 30, 45)
+                        Stepper(stringResource(R.string.s_silence_during_prayer), minText(s.prayerSilence),
+                            onMinus = { vm.updateSettings { it.copy(prayerSilence = quiet.lastOrNull { m -> m < it.prayerSilence } ?: 0) } },
+                            onPlus = { vm.updateSettings { it.copy(prayerSilence = quiet.firstOrNull { m -> m > it.prayerSilence } ?: 45) } })
+                        if (s.prayerSilence > 0 && !silenceOk) {
+                            ActionRow(stringResource(R.string.s_allow_do_not_disturb), "Android settings") { ctx.safeStart(PrayerAlerts.silenceSettings()) }
+                        }
+                        ActionRow(stringResource(R.string.s_friday_jumuah),
+                            if (s.jumuah < 0) stringResource(R.string.s_same_as_dhuhr) else "%d:%02d".format(s.jumuah / 60, s.jumuah % 60)) {
+                            val start = if (s.jumuah < 0) 13 * 60 + 15 else s.jumuah
+                            android.app.TimePickerDialog(ctx, { _, h, m -> vm.updateSettings { it.copy(jumuah = h * 60 + m) } },
+                                start / 60, start % 60, android.text.format.DateFormat.is24HourFormat(ctx)).apply {
+                                setButton(android.content.DialogInterface.BUTTON_NEUTRAL, ctx.getString(R.string.s_same_as_dhuhr)) { _, _ ->
+                                    vm.updateSettings { it.copy(jumuah = -1) }
+                                }
+                            }.show()
                         }
                     }
+                    Note(stringResource(R.string.s_popup_note))
                     Group(stringResource(R.string.s_iqama_after_the_adhan)) {
                         Prayer.entries.filter { it.isPrayer }.forEach { p ->
                             Stepper(p.label, "${s.iqamaMin(p)} min",

@@ -324,4 +324,20 @@
     <string name="tab_favorites">பிடித்தவை</string>
     <string name="tab_most">அதிகம்</string>
     <string name="tab_recent">சமீபத்தியவை</string>
+    <string name="s_full_screen_popup">முழுத்திரை பாப்அப்</string>
+    <string name="s_allow_full_screen_alerts">முழுத்திரை எச்சரிக்கைகளை அனுமதி</string>
+    <string name="s_remind_before">முன்பே நினைவூட்டு</string>
+    <string name="s_silence_during_prayer">தொழுகையின்போது அமைதி</string>
+    <string name="s_allow_do_not_disturb">தொந்தரவு செய்யாதே அனுமதி</string>
+    <string name="s_friday_jumuah">வெள்ளி: ஜும்ஆ</string>
+    <string name="s_same_as_dhuhr">ளுஹர் போலவே</string>
+    <string name="s_off">அணை</string>
+    <string name="s_n_min">%1$d நிமி</string>
+    <string name="s_popup_note">பாப்அப் பூட்டுத் திரையின் மேல் தோன்றும். இகாமத் 5 நிமிடத்துக்கு மேல் இருந்தால் மட்டுமே 5 நிமிடத்தில் நினைவூட்டு கிடைக்கும். அமைதி இகாமத்தில் தொந்தரவு செய்யாதே-வை இயக்கி, பின் அணைக்கும்.</string>
+    <string name="s_remind_in_5_min">5 நிமிடத்தில் நினைவூட்டு</string>
+    <string name="s_iqama_is_near">இகாமத் நெருங்குகிறது</string>
+    <string name="s_until_iqama">இகாமத் வரை</string>
+    <string name="s_iqama">இகாமத்</string>
+    <string name="s_the_prayer_is_starting">தொழுகை தொடங்குகிறது</string>
+    <string name="s_phone_silent_for">போன் %1$d நிமி அமைதியில்</string>
 </resources>

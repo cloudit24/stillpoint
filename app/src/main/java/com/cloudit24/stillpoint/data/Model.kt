@@ -179,6 +179,12 @@ data class LauncherSettings(
     val adhanAlert: Boolean = false,
     val iqamaAlert: Boolean = false,
     val iqama: Map<Prayer, Int> = DEFAULT_IQAMA,
+    // Full-screen popup at adhan and iqama, minutes of warning before, Do Not Disturb minutes at the iqama,
+    // and the Friday Jumu'ah time in minutes after midnight (-1 = same as Dhuhr).
+    val prayerPopup: Boolean = true,
+    val remindBefore: Int = 0,
+    val prayerSilence: Int = 0,
+    val jumuah: Int = -1,
     val edgeStyle: EdgeStyle = EdgeStyle.FLAT,
     val edgeBright: Int = 2,
     val edgeWarnMin: Int = 15,

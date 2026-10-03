@@ -3,6 +3,15 @@
 Every version of Stillpoint Launcher, newest first. Each links to its APK.
 The newest is always at **[Download the latest APK](https://github.com/cloudit24/stillpoint/releases/latest/download/Stillpoint-Launcher.apk)**.
 
+## v0.41.0 · 3 Oct 2026
+- Prayer popup: at the adhan and the iqama, a full-screen alert shows even over the lock screen, like an alarm clock (Settings, Prayer, Alerts). In a meeting, tap Remind in 5 min; it's offered only while the iqama is more than 5 minutes away, so it can't make you miss the prayer.
+- Remind before: a quiet heads-up 5 to 30 minutes before each prayer.
+- Silence during prayer: Do Not Disturb turns on at the iqama and back off after 10 to 45 minutes. Starred contacts and alarms still come through.
+- Friday: set your mosque's Jumu'ah time; on Fridays it replaces Dhuhr for alerts.
+- All of this works without internet; times are calculated on the phone.
+
+[stillpoint-v0.41.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.41.0/stillpoint-v0.41.0.apk)
+
 ## v0.40.0 · 3 Oct 2026
 - Languages: English, हिन्दी, தமிழ் and العربية (right to left), in Settings, Personalization, Language. Home, the app list, the Shelf, notes, tasks, senior mode and Settings are translated; Tools and a few detail pages are still in English. Corrections are welcome.
 - Switching shelves is smooth: the shelf cross-fades instead of rebuilding card by card, and the shelf name no longer wobbles.
