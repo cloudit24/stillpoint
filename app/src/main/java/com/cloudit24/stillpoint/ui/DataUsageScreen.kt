@@ -1,5 +1,7 @@
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.ui.res.stringResource
+import com.cloudit24.stillpoint.R
 import android.content.Intent
 import android.provider.Settings
 import androidx.compose.foundation.clickable
@@ -52,11 +54,11 @@ fun DataUsageScreen(vm: LauncherViewModel) {
     }
 
     Column(Modifier.fillMaxSize().padding(horizontal = 28.dp, vertical = 24.dp)) {
-        Text("Data usage", fontSize = 34.sp, fontWeight = FontWeight.Light)
+        Text(stringResource(R.string.s_data_usage), fontSize = 34.sp, fontWeight = FontWeight.Light)
 
         if (!vm.hasUsageAccess) {
             Text(
-                "Allow usage access to see data use per app",
+                stringResource(R.string.s_allow_usage_access_to_see_data),
                 color = Accent, fontSize = 15.sp,
                 modifier = Modifier.padding(top = 16.dp)
                     .clickable { context.safeStart(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) },
@@ -77,14 +79,14 @@ fun DataUsageScreen(vm: LauncherViewModel) {
 
         val list = rows
         if (list == null) {
-            Text("Reading…", color = Muted, modifier = Modifier.padding(top = 12.dp))
+            Text(stringResource(R.string.s_reading), color = Muted, modifier = Modifier.padding(top = 12.dp))
             return@Column
         }
         Text(
             "Wi-Fi ${formatBytes(list.sumOf { it.wifi })}  ·  Mobile ${formatBytes(list.sumOf { it.mobile })}",
             color = Muted, fontSize = 14.sp, modifier = Modifier.padding(vertical = 8.dp),
         )
-        if (list.isEmpty()) Text("No data used in this period.", color = Muted)
+        if (list.isEmpty()) Text(stringResource(R.string.s_no_data_used_in_this_period), color = Muted)
 
         LazyColumn(Modifier.weight(1f)) {
             items(list.take(60), key = { it.label }) { u ->
@@ -115,7 +117,7 @@ fun DataUsageScreen(vm: LauncherViewModel) {
                 }
             }
         }
-        Text("From Android's own records. Mobile data may be approximate on dual-SIM phones.",
+        Text(stringResource(R.string.s_from_android_s_own_records_mobile),
             color = Muted, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
     }
 }

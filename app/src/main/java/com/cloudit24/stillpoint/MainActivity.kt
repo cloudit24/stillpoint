@@ -1,5 +1,8 @@
 package com.cloudit24.stillpoint
 
+import android.content.Context
+import com.cloudit24.stillpoint.data.Lang
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.runtime.CompositionLocalProvider
@@ -57,6 +60,13 @@ class MainActivity : ComponentActivity() {
     private val bindWidget = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
         if (r.resultCode == RESULT_OK) configureOrCommitWidget() else vm.cancelPendingWidget()
     }
+
+    override fun attachBaseContext(newBase: Context) {
+
+        super.attachBaseContext(Lang.wrap(newBase))
+
+    }
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -192,17 +202,17 @@ private fun LauncherRoot(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderI
     vm.updatePopup?.takeIf { vm.screen == Screen.HOME }?.let { version ->
         AlertDialog(
             onDismissRequest = { vm.updatePopup = null },
-            title = { Text("Update available") },
+            title = { Text(stringResource(R.string.s_update_available)) },
             text = { Text("Stillpoint Launcher $version is ready. You have ${BuildConfig.VERSION_NAME}.") },
-            confirmButton = { TextButton(onClick = { vm.updatePopup = null; vm.screen = Screen.SETTINGS }) { Text("Update") } },
-            dismissButton = { TextButton(onClick = { vm.updatePopup = null }) { Text("Later") } },
+            confirmButton = { TextButton(onClick = { vm.updatePopup = null; vm.screen = Screen.SETTINGS }) { Text(stringResource(R.string.s_update)) } },
+            dismissButton = { TextButton(onClick = { vm.updatePopup = null }) { Text(stringResource(R.string.s_later)) } },
         )
     }
 
     vm.blockedMessage?.let { msg ->
         AlertDialog(
             onDismissRequest = { vm.blockedMessage = null },
-            confirmButton = { TextButton(onClick = { vm.blockedMessage = null }) { Text("OK") } },
+            confirmButton = { TextButton(onClick = { vm.blockedMessage = null }) { Text(stringResource(R.string.s_ok)) } },
             text = { Text(msg) },
         )
     }

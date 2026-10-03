@@ -2,6 +2,8 @@
 
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.ui.res.stringResource
+import com.cloudit24.stillpoint.R
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Icon
@@ -186,9 +188,16 @@ fun DrawerScreen(vm: LauncherViewModel) {
             )
         } else {
             Column(Modifier.fillMaxSize()) {
-                PivotHeaders(tabs.map { it.label }, pager)
+                PivotHeaders(tabs.map {
+                    stringResource(when (it) {
+                        DrawerTab.MOST -> R.string.tab_most
+                        DrawerTab.RECENT -> R.string.tab_recent
+                        DrawerTab.ALL -> R.string.tab_all
+                        DrawerTab.FAVORITES -> R.string.tab_favorites
+                    })
+                }, pager)
                 if (vm.isFocusActive()) {
-                    Text("Focus is on. Only allowed apps are listed.", color = Accent, fontSize = 13.sp,
+                    Text(stringResource(R.string.s_focus_is_on_only_allowed_apps), color = Accent, fontSize = 13.sp,
                         modifier = Modifier.padding(start = 28.dp, bottom = 4.dp))
                 }
                 HorizontalPager(state = pager, modifier = Modifier.weight(1f).nestedScroll(backToHome)) { page ->
@@ -223,7 +232,7 @@ fun DrawerScreen(vm: LauncherViewModel) {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     SearchGlyph()
-                    Text("Search apps", color = Muted, fontSize = 17.sp, modifier = Modifier.padding(start = 12.dp))
+                    Text(stringResource(R.string.s_search_apps), color = Muted, fontSize = 17.sp, modifier = Modifier.padding(start = 12.dp))
                 }
                 Box(
                     Modifier.padding(start = 10.dp).size(52.dp).clip(CircleShape).background(Color(0xFF1A1A18))
@@ -301,18 +310,18 @@ private fun SearchPanel(
     val close = { keyboard?.hide(); onClose() }
 
     Column(Modifier.fillMaxSize()) {
-        Text("search", fontSize = 40.sp, fontWeight = FontWeight.Light,
+        Text(stringResource(R.string.s_search), fontSize = 40.sp, fontWeight = FontWeight.Light,
             modifier = Modifier.padding(start = 28.dp, top = 20.dp, bottom = 10.dp))
         LazyColumn(Modifier.weight(1f).padding(start = 28.dp, end = 28.dp)) {
             if (query.isNotBlank() && results.isEmpty()) {
-                item { Text("No apps match.", color = Muted, fontSize = 15.sp, modifier = Modifier.padding(vertical = 8.dp)) }
+                item { Text(stringResource(R.string.s_no_apps_match), color = Muted, fontSize = 15.sp, modifier = Modifier.padding(vertical = 8.dp)) }
             }
             if (query.isNotBlank()) items(results, key = { it.key }) { row(it) }
             else if (history.isNotEmpty()) {
                 item(key = "recent") {
                     Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text("Recent", color = Muted, fontSize = 13.sp, modifier = Modifier.weight(1f))
-                        Text("Clear", color = Accent, fontSize = 13.sp, modifier = Modifier.clickable(onClick = onClearHistory).padding(8.dp))
+                        Text(stringResource(R.string.s_recent), color = Muted, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                        Text(stringResource(R.string.s_clear), color = Accent, fontSize = 13.sp, modifier = Modifier.clickable(onClick = onClearHistory).padding(8.dp))
                     }
                 }
                 items(history, key = { "h_" + it.key }) { row(it) }
@@ -334,7 +343,7 @@ private fun SearchPanel(
                 modifier = Modifier.weight(1f).focusRequester(focusRequester)
                     .clip(RoundedCornerShape(50)).background(Color(0xFF1A1A18)).padding(horizontal = 18.dp, vertical = 13.dp),
                 decorationBox = { inner ->
-                    if (query.isEmpty()) Text("Search apps", color = Muted, fontSize = 22.sp)
+                    if (query.isEmpty()) Text(stringResource(R.string.s_search_apps), color = Muted, fontSize = 22.sp)
                     inner()
                 },
             )
@@ -384,7 +393,7 @@ private fun MostUsedTab(vm: LauncherViewModel, row: @Composable (AppEntry, Strin
     val context = LocalContext.current
     if (!vm.hasUsageAccess) {
         Text(
-            "Allow usage access to see your most used apps",
+            stringResource(R.string.s_allow_usage_access_to_see_your),
             color = Accent, fontSize = 15.sp,
             modifier = Modifier.padding(vertical = 12.dp)
                 .clickable { context.safeStart(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) },
@@ -393,8 +402,8 @@ private fun MostUsedTab(vm: LauncherViewModel, row: @Composable (AppEntry, Strin
     }
     val list = vm.mostUsedApps()
     LazyColumn(Modifier.fillMaxSize().padding(end = 16.dp), contentPadding = ListBottom) {
-        item { Text("Last 7 days", color = Muted, fontSize = 13.sp, modifier = Modifier.padding(vertical = 6.dp)) }
-        if (list.isEmpty()) item { Text("No usage recorded yet.", color = Muted, fontSize = 15.sp) }
+        item { Text(stringResource(R.string.s_last_7_days), color = Muted, fontSize = 13.sp, modifier = Modifier.padding(vertical = 6.dp)) }
+        if (list.isEmpty()) item { Text(stringResource(R.string.s_no_usage_recorded_yet), color = Muted, fontSize = 15.sp) }
         items(list, key = { it.key }) { row(it, formatDuration(vm.weekUsage[it.packageName] ?: 0L), "") }
     }
 }
@@ -578,10 +587,10 @@ private fun DrawerItem(
                 text = { Text(if (favorite) "Remove from Favorites" else "Add to Favorites") },
                 onClick = { if (favorite) vm.removeFavorite(app) else vm.addFavorite(app); onMenu(false) },
             )
-            DropdownMenuItem(text = { Text("Move to folder…") }, onClick = { onMenu(false); onPickFolder() })
-            DropdownMenuItem(text = { Text("Hide") }, onClick = { vm.hide(app); onMenu(false) })
-            DropdownMenuItem(text = { Text("App info") }, onClick = { vm.openAppInfo(app); onMenu(false) })
-            DropdownMenuItem(text = { Text("Uninstall") }, onClick = { vm.uninstall(app); onMenu(false) })
+            DropdownMenuItem(text = { Text(stringResource(R.string.s_move_to_folder)) }, onClick = { onMenu(false); onPickFolder() })
+            DropdownMenuItem(text = { Text(stringResource(R.string.s_hide)) }, onClick = { vm.hide(app); onMenu(false) })
+            DropdownMenuItem(text = { Text(stringResource(R.string.s_app_info)) }, onClick = { vm.openAppInfo(app); onMenu(false) })
+            DropdownMenuItem(text = { Text(stringResource(R.string.s_uninstall)) }, onClick = { vm.uninstall(app); onMenu(false) })
         }
     }
 }
@@ -590,12 +599,12 @@ private fun DrawerItem(
 private fun FolderPicker(vm: LauncherViewModel, onPick: (Long?) -> Unit, onNew: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        confirmButton = { TextButton(onClick = onNew) { Text("New folder") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-        title = { Text("Move to") },
+        confirmButton = { TextButton(onClick = onNew) { Text(stringResource(R.string.s_new_folder)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.s_cancel)) } },
+        title = { Text(stringResource(R.string.s_move_to)) },
         text = {
             Column {
-                Text("Favorites (no folder)", fontSize = 17.sp,
+                Text(stringResource(R.string.s_favorites_no_folder), fontSize = 17.sp,
                     modifier = Modifier.fillMaxWidth().clickable { onPick(null) }.padding(vertical = 10.dp))
                 vm.settings.folders.forEach { f ->
                     Text(f.name, fontSize = 17.sp,
@@ -612,10 +621,10 @@ private fun NameDialog(title: String, initial: String, onDone: (String?) -> Unit
     var name by remember { mutableStateOf(initial) }
     AlertDialog(
         onDismissRequest = { onDone(null) },
-        confirmButton = { TextButton(onClick = { onDone(name) }, enabled = name.isNotBlank()) { Text("Save") } },
-        dismissButton = { TextButton(onClick = { onDone(null) }) { Text("Cancel") } },
+        confirmButton = { TextButton(onClick = { onDone(name) }, enabled = name.isNotBlank()) { Text(stringResource(R.string.s_save)) } },
+        dismissButton = { TextButton(onClick = { onDone(null) }) { Text(stringResource(R.string.s_cancel)) } },
         title = { Text(title) },
-        text = { OutlinedTextField(value = name, onValueChange = { name = it }, singleLine = true, placeholder = { Text("Name") }) },
+        text = { OutlinedTextField(value = name, onValueChange = { name = it }, singleLine = true, placeholder = { Text(stringResource(R.string.s_name)) }) },
     )
 }
 

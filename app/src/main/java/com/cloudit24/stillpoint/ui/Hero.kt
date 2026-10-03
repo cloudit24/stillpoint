@@ -1,5 +1,7 @@
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.ui.res.stringResource
+import com.cloudit24.stillpoint.R
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -437,7 +439,7 @@ internal fun WorldInfo(s: LauncherSettings, now: Long, modifier: Modifier) {
     val context = LocalContext.current
     val cities = s.worldClocks.mapNotNull { e -> e.split("|").takeIf { it.size == 2 } }.take(3)
     if (cities.isEmpty()) {
-        Text("World clock: choose up to three cities in Settings, Home screen.", color = Muted, fontSize = 14.sp,
+        Text(stringResource(R.string.s_world_clock_choose_up_to_three), color = Muted, fontSize = 14.sp,
             modifier = modifier.padding(top = 8.dp))
         return
     }
@@ -520,7 +522,7 @@ internal fun PrayerTimeline(vm: LauncherViewModel, s: LauncherSettings, now: Lon
                 Text(sub, color = Muted, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Column(horizontalAlignment = Alignment.End, modifier = Modifier.padding(start = 8.dp)) {
-                Text("NEXT", color = Muted, fontSize = 9.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.4.sp)
+                Text(stringResource(R.string.s_next), color = Muted, fontSize = 9.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.4.sp)
                 Text("${span.next.label} ${formatClock(context, span.nextAt)}", color = Ink, fontSize = 15.sp, maxLines = 1)
                 Text("in ${formatDuration(span.nextAt - now)}", color = accent, fontSize = 13.sp, maxLines = 1)
             }

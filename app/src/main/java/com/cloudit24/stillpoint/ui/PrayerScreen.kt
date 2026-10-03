@@ -1,5 +1,7 @@
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.ui.res.stringResource
+import com.cloudit24.stillpoint.R
 import android.view.Surface
 import android.view.WindowManager
 import androidx.compose.runtime.MutableState
@@ -86,9 +88,9 @@ fun PrayerScreen(vm: LauncherViewModel) {
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 28.dp, vertical = 24.dp),
     ) {
-        Text("Prayer", fontSize = 34.sp, fontWeight = FontWeight.Light)
+        Text(stringResource(R.string.s_prayer), fontSize = 34.sp, fontWeight = FontWeight.Light)
         if (city == null) {
-            Text("Choose a city in Settings to calculate prayer times.", color = Accent, fontSize = 15.sp,
+            Text(stringResource(R.string.s_choose_a_city_in_settings_to), color = Accent, fontSize = 15.sp,
                 modifier = Modifier.padding(top = 16.dp).clickable { vm.screen = Screen.SETTINGS })
             return@Column
         }
@@ -134,7 +136,7 @@ private fun ColumnScope.QiblaCompass(lat: Double, lon: Double, haptics: Boolean)
     val h = heading
     if (haptics && h != null) CompassHaptics(h, qibla)
 
-    Text("Qibla", fontSize = 24.sp, fontWeight = FontWeight.Light, modifier = Modifier.padding(top = 28.dp))
+    Text(stringResource(R.string.s_qibla), fontSize = 24.sp, fontWeight = FontWeight.Light, modifier = Modifier.padding(top = 28.dp))
     val delta = h?.let { ((qibla - it + 540) % 360) - 180 }
     val facing = delta != null && abs(delta) < 5
     Text(
@@ -179,9 +181,9 @@ private fun ColumnScope.QiblaCompass(lat: Double, lon: Double, haptics: Boolean)
         drawLine(Slate, Offset(c.x, c.y - r - 2.dp.toPx()), Offset(c.x, c.y - r + 20.dp.toPx()), strokeWidth = 3.dp.toPx())
         drawCircle(Ink, 5.dp.toPx(), c)
     }
-    if (calibrate.value) Text("The compass needs calibrating: move the phone in a figure 8 a few times.",
+    if (calibrate.value) Text(stringResource(R.string.s_the_compass_needs_calibrating_move_the),
         color = PrayerText, fontSize = 13.sp)
-    Text("Keep away from metal, magnets and magnetic phone cases. If it seems off, move the phone in a figure 8 to calibrate.",
+    Text(stringResource(R.string.s_keep_away_from_metal_magnets_and),
         color = Muted, fontSize = 12.sp)
 }
 

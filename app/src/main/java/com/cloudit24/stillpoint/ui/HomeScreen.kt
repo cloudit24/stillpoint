@@ -1,5 +1,7 @@
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.ui.res.stringResource
+import com.cloudit24.stillpoint.R
 import com.cloudit24.stillpoint.data.NotifyStyle
 import androidx.compose.runtime.key
 import androidx.compose.material3.Icon
@@ -275,7 +277,7 @@ fun HomeScreen(vm: LauncherViewModel) {
             // Screen time itself is one of the flipping headline cards.
             if (!vm.hasUsageAccess) {
                 Text(
-                    "Allow usage access to show screen time",
+                    stringResource(R.string.s_allow_usage_access_to_show_screen),
                     color = Accent, fontSize = 14.sp,
                     modifier = Modifier
                         .padding(top = 16.dp)
@@ -300,7 +302,7 @@ fun HomeScreen(vm: LauncherViewModel) {
         }
 
         if (homeApps.isEmpty()) {
-            Text("Swipe left for apps, right for widgets. Long-press for settings.", color = Muted, fontSize = 14.sp)
+            Text(stringResource(R.string.s_swipe_left_for_apps_right_for), color = Muted, fontSize = 14.sp)
         }
         if (s.showRecent) {
             val recent = vm.recentlyUsed(6)
@@ -386,7 +388,7 @@ private fun RotatingLine(lines: List<String>) {
 @Composable
 private fun RecentStrip(vm: LauncherViewModel, apps: List<AppEntry>) {
     Column(Modifier.padding(bottom = 16.dp)) {
-        Text("RECENT", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.4.sp)
+        Text(stringResource(R.string.s_recent_2), color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.4.sp)
         Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             apps.forEach { app ->
                 key(app.key) {
@@ -444,9 +446,9 @@ private fun HubCard(vm: LauncherViewModel, now: Long) {
             Text(n.why, color = Muted, fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp))
             if (n.kind == "task") {
                 Row(Modifier.padding(top = 8.dp)) {
-                    Text("✓ Done", color = Accent, fontSize = 16.sp, fontWeight = FontWeight.Medium,
+                    Text(stringResource(R.string.s_done), color = Accent, fontSize = 16.sp, fontWeight = FontWeight.Medium,
                         modifier = Modifier.clickable { vm.hubDone(n.id) }.padding(end = 24.dp, top = 6.dp, bottom = 6.dp))
-                    Text("Not now", color = Muted, fontSize = 16.sp,
+                    Text(stringResource(R.string.s_not_now), color = Muted, fontSize = 16.sp,
                         modifier = Modifier.clickable { vm.hubNotNow(n.id) }.padding(vertical = 6.dp))
                 }
             }
@@ -470,9 +472,9 @@ private fun HubCard(vm: LauncherViewModel, now: Long) {
 
 @Composable
 private fun AgendaBlock(context: Context, items: List<AgendaItem>) {
-    Text("Today", color = Muted, fontSize = 13.sp)
+    Text(stringResource(R.string.s_today), color = Muted, fontSize = 13.sp)
     if (items.isEmpty()) {
-        Text("Nothing else scheduled", color = Muted, fontSize = 15.sp, modifier = Modifier.padding(vertical = 4.dp))
+        Text(stringResource(R.string.s_nothing_else_scheduled), color = Muted, fontSize = 15.sp, modifier = Modifier.padding(vertical = 4.dp))
     }
     items.forEach { e ->
         Row(Modifier.padding(vertical = 4.dp)) {
@@ -491,20 +493,20 @@ private fun AgendaBlock(context: Context, items: List<AgendaItem>) {
 private fun LocalProjectCard(vm: LauncherViewModel) {
     val p = vm.projects.firstOrNull { it.next.isNotBlank() }
     if (p == null) {
-        Text("No next step yet. Add projects on the Shelf.", color = Muted, fontSize = 14.sp,
+        Text(stringResource(R.string.s_no_next_step_yet_add_projects), color = Muted, fontSize = 14.sp,
             modifier = Modifier.padding(bottom = 20.dp).clickable { vm.screen = Screen.WIDGETS })
         return
     }
     Row(Modifier.fillMaxWidth().padding(bottom = 20.dp).height(IntrinsicSize.Min)) {
         Box(Modifier.width(3.dp).fillMaxHeight().background(Accent))
         Column(Modifier.padding(start = 14.dp)) {
-            Text("NEXT STEP", color = Accent, fontSize = 12.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.8.sp)
+            Text(stringResource(R.string.s_next_step), color = Accent, fontSize = 12.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.8.sp)
             Text(p.next, color = Ink, fontSize = 22.sp, lineHeight = 27.sp, modifier = Modifier.padding(top = 2.dp))
             Text(p.name, color = Muted, fontSize = 13.sp)
             Row(Modifier.padding(top = 8.dp)) {
-                Text("✓ Done", color = Accent, fontSize = 16.sp, fontWeight = FontWeight.Medium,
+                Text(stringResource(R.string.s_done), color = Accent, fontSize = 16.sp, fontWeight = FontWeight.Medium,
                     modifier = Modifier.clickable { vm.projectStepDone(p.id) }.padding(end = 24.dp, top = 6.dp, bottom = 6.dp))
-                Text("Later", color = Muted, fontSize = 16.sp,
+                Text(stringResource(R.string.s_later), color = Muted, fontSize = 16.sp,
                     modifier = Modifier.clickable { vm.projectLater(p.id) }.padding(vertical = 6.dp))
             }
         }

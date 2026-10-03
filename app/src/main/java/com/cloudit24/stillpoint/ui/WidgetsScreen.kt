@@ -1,5 +1,12 @@
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.res.stringResource
+import com.cloudit24.stillpoint.R
 import androidx.compose.animation.animateColorAsState
 import com.cloudit24.stillpoint.data.BuiltIn
 import androidx.compose.foundation.horizontalScroll
@@ -129,6 +136,11 @@ fun WidgetsScreen(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderInfo) ->
     val drag = remember { ShelfDrag() }
     val shelfAccent = Accent
     val shelfScroll = rememberScrollState()
+    var firstShow by remember { mutableStateOf(true) }
+    LaunchedEffect(Unit) {
+        delay(900)
+        firstShow = false
+    }
     var viewport by remember { mutableStateOf(Rect.Zero) }
     // While a widget is dragged near the top or bottom, the page scrolls by itself (faster closer to the edge).
     LaunchedEffect(drag.id) {
@@ -182,7 +194,7 @@ fun WidgetsScreen(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderInfo) ->
     ) {
         Row(Modifier.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             ShelfTabs(vm, Modifier.weight(1f))
-            if (!editing && vm.settings.toolsOn) Text("Tools", color = Muted, modifier = Modifier.clickable {
+            if (!editing && vm.settings.toolsOn) Text(stringResource(R.string.s_tools), color = Muted, modifier = Modifier.clickable {
                 vm.toolsReturn = Screen.WIDGETS
                 vm.screen = Screen.TOOLS
             }.padding(8.dp))
@@ -193,17 +205,21 @@ fun WidgetsScreen(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderInfo) ->
         // The Shelf: things to keep near but off the home screen. Notes, tasks, projects, then widgets.
         Column(Modifier.weight(1f).padding(top = 16.dp).onGloballyPositioned { viewport = it.boundsInRoot() }
             .verticalScroll(shelfScroll, enabled = drag.id == null)) {
-            if (editing) Text("Drag to move · corner to resize · − to remove", color = Muted, fontSize = 13.sp,
+            if (editing) Text(stringResource(R.string.s_drag_to_move_corner_to_resize), color = Muted, fontSize = 13.sp,
                 modifier = Modifier.padding(horizontal = 12.dp))
             if (vm.widgetIds.isEmpty()) {
-                Text("Nothing on this shelf yet. Tap Add below for Stillpoint cards and widgets.", color = Muted, fontSize = 14.sp,
+                Text(stringResource(R.string.s_nothing_on_this_shelf_yet_tap), color = Muted, fontSize = 14.sp,
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
             }
             // Widgets flow like tiles: two half-width ones sit side by side.
+            // Switching shelves cross-fades the whole shelf; cards rise in only when the Shelf first opens.
+            AnimatedContent(targetState = vm.shelfIndex, transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(120)) },
+                label = "shelf") { shown ->
+            val ids = vm.shelfPages.getOrNull(shown)?.items.orEmpty()
             BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
                 val areaW = maxWidth
                 FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    vm.widgetIds.forEachIndexed { i, id ->
+                    ids.forEachIndexed { i, id ->
                         key(id) {
                             // The widget being moved floats above the others and follows the finger.
                             val moving = drag.id == id
@@ -220,7 +236,7 @@ fun WidgetsScreen(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderInfo) ->
                                         }
                                     },
                             ) {
-                                AppearIn(i) {
+                                AppearIn(i, firstShow) {
                                     if (id < 0) BuiltInItem(vm, id, editing, areaW, drag) { editing = true }
                                     else WidgetItem(vm, id, editing, areaW, drag) { editing = true }
                                 }
@@ -229,12 +245,13 @@ fun WidgetsScreen(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderInfo) ->
                     }
                 }
             }
+            }
         }
 
         Row(Modifier.fillMaxWidth().padding(top = 16.dp, start = 12.dp, end = 12.dp)) {
-            Text("Home", color = Muted, modifier = Modifier.clickable { vm.screen = Screen.HOME }.padding(8.dp))
+            Text(stringResource(R.string.s_home), color = Muted, modifier = Modifier.clickable { vm.screen = Screen.HOME }.padding(8.dp))
             Box(Modifier.weight(1f), contentAlignment = Alignment.Center) { UndoBar(vm) }
-            Text("Add", color = Muted, modifier = Modifier.clickable { editing = false; picking = true }.padding(8.dp))
+            Text(stringResource(R.string.s_add), color = Muted, modifier = Modifier.clickable { editing = false; picking = true }.padding(8.dp))
         }
     }
 }
@@ -277,7 +294,7 @@ private fun WidgetItem(vm: LauncherViewModel, id: Int, editing: Boolean, areaW: 
                 modifier = Modifier.padding(start = 4.dp, bottom = 4.dp))
         }
         if (info == null || natural == null) {
-            Text("Remove", color = Accent, fontSize = 13.sp, modifier = Modifier.clickable { vm.removeWidget(id) }.padding(6.dp))
+            Text(stringResource(R.string.s_remove), color = Accent, fontSize = 13.sp, modifier = Modifier.clickable { vm.removeWidget(id) }.padding(6.dp))
             return@Column
         }
         var hostView by remember { mutableStateOf<AppWidgetHostView?>(null) }
@@ -362,8 +379,8 @@ private fun WidgetItem(vm: LauncherViewModel, id: Int, editing: Boolean, areaW: 
     if (confirmRemove) {
         AlertDialog(
             onDismissRequest = { confirmRemove = false },
-            confirmButton = { TextButton(onClick = { confirmRemove = false; vm.removeWidget(id) }) { Text("Remove") } },
-            dismissButton = { TextButton(onClick = { confirmRemove = false }) { Text("Keep") } },
+            confirmButton = { TextButton(onClick = { confirmRemove = false; vm.removeWidget(id) }) { Text(stringResource(R.string.s_remove)) } },
+            dismissButton = { TextButton(onClick = { confirmRemove = false }) { Text(stringResource(R.string.s_keep)) } },
             title = { Text("Remove $label?") },
         )
     }
@@ -375,7 +392,7 @@ private fun WidgetItem(vm: LauncherViewModel, id: Int, editing: Boolean, areaW: 
 private fun BuiltInItem(vm: LauncherViewModel, id: Int, editing: Boolean, areaW: Dp, drag: ShelfDrag, onArrange: () -> Unit) {
     val kind = BuiltIn.of(id)
     if (kind == null) {
-        Text("Remove", color = Accent, fontSize = 13.sp, modifier = Modifier.clickable { vm.removeWidget(id) }.padding(6.dp))
+        Text(stringResource(R.string.s_remove), color = Accent, fontSize = 13.sp, modifier = Modifier.clickable { vm.removeWidget(id) }.padding(6.dp))
         return
     }
     val half = (areaW - 12.dp) / 2
@@ -410,10 +427,10 @@ private fun BuiltInItem(vm: LauncherViewModel, id: Int, editing: Boolean, areaW:
     if (confirmRemove) {
         AlertDialog(
             onDismissRequest = { confirmRemove = false },
-            confirmButton = { TextButton(onClick = { confirmRemove = false; vm.removeWidget(id) }) { Text("Remove") } },
-            dismissButton = { TextButton(onClick = { confirmRemove = false }) { Text("Keep") } },
+            confirmButton = { TextButton(onClick = { confirmRemove = false; vm.removeWidget(id) }) { Text(stringResource(R.string.s_remove)) } },
+            dismissButton = { TextButton(onClick = { confirmRemove = false }) { Text(stringResource(R.string.s_keep)) } },
             title = { Text("Remove ${kind.title} from this shelf?") },
-            text = { Text("What's in it stays; add it again any time.") },
+            text = { Text(stringResource(R.string.s_what_s_in_it_stays_add)) },
         )
     }
 }
@@ -470,13 +487,19 @@ private fun ShelfTabs(vm: LauncherViewModel, modifier: Modifier) {
         vm.shelfPages.forEachIndexed { i, p ->
             val on = i == vm.shelfIndex
             // The chosen shelf grows, brightens and gets a short accent line that slides out under it.
-            val size by animateFloatAsState(if (on) 34f else 18f, spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow), label = "tab")
+            val size = if (on) 34f else 18f
+            val pop by animateFloatAsState(if (on) 1f else 0.9f, spring(stiffness = Spring.StiffnessMediumLow), label = "tab")
             val color by animateColorAsState(if (on) Ink else Muted, tween(300), label = "tabColor")
             val line by animateDpAsState(if (on) 22.dp else 0.dp, spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessLow), label = "tabLine")
             Column(Modifier.padding(end = 18.dp).combinedClickable(
                 interactionSource = remember { MutableInteractionSource() }, indication = null,
                 onClick = { vm.selectShelf(i) }, onLongClick = { renaming = i })) {
-                Text(p.name, fontSize = size.sp, fontWeight = FontWeight.Light, color = color, maxLines = 1)
+                Text(p.name, fontSize = size.sp, fontWeight = FontWeight.Light, color = color, maxLines = 1,
+                    modifier = Modifier.graphicsLayer {
+                        scaleX = pop
+                        scaleY = pop
+                        transformOrigin = TransformOrigin(0f, 1f)
+                    })
                 Box(Modifier.padding(top = 2.dp, start = 2.dp).width(line).height(3.dp).clip(RoundedCornerShape(50)).background(Accent))
             }
         }
@@ -491,12 +514,12 @@ private fun ShelfTabs(vm: LauncherViewModel, modifier: Modifier) {
         var sure by remember(i) { mutableStateOf(false) }
         AlertDialog(
             onDismissRequest = { renaming = null },
-            confirmButton = { TextButton(onClick = { vm.renameShelf(i, name); renaming = null }, enabled = name.isNotBlank()) { Text("Save") } },
-            dismissButton = { TextButton(onClick = { renaming = null }) { Text("Cancel") } },
-            title = { Text("Shelf") },
+            confirmButton = { TextButton(onClick = { vm.renameShelf(i, name); renaming = null }, enabled = name.isNotBlank()) { Text(stringResource(R.string.s_save)) } },
+            dismissButton = { TextButton(onClick = { renaming = null }) { Text(stringResource(R.string.s_cancel)) } },
+            title = { Text(stringResource(R.string.s_shelf)) },
             text = {
                 Column {
-                    OutlinedTextField(value = name, onValueChange = { name = it.take(20) }, singleLine = true, label = { Text("Name") })
+                    OutlinedTextField(value = name, onValueChange = { name = it.take(20) }, singleLine = true, label = { Text(stringResource(R.string.s_name)) })
                     if (vm.shelfPages.size > 1) {
                         Text(if (sure) "Tap again to delete it and its widgets" else "Delete this shelf",
                             color = Color(0xFFE08A78), fontSize = 14.sp,
@@ -556,8 +579,8 @@ private fun Modifier.shelfPlacement(moving: Boolean, drag: ShelfDrag): Modifier 
 
 /** Widgets settle into place when the page opens: a short fade and rise, one after another. Nothing more. */
 @Composable
-private fun AppearIn(index: Int, content: @Composable () -> Unit) {
-    val a = remember { Animatable(0f) }
+private fun AppearIn(index: Int, enabled: Boolean, content: @Composable () -> Unit) {
+    val a = remember { Animatable(if (enabled) 0f else 1f) }
     LaunchedEffect(Unit) {
         delay(index * 45L)
         a.animateTo(1f, tween(380, easing = FastOutSlowInEasing))
@@ -617,14 +640,14 @@ private fun WidgetPicker(vm: LauncherViewModel, onBuiltIn: (BuiltIn) -> Unit, on
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
         item {
             Row(Modifier.padding(top = 20.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("Add to shelf", fontSize = 30.sp, fontWeight = FontWeight.Light, modifier = Modifier.weight(1f))
+                Text(stringResource(R.string.s_add_to_shelf), fontSize = 30.sp, fontWeight = FontWeight.Light, modifier = Modifier.weight(1f))
                 Text("${groups.size} apps", color = Muted, fontSize = 13.sp)
             }
         }
         val shelfId = vm.shelfPages.getOrNull(vm.shelfIndex)?.id ?: 0
         val cards = BuiltIn.entries.filter { !it.retired && it.id(shelfId) !in vm.widgetIds }
         if (cards.isNotEmpty()) {
-            item { Text("Stillpoint cards", color = Accent, fontSize = 17.sp, modifier = Modifier.padding(vertical = 6.dp)) }
+            item { Text(stringResource(R.string.s_stillpoint_cards), color = Accent, fontSize = 17.sp, modifier = Modifier.padding(vertical = 6.dp)) }
             items(cards, key = { "card_${it.name}" }) { b ->
                 Column(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { onBuiltIn(b) }
@@ -634,10 +657,10 @@ private fun WidgetPicker(vm: LauncherViewModel, onBuiltIn: (BuiltIn) -> Unit, on
                     Text(b.summary, color = Muted, fontSize = 12.sp)
                 }
             }
-            item { Text("Widgets from your apps", color = Muted, fontSize = 13.sp, modifier = Modifier.padding(top = 18.dp, bottom = 4.dp)) }
+            item { Text(stringResource(R.string.s_widgets_from_your_apps), color = Muted, fontSize = 13.sp, modifier = Modifier.padding(top = 18.dp, bottom = 4.dp)) }
         }
         if (groups.isEmpty()) {
-            item { Text("No widgets found on this phone.", color = Muted, fontSize = 14.sp) }
+            item { Text(stringResource(R.string.s_no_widgets_found_on_this_phone), color = Muted, fontSize = 14.sp) }
         }
         groups.forEach { (pkg, label, list) ->
             val isOpen = pkg in open

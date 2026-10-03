@@ -1,5 +1,7 @@
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.ui.res.stringResource
+import com.cloudit24.stillpoint.R
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -140,7 +142,7 @@ fun FavoritesTiles(vm: LauncherViewModel, onNewFolder: () -> Unit, onRename: (Fa
                 }
             }
             if (folder == null) item(key = "new_folder") {
-                Text("+ New folder", color = Muted, fontSize = 15.sp,
+                Text(stringResource(R.string.s_new_folder_2), color = Muted, fontSize = 15.sp,
                     modifier = Modifier.clickable(onClick = onNewFolder).padding(vertical = 14.dp))
             }
         }
@@ -180,13 +182,13 @@ private fun Tile(
                 }
             when (item) {
                 is AppItem -> {
-                    DropdownMenuItem(text = { Text("Move to folder…") }, onClick = { menu = false; onPickFolder(item.app) })
-                    DropdownMenuItem(text = { Text("Remove from Favorites") }, onClick = { menu = false; vm.removeFavorite(item.app) })
-                    DropdownMenuItem(text = { Text("App info") }, onClick = { menu = false; vm.openAppInfo(item.app) })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.s_move_to_folder)) }, onClick = { menu = false; onPickFolder(item.app) })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.s_remove_from_favorites)) }, onClick = { menu = false; vm.removeFavorite(item.app) })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.s_app_info)) }, onClick = { menu = false; vm.openAppInfo(item.app) })
                 }
                 is FolderItem -> {
-                    DropdownMenuItem(text = { Text("Rename") }, onClick = { menu = false; onRename(item.folder) })
-                    DropdownMenuItem(text = { Text("Delete folder (apps stay in Favorites)") },
+                    DropdownMenuItem(text = { Text(stringResource(R.string.s_rename)) }, onClick = { menu = false; onRename(item.folder) })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.s_delete_folder_apps_stay_in_favorites)) },
                         onClick = { menu = false; vm.deleteFolder(item.folder.id) })
                 }
             }
@@ -226,7 +228,7 @@ private fun AppFace(vm: LauncherViewModel, app: AppEntry, kind: Int) {
                 } else {
                     Column(Modifier.padding(12.dp)) {
                         Text("$count", color = Color.White, fontSize = 42.sp, fontWeight = FontWeight.Light)
-                        Text("new", color = Color.White.copy(alpha = 0.8f), fontSize = 13.sp)
+                        Text(stringResource(R.string.s_new), color = Color.White.copy(alpha = 0.8f), fontSize = 13.sp)
                     }
                     TileLabel(app.label)
                 }

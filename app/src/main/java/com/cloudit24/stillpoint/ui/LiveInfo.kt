@@ -1,5 +1,7 @@
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.ui.res.stringResource
+import com.cloudit24.stillpoint.R
 import androidx.compose.ui.text.style.TextAlign
 import android.app.ActivityManager
 import android.content.ClipData
@@ -54,7 +56,7 @@ fun WeatherBadge(vm: LauncherViewModel, s: LauncherSettings, onSetup: () -> Unit
         modifier = Modifier.clickable { if (city == null) onSetup() else vm.refreshLive(force = true) },
     ) {
         if (city == null) {
-            Text("Set city", color = Accent, fontSize = 13.sp)
+            Text(stringResource(R.string.s_set_city), color = Accent, fontSize = 13.sp)
             return@Column
         }
         if (w == null) {

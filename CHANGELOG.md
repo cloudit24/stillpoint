@@ -3,6 +3,12 @@
 Every version of Stillpoint Launcher, newest first. Each links to its APK.
 The newest is always at **[Download the latest APK](https://github.com/cloudit24/stillpoint/releases/latest/download/Stillpoint-Launcher.apk)**.
 
+## v0.40.0 · 3 Oct 2026
+- Languages: English, हिन्दी, தமிழ் and العربية (right to left), in Settings, Personalization, Language. Home, the app list, the Shelf, notes, tasks, senior mode and Settings are translated; Tools and a few detail pages are still in English. Corrections are welcome.
+- Switching shelves is smooth: the shelf cross-fades instead of rebuilding card by card, and the shelf name no longer wobbles.
+
+[stillpoint-v0.40.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.40.0/stillpoint-v0.40.0.apk)
+
 ## v0.39.1 · 3 Oct 2026
 - Three shelves at most, also for setups made before the limit: anything on a fourth shelf moves onto the third, so nothing is lost.
 

@@ -1,5 +1,7 @@
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.ui.res.stringResource
+import com.cloudit24.stillpoint.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -43,14 +45,14 @@ fun FocusScreen(vm: LauncherViewModel) {
     val active = s.focusEndsAt > now
 
     Column(Modifier.fillMaxSize().padding(horizontal = 28.dp, vertical = 24.dp)) {
-        Text("Focus", fontSize = 34.sp, fontWeight = FontWeight.Light)
+        Text(stringResource(R.string.s_focus), fontSize = 34.sp, fontWeight = FontWeight.Light)
 
         if (active) {
             Text(formatRemaining(s.focusEndsAt - now), fontSize = 56.sp, fontWeight = FontWeight.ExtraLight,
                 modifier = Modifier.padding(top = 16.dp))
             SectionHeader("Allowed apps")
             val allowed = vm.visibleApps()
-            if (allowed.isEmpty()) Text("No apps allowed in this session.", color = Muted)
+            if (allowed.isEmpty()) Text(stringResource(R.string.s_no_apps_allowed_in_this_session), color = Muted)
             LazyColumn(Modifier.weight(1f)) {
                 items(allowed, key = { it.key }) { app ->
                     AppRow(app.label, null, 19.sp, onClick = { vm.launch(app) })
@@ -59,7 +61,7 @@ fun FocusScreen(vm: LauncherViewModel) {
             EndEarly(onEnd = { vm.endFocus(); vm.screen = Screen.HOME })
         } else {
             var minutes by rememberSaveable { mutableIntStateOf(25) }
-            Text("Only the apps you tick can be opened from the launcher until the timer ends.",
+            Text(stringResource(R.string.s_only_the_apps_you_tick_can),
                 color = Muted, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp))
 
             Row(Modifier.padding(top = 20.dp)) {
@@ -94,7 +96,7 @@ fun FocusScreen(vm: LauncherViewModel) {
             Button(
                 onClick = { vm.startFocus(minutes); vm.screen = Screen.HOME },
                 modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-            ) { Text("Start focus") }
+            ) { Text(stringResource(R.string.s_start_focus)) }
         }
     }
 }
@@ -106,7 +108,7 @@ private fun EndEarly(onEnd: () -> Unit) {
 
     if (!confirming) {
         TextButton(onClick = { secondsLeft = END_EARLY_WAIT_S; confirming = true }) {
-            Text("End early", color = Muted)
+            Text(stringResource(R.string.s_end_early), color = Muted)
         }
         return
     }
@@ -117,6 +119,6 @@ private fun EndEarly(onEnd: () -> Unit) {
         TextButton(onClick = onEnd, enabled = secondsLeft == 0) {
             Text(if (secondsLeft > 0) "End in ${secondsLeft}s" else "End focus now")
         }
-        TextButton(onClick = { confirming = false }) { Text("Keep focusing", color = Muted) }
+        TextButton(onClick = { confirming = false }) { Text(stringResource(R.string.s_keep_focusing), color = Muted) }
     }
 }

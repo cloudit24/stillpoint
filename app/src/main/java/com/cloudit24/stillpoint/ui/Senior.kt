@@ -1,5 +1,7 @@
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.ui.res.stringResource
+import com.cloudit24.stillpoint.R
 import android.content.Intent
 import android.net.Uri
 import android.os.BatteryManager
@@ -104,7 +106,7 @@ fun SeniorHome(vm: LauncherViewModel) {
                                 modifier = Modifier.padding(top = 8.dp))
                         } else {
                             Text("+", fontSize = 34.sp, color = Muted)
-                            Text("Add an app", fontSize = 15.sp, color = Muted)
+                            Text(stringResource(R.string.s_add_an_app), fontSize = 15.sp, color = Muted)
                         }
                     }
                 }
@@ -123,8 +125,8 @@ fun SeniorHome(vm: LauncherViewModel) {
             }
             Spacer(Modifier.height(12.dp))
         }
-        BigButton("All apps") { vm.screen = Screen.DRAWER }
-        Text("Hold the clock for Settings", fontSize = 13.sp, color = Muted, textAlign = TextAlign.Center,
+        BigButton(stringResource(R.string.s_all_apps)) { vm.screen = Screen.DRAWER }
+        Text(stringResource(R.string.s_hold_the_clock_for_settings), fontSize = 13.sp, color = Muted, textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth().padding(top = 16.dp))
     }
     picking?.let { i ->
@@ -140,7 +142,7 @@ fun SeniorApps(vm: LauncherViewModel) {
     val q = query.trim()
     val shown = remember(apps, q) { if (q.isEmpty()) apps else apps.filter { it.label.contains(q, ignoreCase = true) } }
     Column(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 20.dp)) {
-        Text("All apps", fontSize = 30.sp, fontWeight = FontWeight.Light, color = Color.White)
+        Text(stringResource(R.string.s_all_apps), fontSize = 30.sp, fontWeight = FontWeight.Light, color = Color.White)
         BasicTextField(
             value = query, onValueChange = { query = it }, singleLine = true,
             textStyle = TextStyle(color = Color.White, fontSize = 20.sp), cursorBrush = SolidColor(Accent),
@@ -148,7 +150,7 @@ fun SeniorApps(vm: LauncherViewModel) {
                 .padding(horizontal = 16.dp, vertical = 14.dp),
             decorationBox = { inner ->
                 Box {
-                    if (query.isEmpty()) Text("Search", color = Muted, fontSize = 20.sp)
+                    if (query.isEmpty()) Text(stringResource(R.string.s_search_2), color = Muted, fontSize = 20.sp)
                     inner()
                 }
             },
@@ -166,7 +168,7 @@ fun SeniorApps(vm: LauncherViewModel) {
             }
         }
         Spacer(Modifier.height(10.dp))
-        BigButton("Back to home") { vm.screen = Screen.HOME }
+        BigButton(stringResource(R.string.s_back_to_home)) { vm.screen = Screen.HOME }
     }
 }
 
@@ -184,9 +186,9 @@ private fun BigButton(label: String, onClick: () -> Unit) {
 fun SeniorAppPicker(vm: LauncherViewModel, onDismiss: () -> Unit, onPick: (AppEntry?) -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-        dismissButton = { TextButton(onClick = { onPick(null) }) { Text("Empty") } },
-        title = { Text("Choose an app") },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.s_cancel)) } },
+        dismissButton = { TextButton(onClick = { onPick(null) }) { Text(stringResource(R.string.s_empty)) } },
+        title = { Text(stringResource(R.string.s_choose_an_app)) },
         text = {
             LazyColumn(Modifier.heightIn(max = 440.dp)) {
                 items(vm.visibleApps(), key = { it.key }) { app ->

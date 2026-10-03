@@ -1,5 +1,7 @@
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.ui.res.stringResource
+import com.cloudit24.stillpoint.R
 import android.Manifest
 import android.app.TimePickerDialog
 import android.text.format.DateFormat
@@ -141,7 +143,7 @@ fun SwipeToDelete(onDelete: () -> Unit, content: @Composable () -> Unit) {
         backgroundContent = {
             val shown = state.dismissDirection == SwipeToDismissBoxValue.EndToStart
             Box(Modifier.fillMaxSize().padding(end = 8.dp), contentAlignment = Alignment.CenterEnd) {
-                if (shown) Text("Delete", color = Overdue, fontSize = 14.sp)
+                if (shown) Text(stringResource(R.string.s_delete), color = Overdue, fontSize = 14.sp)
             }
         },
     ) { content() }
@@ -229,13 +231,13 @@ fun TasksBlock(vm: LauncherViewModel) {
     Column(Modifier.animateContentSize()) {
         when {
             src == TaskSource.HUB && !hub -> {
-                BlockHeader("Tasks · Project Hub", "")
-                Text("Connect Project Hub in Settings, Extras.", color = Muted, fontSize = 15.sp, modifier = Modifier.padding(vertical = 6.dp))
+                BlockHeader(stringResource(R.string.s_tasks_project_hub), "")
+                Text(stringResource(R.string.s_connect_project_hub_in_settings_extras), color = Muted, fontSize = 15.sp, modifier = Modifier.padding(vertical = 6.dp))
             }
             hub -> {
                 val list = vm.hub?.tasks.orEmpty()
-                BlockHeader("Tasks · Project Hub", list.count { !it.done }.let { if (it > 0) "$it left" else "" })
-                if (list.isEmpty()) Text("Nothing due today.", color = Muted, fontSize = 15.sp, modifier = Modifier.padding(vertical = 6.dp))
+                BlockHeader(stringResource(R.string.s_tasks_project_hub), list.count { !it.done }.let { if (it > 0) "$it left" else "" })
+                if (list.isEmpty()) Text(stringResource(R.string.s_nothing_due_today), color = Muted, fontSize = 15.sp, modifier = Modifier.padding(vertical = 6.dp))
                 list.forEach { t ->
                     key(t.id) {
                         val due = t.due?.let { d -> runCatching { LocalDate.parse(d.take(10)).toEpochDay() }.getOrNull() }
@@ -249,7 +251,7 @@ fun TasksBlock(vm: LauncherViewModel) {
                     Text(it, color = Accent, fontSize = 14.sp, modifier = Modifier.padding(vertical = 6.dp).clickable { vm.loadProviderTasks() })
                 }
                 if (vm.providerError == null && vm.providerTasks.isEmpty()) {
-                    Text("No open tasks.", color = Muted, fontSize = 15.sp, modifier = Modifier.padding(vertical = 6.dp))
+                    Text(stringResource(R.string.s_no_open_tasks), color = Muted, fontSize = 15.sp, modifier = Modifier.padding(vertical = 6.dp))
                 }
                 vm.providerTasks.forEach { t ->
                     key(t.id) { TaskRow(t.text, false, null, onTick = { vm.providerDone(t.id) }, onOpen = null) }
@@ -258,7 +260,7 @@ fun TasksBlock(vm: LauncherViewModel) {
             else -> {
                 val open = sortTasks(vm.tasks.filter { !it.done })
                 val done = vm.tasks.filter { it.done }
-                BlockHeader("Tasks", if (open.isNotEmpty()) "${open.size} left" else if (done.isNotEmpty()) "All done" else "")
+                BlockHeader(stringResource(R.string.s_tasks), if (open.isNotEmpty()) "${open.size} left" else if (done.isNotEmpty()) "All done" else "")
                 open.forEachIndexed { i, t ->
                     key(t.id) {
                         if (i > 0) Hairline()
@@ -287,13 +289,13 @@ fun TasksBlock(vm: LauncherViewModel) {
                         if (done.size > 3) Text(if (showDone) "Show fewer" else "Show all ${done.size} done", color = Muted, fontSize = 13.sp,
                             modifier = Modifier.clickable { showDone = !showDone }.padding(vertical = 8.dp))
                         Spacer(Modifier.weight(1f))
-                        Text("Clear done", color = Accent, fontSize = 13.sp,
+                        Text(stringResource(R.string.s_clear_done), color = Accent, fontSize = 13.sp,
                             modifier = Modifier.clickable { vm.clearDoneTasks() }.padding(8.dp))
                     }
                 }
             }
         }
-        if (src != TaskSource.HUB || hub) AddLine("Add a task", withDue = !hub && !provider, pickAlert) { text, due, remind ->
+        if (src != TaskSource.HUB || hub) AddLine(stringResource(R.string.s_add_a_task), withDue = !hub && !provider, pickAlert) { text, due, remind ->
             when {
                 hub -> vm.hubAdd(text)
                 provider -> vm.providerAdd(text)
@@ -371,10 +373,10 @@ private fun AddLine(hint: String, withDue: Boolean, pickAlert: (Int, (Int) -> Un
                     dueLabel(due)?.let { Text(it.first, color = Ink, fontSize = 12.sp, modifier = Modifier.padding(start = 5.dp)) }
                 }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                    DropdownMenuItem(text = { Text("No day") }, onClick = { due = -1L; menu = false })
-                    DropdownMenuItem(text = { Text("Today") }, onClick = { due = today; menu = false })
-                    DropdownMenuItem(text = { Text("Tomorrow") }, onClick = { due = today + 1; menu = false })
-                    DropdownMenuItem(text = { Text("Pick a day") }, onClick = {
+                    DropdownMenuItem(text = { Text(stringResource(R.string.s_no_day)) }, onClick = { due = -1L; menu = false })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.s_today)) }, onClick = { due = today; menu = false })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.s_tomorrow)) }, onClick = { due = today + 1; menu = false })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.s_pick_a_day)) }, onClick = {
                         menu = false
                         val d = LocalDate.now()
                         DatePickerDialog(context, { _, y, mo, dd -> due = LocalDate.of(y, mo + 1, dd).toEpochDay() },
@@ -409,16 +411,16 @@ private fun TaskDialog(initial: TaskItem, pickAlert: (Int, (Int) -> Unit) -> Uni
     val today = LocalDate.now().toEpochDay()
     AlertDialog(
         onDismissRequest = onDismiss,
-        confirmButton = { TextButton(onClick = { onSave(text, due, remind) }, enabled = text.isNotBlank()) { Text("Save") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-        title = { Text("Task") },
+        confirmButton = { TextButton(onClick = { onSave(text, due, remind) }, enabled = text.isNotBlank()) { Text(stringResource(R.string.s_save)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.s_cancel)) } },
+        title = { Text(stringResource(R.string.s_task)) },
         text = {
             Column {
-                OutlinedTextField(value = text, onValueChange = { text = it }, label = { Text("Task") })
+                OutlinedTextField(value = text, onValueChange = { text = it }, label = { Text(stringResource(R.string.s_task)) })
                 Row(Modifier.padding(top = 14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    DuePick("No date", due < 0) { due = -1L }
-                    DuePick("Today", due == today) { due = today }
-                    DuePick("Tomorrow", due == today + 1) { due = today + 1 }
+                    DuePick(stringResource(R.string.s_no_date), due < 0) { due = -1L }
+                    DuePick(stringResource(R.string.s_today), due == today) { due = today }
+                    DuePick(stringResource(R.string.s_tomorrow), due == today + 1) { due = today + 1 }
                 }
                 val picked = due > today + 1
                 Row(Modifier.padding(top = 8.dp)) {
@@ -432,7 +434,7 @@ private fun TaskDialog(initial: TaskItem, pickAlert: (Int, (Int) -> Unit) -> Uni
                     DuePick(if (remind >= 0) "Alert at ${remindLabel(remind)}" else "No alert", remind >= 0) {
                         pickAlert(if (remind >= 0) remind else 9 * 60) { remind = it }
                     }
-                    if (remind >= 0) DuePick("Turn off", false) { remind = -1 }
+                    if (remind >= 0) DuePick(stringResource(R.string.s_turn_off), false) { remind = -1 }
                 }
             }
         },
@@ -446,7 +448,7 @@ fun UndoBar(vm: LauncherViewModel, modifier: Modifier = Modifier) {
     Row(modifier.clip(RoundedCornerShape(50)).background(Color(0xFF262624)).padding(start = 16.dp),
         verticalAlignment = Alignment.CenterVertically) {
         Text(u.label, color = Ink, fontSize = 14.sp)
-        Text("Undo", color = Accent, fontSize = 14.sp, modifier = Modifier.padding(start = 8.dp).clip(RoundedCornerShape(50))
+        Text(stringResource(R.string.s_undo), color = Accent, fontSize = 14.sp, modifier = Modifier.padding(start = 8.dp).clip(RoundedCornerShape(50))
             .clickable { vm.runUndo() }.padding(horizontal = 12.dp, vertical = 10.dp))
     }
 }

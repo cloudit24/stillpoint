@@ -1,5 +1,7 @@
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.ui.res.stringResource
+import com.cloudit24.stillpoint.R
 import android.app.ActivityManager
 import android.app.DatePickerDialog
 import android.content.Context
@@ -63,21 +65,21 @@ fun BuiltInContent(vm: LauncherViewModel, kind: BuiltIn, id: Int) {
         BuiltIn.CALENDAR -> MonthCard(s)
         BuiltIn.CLOCKS -> {
             val now by rememberTicker(30_000)
-            CardTitle("World clock")
+            CardTitle(stringResource(R.string.s_world_clock))
             WorldInfo(s, now, Modifier.padding(top = 4.dp, bottom = 4.dp))
         }
         BuiltIn.BATTERY -> BatteryCard()
         BuiltIn.WEATHER -> {
-            CardTitle("Weather")
+            CardTitle(stringResource(R.string.s_weather))
             if (s.weatherOn && vm.weather != null) WeatherInfo(vm, s, Modifier.padding(top = 4.dp, bottom = 4.dp))
-            else Text("Turn on weather in Settings, Extras.", color = Muted, fontSize = 14.sp,
+            else Text(stringResource(R.string.s_turn_on_weather_in_settings_extras), color = Muted, fontSize = 14.sp,
                 modifier = Modifier.padding(vertical = 6.dp).clickable { vm.screen = Screen.SETTINGS })
         }
         BuiltIn.PRAYER -> {
             val now by rememberTicker(30_000)
-            CardTitle("Prayer")
+            CardTitle(stringResource(R.string.s_prayer))
             if (s.prayerOn && s.city != null) PrayerTimeline(vm, s, now, Modifier.padding(top = 6.dp, bottom = 4.dp))
-            else Text("Turn on Islamic prayer in Settings, Extras.", color = Muted, fontSize = 14.sp,
+            else Text(stringResource(R.string.s_turn_on_islamic_prayer_in_settings), color = Muted, fontSize = 14.sp,
                 modifier = Modifier.padding(vertical = 6.dp).clickable { vm.screen = Screen.SETTINGS })
         }
         BuiltIn.COUNTDOWN -> CountdownCard(vm, id)
@@ -185,7 +187,7 @@ private fun BatteryCard() {
     val context = LocalContext.current
     val tick by rememberTicker(30_000)
     val d = remember(tick) { deviceNow(context) }
-    CardTitle("Battery and storage")
+    CardTitle(stringResource(R.string.s_battery_and_storage))
     Meter("Battery", "${d.battery}%" + (if (d.charging) " · charging" else "") + (if (d.tempC > 0) " · ${d.tempC.toInt()}°C" else ""),
         d.battery / 100f)
     if (d.storeTotal > 0) Meter("Storage", "${gb(d.storeFree)} free of ${gb(d.storeTotal)}", 1f - d.storeFree / d.storeTotal.toFloat())
@@ -214,8 +216,8 @@ private fun CountdownCard(vm: LauncherViewModel, id: Int) {
     var open by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().clickable { open = true }.padding(vertical = 4.dp)) {
         if (c == null) {
-            CardTitle("Countdown")
-            Text("Tap to choose a date", color = Muted, fontSize = 15.sp, modifier = Modifier.padding(vertical = 6.dp))
+            CardTitle(stringResource(R.string.s_countdown))
+            Text(stringResource(R.string.s_tap_to_choose_a_date), color = Muted, fontSize = 15.sp, modifier = Modifier.padding(vertical = 6.dp))
         } else {
             val days = c.second - LocalDate.now().toEpochDay()
             CardTitle(c.first)
@@ -242,12 +244,12 @@ private fun CountdownDialog(initial: Pair<String, Long>?, onDismiss: () -> Unit,
     var day by remember { mutableLongStateOf(initial?.second ?: LocalDate.now().plusDays(7).toEpochDay()) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        confirmButton = { TextButton(onClick = { onSave(title.trim().ifEmpty { "Countdown" }, day) }) { Text("Save") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-        title = { Text("Countdown") },
+        confirmButton = { TextButton(onClick = { onSave(title.trim().ifEmpty { "Countdown" }, day) }) { Text(stringResource(R.string.s_save)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.s_cancel)) } },
+        title = { Text(stringResource(R.string.s_countdown)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(value = title, onValueChange = { title = it }, singleLine = true, label = { Text("What for") })
+                OutlinedTextField(value = title, onValueChange = { title = it }, singleLine = true, label = { Text(stringResource(R.string.s_what_for)) })
                 Text(LocalDate.ofEpochDay(day).format(DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy", Locale.getDefault())),
                     color = Accent, fontSize = 15.sp, modifier = Modifier.clip(RoundedCornerShape(50))
                         .background(Color.White.copy(alpha = 0.06f)).clickable {

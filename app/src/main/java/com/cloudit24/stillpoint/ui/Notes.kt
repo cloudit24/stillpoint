@@ -1,5 +1,7 @@
 package com.cloudit24.stillpoint.ui
 
+import androidx.compose.ui.res.stringResource
+import com.cloudit24.stillpoint.R
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -93,8 +95,8 @@ fun NotesBlock(vm: LauncherViewModel) {
     val list = vm.notes.asReversed()
     Column(Modifier.animateContentSize()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Notes", color = Muted, fontSize = 13.sp, modifier = Modifier.weight(1f))
-            if (picked != null) Text("Done", color = Accent, fontSize = 13.sp,
+            Text(stringResource(R.string.s_notes), color = Muted, fontSize = 13.sp, modifier = Modifier.weight(1f))
+            if (picked != null) Text(stringResource(R.string.s_done_2), color = Accent, fontSize = 13.sp,
                 modifier = Modifier.clickable { picked = null }.padding(horizontal = 8.dp, vertical = 4.dp))
             else if (list.isNotEmpty()) Text("${list.size}", color = Muted, fontSize = 13.sp)
         }
@@ -116,7 +118,7 @@ fun NotesBlock(vm: LauncherViewModel) {
                 if (row.size == 1) Spacer(Modifier.weight(1f))
             }
         }
-        if (list.size in 1..3 && picked == null) Text("Tap to open · hold to throw away", color = Muted, fontSize = 12.sp,
+        if (list.size in 1..3 && picked == null) Text(stringResource(R.string.s_tap_to_open_hold_to_throw), color = Muted, fontSize = 12.sp,
             modifier = Modifier.padding(top = 8.dp))
     }
     val e = open
@@ -190,9 +192,9 @@ private fun NoteEditor(initial: Note?, startColor: Int, onDelete: (() -> Unit)?,
         onDismissRequest = { onSave(text, color) },
         containerColor = paper,
         shape = RoundedCornerShape(22.dp),
-        confirmButton = { TextButton(onClick = { onSave(text, color) }) { Text("Done", color = ink) } },
+        confirmButton = { TextButton(onClick = { onSave(text, color) }) { Text(stringResource(R.string.s_done_2), color = ink) } },
         dismissButton = {
-            if (onDelete != null) TextButton(onClick = onDelete) { Text("Delete", color = ink.copy(alpha = 0.7f)) }
+            if (onDelete != null) TextButton(onClick = onDelete) { Text(stringResource(R.string.s_delete), color = ink.copy(alpha = 0.7f)) }
         },
         text = {
             Column {
@@ -202,7 +204,7 @@ private fun NoteEditor(initial: Note?, startColor: Int, onDelete: (() -> Unit)?,
                     modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp).focusRequester(focus),
                     decorationBox = { inner ->
                         Box {
-                            if (text.isEmpty()) Text("Write something", color = ink.copy(alpha = 0.5f), fontSize = 17.sp)
+                            if (text.isEmpty()) Text(stringResource(R.string.s_write_something), color = ink.copy(alpha = 0.5f), fontSize = 17.sp)
                             inner()
                         }
                     },

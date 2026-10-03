@@ -1,5 +1,13 @@
 package com.cloudit24.stillpoint.ui
 
+import androidx.annotation.StringRes
+import androidx.compose.material.icons.outlined.Edit
+import com.cloudit24.stillpoint.data.Lang
+import android.app.Activity
+import android.content.ContextWrapper
+import android.content.Context
+import androidx.compose.ui.res.stringResource
+import com.cloudit24.stillpoint.R
 import androidx.compose.material.icons.outlined.Person
 import com.cloudit24.stillpoint.data.AccentStyle
 import androidx.compose.foundation.layout.height
@@ -141,29 +149,30 @@ import com.cloudit24.stillpoint.service.LockAccessibilityService
 import kotlinx.coroutines.launch
 
 /** Settings pages, grouped on the main screen under [section]. */
-private enum class SettingsPage(val section: String, val title: String, val summary: String, val icon: ImageVector) {
-    APPEARANCE("Personalization", "Appearance", "Accent, icons, app style and size, edge light", Icons.Outlined.Face),
-    HOME("Personalization", "Home screen", "Headline, calendars, swipe cards, apps, footer", Icons.Outlined.Home),
-    APPS("Personalization", "App list", "Starting tab, hidden apps", Icons.Outlined.Menu),
-    GESTURES("Personalization", "Gestures and shortcuts", "Swipes, double-tap, bottom shortcuts", Icons.Outlined.ThumbUp),
-    NOTIFY("Personalization", "Notification", "Edge light, signal dot and app dots; never miss important people", Icons.Outlined.Star),
-    SENIOR("Personalization", "Senior mode", "Big text, six large tiles, no hidden gestures", Icons.Outlined.Person),
-    LOCK("Personalization", "Lock screen", "Next prayer and dates on the lock screen", Icons.Outlined.Notifications),
-    TASKS("Productivity", "Tasks", "On this phone, Project Hub, Tasks.org or OpenTasks", Icons.Outlined.Done),
-    CALENDAR("Productivity", "Calendar", "Phone calendar, Project Hub or a calendar link", Icons.Outlined.DateRange),
-    PRAYER("Extras", "Islamic prayer", "Prayer times, alerts, iqama, Qibla", Icons.Outlined.Place),
-    WEATHER("Extras", "Weather", "Headline card · uses Open-Meteo", Icons.Outlined.LocationOn),
-    GOLD("Extras", "Gold price", "Home line and widget · uses outside websites", Icons.Outlined.Star),
-    HUB("Extras", "Project Hub", "Connection to your own server", Icons.Outlined.CheckCircle),
-    SELFHOSTED("Extras", "Self-hosted", "Home Assistant, Uptime Kuma, ntfy and Gotify", Icons.Outlined.Home),
-    TOOLS("Extras", "Tools", "Device info, passwords, QR, ping, DNS and more", Icons.Outlined.Build),
-    PRIVACY("System", "Permissions and data", "Usage access, gesture service, data usage", Icons.Outlined.Lock),
-    BACKUP("System", "Backup and restore", "Keep your setup in a file, bring it to a new phone", Icons.Outlined.Send),
-    FOOTPRINT("System", "Battery and memory", "What Stillpoint itself uses", Icons.Outlined.Settings),
-    SOURCES("System", "Online sources", "Use your own server or another service for anything online", Icons.Outlined.Share),
-    UPDATES("System", "Updates", "Download new versions from GitHub", Icons.Outlined.Refresh),
-    SYSTEM("System", "System", "Permissions, backup, battery, online sources, updates", Icons.Outlined.Settings),
-    ABOUT("System", "About", "Version, source code and privacy", Icons.Outlined.Info),
+private enum class SettingsPage(@StringRes val section: Int, @StringRes val title: Int, @StringRes val summary: Int, val icon: ImageVector) {
+    APPEARANCE(R.string.sec_personalization, R.string.pg_appearance, R.string.pg_appearance_sum, Icons.Outlined.Face),
+    HOME(R.string.sec_personalization, R.string.pg_home, R.string.pg_home_sum, Icons.Outlined.Home),
+    APPS(R.string.sec_personalization, R.string.pg_apps, R.string.pg_apps_sum, Icons.Outlined.Menu),
+    GESTURES(R.string.sec_personalization, R.string.pg_gestures, R.string.pg_gestures_sum, Icons.Outlined.ThumbUp),
+    NOTIFY(R.string.sec_personalization, R.string.pg_notify, R.string.pg_notify_sum, Icons.Outlined.Star),
+    SENIOR(R.string.sec_personalization, R.string.pg_senior, R.string.pg_senior_sum, Icons.Outlined.Person),
+    LANGUAGE(R.string.sec_personalization, R.string.pg_language, R.string.pg_language_sum, Icons.Outlined.Edit),
+    LOCK(R.string.sec_personalization, R.string.pg_lock, R.string.pg_lock_sum, Icons.Outlined.Notifications),
+    TASKS(R.string.sec_productivity, R.string.pg_tasks, R.string.pg_tasks_sum, Icons.Outlined.Done),
+    CALENDAR(R.string.sec_productivity, R.string.pg_calendar, R.string.pg_calendar_sum, Icons.Outlined.DateRange),
+    PRAYER(R.string.sec_extras, R.string.pg_prayer, R.string.pg_prayer_sum, Icons.Outlined.Place),
+    WEATHER(R.string.sec_extras, R.string.pg_weather, R.string.pg_weather_sum, Icons.Outlined.LocationOn),
+    GOLD(R.string.sec_extras, R.string.pg_gold, R.string.pg_gold_sum, Icons.Outlined.Star),
+    HUB(R.string.sec_extras, R.string.pg_hub, R.string.pg_hub_sum, Icons.Outlined.CheckCircle),
+    SELFHOSTED(R.string.sec_extras, R.string.pg_selfhosted, R.string.pg_selfhosted_sum, Icons.Outlined.Home),
+    TOOLS(R.string.sec_extras, R.string.pg_tools, R.string.pg_tools_sum, Icons.Outlined.Build),
+    PRIVACY(R.string.sec_system, R.string.pg_privacy, R.string.pg_privacy_sum, Icons.Outlined.Lock),
+    BACKUP(R.string.sec_system, R.string.pg_backup, R.string.pg_backup_sum, Icons.Outlined.Send),
+    FOOTPRINT(R.string.sec_system, R.string.pg_footprint, R.string.pg_footprint_sum, Icons.Outlined.Settings),
+    SOURCES(R.string.sec_system, R.string.pg_sources, R.string.pg_sources_sum, Icons.Outlined.Share),
+    UPDATES(R.string.sec_system, R.string.pg_updates, R.string.pg_updates_sum, Icons.Outlined.Refresh),
+    SYSTEM(R.string.sec_system, R.string.pg_system, R.string.pg_system_sum, Icons.Outlined.Settings),
+    ABOUT(R.string.sec_system, R.string.pg_about, R.string.pg_about_sum, Icons.Outlined.Info),
 }
 
 /** Pages reached from inside another page rather than from the main list. */
@@ -266,7 +275,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
             Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp),
         ) {
             if (current == null) {
-                Text("Settings", fontSize = 34.sp, fontWeight = FontWeight.Light,
+                Text(stringResource(R.string.s_settings), fontSize = 34.sp, fontWeight = FontWeight.Light,
                     modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 8.dp))
                 available?.let { a ->
                     Row(
@@ -286,7 +295,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
                 Row(Modifier.padding(top = 4.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Ink,
                         modifier = Modifier.clip(CircleShape).clickable { page = current.parent }.padding(8.dp))
-                    Text(current.title, fontSize = 26.sp, fontWeight = FontWeight.Light, modifier = Modifier.padding(start = 8.dp))
+                    Text(stringResource(current.title), fontSize = 26.sp, fontWeight = FontWeight.Light, modifier = Modifier.padding(start = 8.dp))
                 }
             }
 
@@ -296,11 +305,11 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         .filter { it.parent == null }
                         .groupBy { it.section }
                         .forEach { (section, pages) ->
-                            Group(section) {
-                                if (section == "Productivity") TileRow(pages) { page = it }
+                            Group(stringResource(section)) {
+                                if (section == R.string.sec_productivity) TileRow(pages) { page = it }
                                 else pages.forEachIndexed { i, p ->
                                     if (i > 0) HorizontalDivider(color = DividerColor, thickness = 0.5.dp, modifier = Modifier.padding(start = 56.dp))
-                                    MenuRow(p.icon, p.title, p.summary) { page = p }
+                                    MenuRow(p.icon, stringResource(p.title), stringResource(p.summary)) { page = p }
                                 }
                             }
                         }
@@ -309,11 +318,11 @@ fun SettingsScreen(vm: LauncherViewModel) {
                 }
 
                 SettingsPage.APPEARANCE -> {
-                    Group("Theme") {
+                    Group(stringResource(R.string.s_theme)) {
                         Row(Modifier.fillMaxWidth().clickable { dialog = SettingsDialog.ACCENT }.padding(vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
-                                Text("Accent colour", fontSize = 16.sp)
+                                Text(stringResource(R.string.s_accent_colour), fontSize = 16.sp)
                                 Text(ACCENTS.firstOrNull { it.argb == s.accent }?.name ?: "Custom", color = Muted, fontSize = 13.sp)
                             }
                             Box(Modifier.size(28.dp).clip(CircleShape).background(Color(s.accent)))
@@ -331,25 +340,25 @@ fun SettingsScreen(vm: LauncherViewModel) {
                                 }
                             }
                         }
-                        ActionRow("Icon colours", s.iconTint.label) { dialog = SettingsDialog.ICON_TINT }
-                        ActionRow("Font", s.font.label) { dialog = SettingsDialog.FONT }
+                        ActionRow(stringResource(R.string.s_icon_colours), s.iconTint.label) { dialog = SettingsDialog.ICON_TINT }
+                        ActionRow(stringResource(R.string.s_font), s.font.label) { dialog = SettingsDialog.FONT }
                     }
-                    Group("Apps") {
-                        ActionRow("Home apps as", s.homeStyle.label) { dialog = SettingsDialog.HOME_STYLE }
+                    Group(stringResource(R.string.s_apps)) {
+                        ActionRow(stringResource(R.string.s_home_apps_as), s.homeStyle.label) { dialog = SettingsDialog.HOME_STYLE }
                         Stepper("App size on home", "${s.homeSize}",
                             onMinus = { vm.updateSettings { it.copy(homeSize = (it.homeSize - 2).coerceAtLeast(16)) } },
                             onPlus = { vm.updateSettings { it.copy(homeSize = (it.homeSize + 2).coerceAtMost(40)) } })
-                        ToggleRow("Icons in lists", s.showIcons) { on -> vm.updateSettings { it.copy(showIcons = on) } }
+                        ToggleRow(stringResource(R.string.s_icons_in_lists), s.showIcons) { on -> vm.updateSettings { it.copy(showIcons = on) } }
                     }
-                    Group("Edge light") {
-                        ActionRow("Style", s.edgeStyle.label) { dialog = SettingsDialog.EDGE_STYLE }
+                    Group(stringResource(R.string.s_edge_light)) {
+                        ActionRow(stringResource(R.string.s_style), s.edgeStyle.label) { dialog = SettingsDialog.EDGE_STYLE }
                         if (s.edgeStyle == EdgeStyle.CURVED || s.edgeStyle == EdgeStyle.FLAT) {
-                            ActionRow("Side", if (s.edgeRight) "Right" else "Left") {
+                            ActionRow(stringResource(R.string.s_side), if (s.edgeRight) "Right" else "Left") {
                                 vm.updateSettings { it.copy(edgeRight = !it.edgeRight) }
                             }
                         }
                         if (s.edgeStyle != EdgeStyle.OFF) {
-                            ActionRow("Brightness", listOf("Low", "Medium", "High")[s.edgeBright.coerceIn(1, 3) - 1]) {
+                            ActionRow(stringResource(R.string.s_brightness), listOf("Low", "Medium", "High")[s.edgeBright.coerceIn(1, 3) - 1]) {
                                 vm.updateSettings { it.copy(edgeBright = it.edgeBright % 3 + 1) }
                             }
                             Stepper("Blink before a prayer ends", "${s.edgeWarnMin} min",
@@ -359,34 +368,34 @@ fun SettingsScreen(vm: LauncherViewModel) {
                     }
                     Note(s.edgeStyle.detail + if (s.edgeStyle == EdgeStyle.OFF) "" else " Bright: the next prayer. Dim: what's left of this one." +
                         if (!s.prayerOn || s.city == null) " Needs Islamic prayer with a city." else "")
-                    Group("Motion") {
-                        ToggleRow("Animations", s.edgeMotion) { on -> vm.updateSettings { it.copy(edgeMotion = on) } }
+                    Group(stringResource(R.string.s_motion)) {
+                        ToggleRow(stringResource(R.string.s_animations), s.edgeMotion) { on -> vm.updateSettings { it.copy(edgeMotion = on) } }
                     }
-                    Note("Spark, blink and pulse. They run only while home is open.")
+                    Note(stringResource(R.string.s_spark_blink_and_pulse_they_run))
                 }
 
                 SettingsPage.HOME -> {
                     var worldOpen by remember { mutableStateOf(false) }
-                    Group("Gestures") {
-                        SettingsPage.GESTURES.let { MenuRow(it.icon, it.title, it.summary) { page = it } }
+                    Group(stringResource(R.string.s_gestures)) {
+                        SettingsPage.GESTURES.let { MenuRow(it.icon, stringResource(it.title), stringResource(it.summary)) { page = it } }
                     }
-                    Group("Headline") {
-                        ToggleRow("Screen time card", s.showUsage) { on -> vm.updateSettings { it.copy(showUsage = on) } }
-                        ActionRow("Ring beside it", s.dialMode.label) { dialog = SettingsDialog.DIAL_MODE }
+                    Group(stringResource(R.string.s_headline)) {
+                        ToggleRow(stringResource(R.string.s_screen_time_card), s.showUsage) { on -> vm.updateSettings { it.copy(showUsage = on) } }
+                        ActionRow(stringResource(R.string.s_ring_beside_it), s.dialMode.label) { dialog = SettingsDialog.DIAL_MODE }
                     }
-                    Group("Calendars") {
-                        ToggleRow("Hijri", s.hijriOn) { on -> vm.updateSettings { it.copy(hijriOn = on) } }
+                    Group(stringResource(R.string.s_calendars)) {
+                        ToggleRow(stringResource(R.string.s_hijri), s.hijriOn) { on -> vm.updateSettings { it.copy(hijriOn = on) } }
                         if (s.hijriOn) {
                             Stepper("Hijri adjustment (days)", if (s.hijriAdjust > 0) "+${s.hijriAdjust}" else "${s.hijriAdjust}",
                                 onMinus = { vm.updateSettings { it.copy(hijriAdjust = (it.hijriAdjust - 1).coerceAtLeast(-2)) } },
                                 onPlus = { vm.updateSettings { it.copy(hijriAdjust = (it.hijriAdjust + 1).coerceAtMost(2)) } })
                         }
-                        ToggleRow("Indian national (Saka)", s.sakaOn) { on -> vm.updateSettings { it.copy(sakaOn = on) } }
-                        ToggleRow("Malayalam (Kollavarsham)", s.malayalamOn) { on -> vm.updateSettings { it.copy(malayalamOn = on) } }
-                        ToggleRow("Tamil", s.tamilOn) { on -> vm.updateSettings { it.copy(tamilOn = on) } }
+                        ToggleRow(stringResource(R.string.s_indian_national_saka), s.sakaOn) { on -> vm.updateSettings { it.copy(sakaOn = on) } }
+                        ToggleRow(stringResource(R.string.s_malayalam_kollavarsham), s.malayalamOn) { on -> vm.updateSettings { it.copy(malayalamOn = on) } }
+                        ToggleRow(stringResource(R.string.s_tamil), s.tamilOn) { on -> vm.updateSettings { it.copy(tamilOn = on) } }
                     }
-                    Note("Shown in the headline and on the week card. Hijri uses Umm al-Qura; adjust it to your moon sighting.")
-                    Group("Cards under the headline") {
+                    Note(stringResource(R.string.s_shown_in_the_headline_and_on))
+                    Group(stringResource(R.string.s_cards_under_the_headline)) {
                         InfoPanel.entries.filter { it != InfoPanel.PRAYER }.forEach { panel ->
                             ToggleRow(panel.label, panel in s.infoPanels) { on ->
                                 vm.updateSettings { it.copy(infoPanels = if (on) it.infoPanels + panel else it.infoPanels - panel) }
@@ -395,34 +404,34 @@ fun SettingsScreen(vm: LauncherViewModel) {
                             }
                         }
                         if (InfoPanel.WORLD in s.infoPanels) {
-                            ActionRow("World clock cities",
+                            ActionRow(stringResource(R.string.s_world_clock_cities),
                                 s.worldClocks.joinToString(", ") { it.substringBefore("|") }.ifEmpty { "Choose up to three" }) { worldOpen = true }
                         }
                     }
-                    Note("Swipe between cards on home. Weather appears once it's on in Extras.")
+                    Note(stringResource(R.string.s_swipe_between_cards_on_home_weather))
                     if (worldOpen) {
                         WorldCitiesDialog(s.worldClocks, onDismiss = { worldOpen = false }) { list ->
                             vm.updateSettings { it.copy(worldClocks = list) }
                             worldOpen = false
                         }
                     }
-                    Group("Footer") {
-                        ToggleRow("Network speed and memory", s.showStats) { on -> vm.updateSettings { it.copy(showStats = on) } }
-                        ToggleRow("Local IP address", s.showLocalIp) { on -> vm.updateSettings { it.copy(showLocalIp = on) } }
-                        ToggleRow("Public IP address", s.publicIpOn) { on -> vm.updateSettings { it.copy(publicIpOn = on) } }
+                    Group(stringResource(R.string.s_footer)) {
+                        ToggleRow(stringResource(R.string.s_network_speed_and_memory), s.showStats) { on -> vm.updateSettings { it.copy(showStats = on) } }
+                        ToggleRow(stringResource(R.string.s_local_ip_address), s.showLocalIp) { on -> vm.updateSettings { it.copy(showLocalIp = on) } }
+                        ToggleRow(stringResource(R.string.s_public_ip_address), s.publicIpOn) { on -> vm.updateSettings { it.copy(publicIpOn = on) } }
                     }
-                    Note("Public IP from api.ipify.org, checked only when your network changes.")
-                    Group("Apps") {
-                        ToggleRow("Recently used (24 h)", s.showRecent) { on -> vm.updateSettings { it.copy(showRecent = on) } }
-                        ToggleRow("Most used today", s.homeMode == HomeMode.AUTO) { on ->
+                    Note(stringResource(R.string.s_public_ip_from_api_ipify_org))
+                    Group(stringResource(R.string.s_apps)) {
+                        ToggleRow(stringResource(R.string.s_recently_used_24_h), s.showRecent) { on -> vm.updateSettings { it.copy(showRecent = on) } }
+                        ToggleRow(stringResource(R.string.s_most_used_today), s.homeMode == HomeMode.AUTO) { on ->
                             vm.updateSettings { it.copy(homeMode = if (on) HomeMode.AUTO else HomeMode.PINNED) }
                         }
                         Stepper("Apps on home", "${s.homeCount}",
                             onMinus = { vm.updateSettings { it.copy(homeCount = (it.homeCount - 1).coerceAtLeast(3)) } },
                             onPlus = { vm.updateSettings { it.copy(homeCount = (it.homeCount + 1).coerceAtMost(9)) } })
                     }
-                    Note("Long-press an app to pin it. Most used and Recent need usage access.")
-                    Group("Widgets") {
+                    Note(stringResource(R.string.s_long_press_an_app_to_pin))
+                    Group(stringResource(R.string.s_widgets)) {
                         Text("Swipe right on home for the Shelf. Add more shelves with +, and put Stillpoint cards " +
                             "(notes, tasks, calendar, countdown...) or any app's widgets on them. Stillpoint's own widgets: Stillpoint Widget " +
                             "(clock and dates), Stillpoint Prayer (times, countdown, moon) and Stillpoint Gold. " +
@@ -432,37 +441,37 @@ fun SettingsScreen(vm: LauncherViewModel) {
                 }
 
                 SettingsPage.APPS -> {
-                    Group("Behaviour") {
-                        ActionRow("Open the app list on", s.drawerStart.label.replaceFirstChar { it.uppercase() }) {
+                    Group(stringResource(R.string.s_behaviour)) {
+                        ActionRow(stringResource(R.string.s_open_the_app_list_on), s.drawerStart.label.replaceFirstChar { it.uppercase() }) {
                             dialog = SettingsDialog.DRAWER_START
                         }
                     }
-                    Group("Hidden apps") {
+                    Group(stringResource(R.string.s_hidden_apps)) {
                         val hidden = vm.apps.filter { it.key in s.hidden }
-                        if (hidden.isEmpty()) Text("None. Long-press an app in the list to hide it.", color = Muted,
+                        if (hidden.isEmpty()) Text(stringResource(R.string.s_none_long_press_an_app_in), color = Muted,
                             fontSize = 14.sp, modifier = Modifier.padding(vertical = 12.dp))
                         hidden.forEach { app ->
                             Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Text(app.label, fontSize = 16.sp, modifier = Modifier.weight(1f))
-                                Text("Unhide", color = Accent, modifier = Modifier.clickable { vm.unhide(app.key) }.padding(8.dp))
+                                Text(stringResource(R.string.s_unhide), color = Accent, modifier = Modifier.clickable { vm.unhide(app.key) }.padding(8.dp))
                             }
                         }
                     }
                 }
 
                 SettingsPage.GESTURES -> {
-                    Group("Swipes and taps") {
+                    Group(stringResource(R.string.s_swipes_and_taps)) {
                         listOf(GestureSlot.SWIPE_LEFT, GestureSlot.SWIPE_RIGHT, GestureSlot.SWIPE_UP, GestureSlot.SWIPE_DOWN,
                             GestureSlot.DOUBLE_TAP).forEach { slot ->
                             ActionRow(slot.label, vm.targetLabel(s.gesture(slot)) ?: "Nothing") { picking = slot }
                         }
                     }
-                    Group("Bottom shortcuts") {
+                    Group(stringResource(R.string.s_bottom_shortcuts)) {
                         listOf(GestureSlot.SHORTCUT_LEFT, GestureSlot.SHORTCUT_MIDDLE, GestureSlot.SHORTCUT_RIGHT).forEach { slot ->
                             ActionRow(slot.label, vm.targetLabel(s.gesture(slot)) ?: "Nothing") { picking = slot }
                         }
                     }
-                    Group("Gesture service") {
+                    Group(stringResource(R.string.s_gesture_service)) {
                         ActionRow(
                             "Status: ${if (a11yOn) "on" else "off"}",
                             "For the Lock screen and Notifications gestures.",
@@ -471,65 +480,65 @@ fun SettingsScreen(vm: LauncherViewModel) {
                 }
 
                 SettingsPage.PRAYER -> {
-                    Group("Prayer times") {
-                        ToggleRow("Prayer ring on home", s.dialMode == DialMode.PRAYER) { on ->
+                    Group(stringResource(R.string.s_prayer_times)) {
+                        ToggleRow(stringResource(R.string.s_prayer_ring_on_home), s.dialMode == DialMode.PRAYER) { on ->
                             vm.updateSettings { it.copy(dialMode = if (on) DialMode.PRAYER else DialMode.OFF) }
                         }
-                        ToggleRow("Prayer times", s.prayerOn) { on ->
+                        ToggleRow(stringResource(R.string.s_prayer_times), s.prayerOn) { on ->
                             if (on && s.city == null) dialog = SettingsDialog.PRAYER_CITY
                             else vm.updateSettings { it.copy(prayerOn = on) }
                         }
-                        ActionRow("City", s.city?.let { "${it.name}, ${it.country}" } ?: "Not set") {
+                        ActionRow(stringResource(R.string.s_city), s.city?.let { "${it.name}, ${it.country}" } ?: "Not set") {
                             dialog = SettingsDialog.PRAYER_CITY
                         }
-                        ActionRow("Calculation method", s.prayerMethod.label) { dialog = SettingsDialog.PRAYER_METHOD }
-                        ActionRow("Asr time", if (s.asrHanafi) "Hanafi (later)" else "Standard (Shafi'i, Maliki, Hanbali)") {
+                        ActionRow(stringResource(R.string.s_calculation_method), s.prayerMethod.label) { dialog = SettingsDialog.PRAYER_METHOD }
+                        ActionRow(stringResource(R.string.s_asr_time), if (s.asrHanafi) "Hanafi (later)" else "Standard (Shafi'i, Maliki, Hanbali)") {
                             vm.updateSettings { it.copy(asrHanafi = !it.asrHanafi) }
                         }
-                        ActionRow("Today's times and Qibla compass") { vm.screen = Screen.PRAYER }
+                        ActionRow(stringResource(R.string.s_today_s_times_and_qibla_compass)) { vm.screen = Screen.PRAYER }
                     }
-                    Note("Calculated on the phone from the city's position. Nothing is sent.")
-                    Group("Alerts") {
-                        ToggleRow("Prayer time alert", s.adhanAlert) { on -> alertToggle(on) { it.copy(adhanAlert = on) } }
-                        ToggleRow("Iqama alert", s.iqamaAlert) { on -> alertToggle(on) { it.copy(iqamaAlert = on) } }
+                    Note(stringResource(R.string.s_calculated_on_the_phone_from_the))
+                    Group(stringResource(R.string.s_alerts)) {
+                        ToggleRow(stringResource(R.string.s_prayer_time_alert), s.adhanAlert) { on -> alertToggle(on) { it.copy(adhanAlert = on) } }
+                        ToggleRow(stringResource(R.string.s_iqama_alert), s.iqamaAlert) { on -> alertToggle(on) { it.copy(iqamaAlert = on) } }
                         if (s.adhanAlert || s.iqamaAlert) {
-                            ActionRow("Alert sound and vibration", "Android settings") { ctx.safeStart(PrayerAlerts.soundSettings(ctx)) }
+                            ActionRow(stringResource(R.string.s_alert_sound_and_vibration), "Android settings") { ctx.safeStart(PrayerAlerts.soundSettings(ctx)) }
                         }
                     }
-                    Group("Iqama after the adhan") {
+                    Group(stringResource(R.string.s_iqama_after_the_adhan)) {
                         Prayer.entries.filter { it.isPrayer }.forEach { p ->
                             Stepper(p.label, "${s.iqamaMin(p)} min",
                                 onMinus = { vm.updateSettings { it.copy(iqama = it.iqama + (p to (it.iqamaMin(p) - 5).coerceAtLeast(5))) } },
                                 onPlus = { vm.updateSettings { it.copy(iqama = it.iqama + (p to (it.iqamaMin(p) + 5).coerceAtMost(60))) } })
                         }
                     }
-                    Note("Set your mosque's iqama times. For an adhan, pick it as the alert sound in Android settings.")
-                    Group("Feel") {
-                        ActionRow("Edge light", s.edgeStyle.label) { page = SettingsPage.APPEARANCE }
-                        ToggleRow("Vibrate on the Qibla compass", s.compassHaptics) { on ->
+                    Note(stringResource(R.string.s_set_your_mosque_s_iqama_times))
+                    Group(stringResource(R.string.s_feel)) {
+                        ActionRow(stringResource(R.string.s_edge_light), s.edgeStyle.label) { page = SettingsPage.APPEARANCE }
+                        ToggleRow(stringResource(R.string.s_vibrate_on_the_qibla_compass), s.compassHaptics) { on ->
                             vm.updateSettings { it.copy(compassHaptics = on) }
                         }
                     }
-                    Note("The compass ticks every 10°, clicks at N, E, S and W, and taps once when you face the Qibla.")
+                    Note(stringResource(R.string.s_the_compass_ticks_every_10_clicks))
                 }
 
                 SettingsPage.SENIOR -> {
-                    Group("Senior mode") {
-                        ToggleRow("Senior mode", s.seniorMode) { on -> vm.setSeniorMode(on) }
+                    Group(stringResource(R.string.s_senior_mode)) {
+                        ToggleRow(stringResource(R.string.s_senior_mode), s.seniorMode) { on -> vm.setSeniorMode(on) }
                     }
-                    Note("Big text, six large tiles and a simple app list. Hold the clock on home to open Settings.")
-                    Group("Tiles") {
+                    Note(stringResource(R.string.s_big_text_six_large_tiles_and))
+                    Group(stringResource(R.string.s_tiles)) {
                         (0 until 6).forEach { i ->
                             ActionRow("Tile ${i + 1}", vm.seniorApp(i)?.label ?: "Empty") { seniorPick = i }
                         }
                     }
-                    Group("Call button") {
-                        ActionRow("Name", s.seniorCallName.ifBlank { "Not set" }) {
+                    Group(stringResource(R.string.s_call_button)) {
+                        ActionRow(stringResource(R.string.s_name), s.seniorCallName.ifBlank { "Not set" }) {
                             textEdit = TextEdit("Name on the button", "For example Mum or Ahmed.", s.seniorCallName, "Name") { v ->
                                 vm.updateSettings { it.copy(seniorCallName = v) }
                             }
                         }
-                        ActionRow("Phone number", s.seniorCallNumber.ifBlank { "Not set" }) {
+                        ActionRow(stringResource(R.string.s_phone_number), s.seniorCallNumber.ifBlank { "Not set" }) {
                             textEdit = TextEdit("Phone number", "Opens the phone app with this number.", s.seniorCallNumber, "+971 50 123 4567") { v ->
                                 vm.updateSettings { it.copy(seniorCallNumber = v) }
                             }
@@ -537,69 +546,92 @@ fun SettingsScreen(vm: LauncherViewModel) {
                     }
                 }
 
+                SettingsPage.LANGUAGE -> {
+                    val chosen = remember { Lang.saved(ctx) }
+                    Group(stringResource(R.string.s_language)) {
+                        Lang.CHOICES.forEachIndexed { i, (code, name) ->
+                            if (i > 0) HorizontalDivider(color = DividerColor, thickness = 0.5.dp)
+                            Row(
+                                Modifier.fillMaxWidth().clickable {
+                                    if (code != chosen) {
+                                        Lang.save(ctx, code)
+                                        ctx.findActivity()?.recreate()
+                                    }
+                                }.padding(vertical = 14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(if (code.isEmpty()) stringResource(R.string.s_system_default) else name, fontSize = 16.sp,
+                                    modifier = Modifier.weight(1f))
+                                if (code == chosen) Text("✓", color = Accent, fontSize = 16.sp)
+                            }
+                        }
+                    }
+                    Note(stringResource(R.string.s_language_note))
+                }
+
                 SettingsPage.SELFHOSTED -> SelfHostedSettings(vm)
 
                 SettingsPage.TOOLS -> {
-                    Group("Tools") {
-                        ToggleRow("Show Tools", s.toolsOn) { on -> vm.updateSettings { it.copy(toolsOn = on) } }
-                        if (s.toolsOn) ActionRow("Open Tools", "Device, security and text, network") {
+                    Group(stringResource(R.string.s_tools)) {
+                        ToggleRow(stringResource(R.string.s_show_tools), s.toolsOn) { on -> vm.updateSettings { it.copy(toolsOn = on) } }
+                        if (s.toolsOn) ActionRow(stringResource(R.string.s_open_tools), "Device, security and text, network") {
                             vm.toolsReturn = Screen.SETTINGS
                             vm.screen = Screen.TOOLS
                         }
                     }
-                    Note("Device info, passwords, QR codes and network tools. Open them from the Shelf or a gesture.")
+                    Note(stringResource(R.string.s_device_info_passwords_qr_codes_and))
                 }
 
                 SettingsPage.WEATHER -> {
-                    Group("Weather") {
-                        ToggleRow("Weather card on home", s.weatherOn) { on ->
+                    Group(stringResource(R.string.s_weather)) {
+                        ToggleRow(stringResource(R.string.s_weather_card_on_home), s.weatherOn) { on ->
                             vm.updateSettings { it.copy(weatherOn = on) }
                             if (on && s.city == null) dialog = SettingsDialog.CITY else if (on) vm.refreshLive(force = true)
                         }
-                        ActionRow("City", s.city?.let { "${it.name}, ${it.country}" } ?: "Not set") { dialog = SettingsDialog.CITY }
-                        ActionRow("Units", if (s.fahrenheit) "Fahrenheit (°F)" else "Celsius (°C)") {
+                        ActionRow(stringResource(R.string.s_city), s.city?.let { "${it.name}, ${it.country}" } ?: "Not set") { dialog = SettingsDialog.CITY }
+                        ActionRow(stringResource(R.string.s_units), if (s.fahrenheit) "Fahrenheit (°F)" else "Celsius (°C)") {
                             vm.updateSettings { it.copy(fahrenheit = !it.fahrenheit) }
                         }
                     }
-                    Note("From Open-Meteo. Only the city's rounded position is sent, at most every 30 minutes.")
+                    Note(stringResource(R.string.s_from_open_meteo_only_the_city))
                 }
 
                 SettingsPage.GOLD -> {
-                    Group("Gold price") {
-                        ActionRow("Source", s.goldSource.label) { dialog = SettingsDialog.GOLD_SOURCE }
-                        ActionRow("Show in", s.goldCurrency) { dialog = SettingsDialog.CURRENCY }
-                        ActionRow("Karat", "${s.goldKarat}K") { dialog = SettingsDialog.KARAT }
-                        ActionRow("Unit", if (s.goldPerGram) "Per gram" else "Per troy ounce") {
+                    Group(stringResource(R.string.s_gold_price)) {
+                        ActionRow(stringResource(R.string.s_source), s.goldSource.label) { dialog = SettingsDialog.GOLD_SOURCE }
+                        ActionRow(stringResource(R.string.s_show_in), s.goldCurrency) { dialog = SettingsDialog.CURRENCY }
+                        ActionRow(stringResource(R.string.s_karat), "${s.goldKarat}K") { dialog = SettingsDialog.KARAT }
+                        ActionRow(stringResource(R.string.s_unit), if (s.goldPerGram) "Per gram" else "Per troy ounce") {
                             vm.updateSettings { it.copy(goldPerGram = !it.goldPerGram) }
                         }
                     }
                     if (s.goldSource == GoldSource.CUSTOM) {
                         val g = vm.sources.gold
                         var test by remember { mutableStateOf<String?>(null) }
-                        Group("Your source") {
-                            ActionRow("Address", g.url.ifBlank { "Not set · tap to add" }) {
+                        Group(stringResource(R.string.s_your_source)) {
+                            ActionRow(stringResource(R.string.s_address), g.url.ifBlank { "Not set · tap to add" }) {
                                 textEdit = TextEdit("Gold price address",
                                     "Any web address that shows a gold price: an API, a JSON file, or a page.",
                                     g.url, "https://…") { vm.setCustomGold(g.copy(url = it)); test = null }
                             }
-                            ActionRow("Where the price is", g.path.ifBlank { "The first number" }) {
+                            ActionRow(stringResource(R.string.s_where_the_price_is), g.path.ifBlank { "The first number" }) {
                                 textEdit = TextEdit("Where the price is",
                                     "For JSON, the path to the number, like data.price or rates.XAU or 0.price. " +
                                         "Leave empty to use the first number in the answer.",
                                     g.path, "data.price") { vm.setCustomGold(g.copy(path = it)); test = null }
                             }
-                            ActionRow("The price is per", if (g.perGram) "Gram" else "Troy ounce") {
+                            ActionRow(stringResource(R.string.s_the_price_is_per), if (g.perGram) "Gram" else "Troy ounce") {
                                 vm.setCustomGold(g.copy(perGram = !g.perGram)); test = null
                             }
-                            ActionRow("In currency", g.currency) { dialog = SettingsDialog.GOLD_CUSTOM_CURRENCY }
-                            ActionRow("Test", test ?: "Fetch it now and show what was read") {
+                            ActionRow(stringResource(R.string.s_in_currency), g.currency) { dialog = SettingsDialog.GOLD_CUSTOM_CURRENCY }
+                            ActionRow(stringResource(R.string.s_test), test ?: "Fetch it now and show what was read") {
                                 test = "Checking…"
                                 settingsScope.launch { test = vm.testCustomGold() }
                             }
                         }
-                        Note("The price is taken as 24K; karat, unit and the currency you show are worked out from it.")
+                        Note(stringResource(R.string.s_the_price_is_taken_as_24k))
                     }
-                    Group("Widget") {
+                    Group(stringResource(R.string.s_widget)) {
                         Text("Add \"Stillpoint Gold\" from the Shelf (swipe right on home, Add widget) " +
                             "or from any launcher. Tap the widget to refresh.", color = Muted, fontSize = 14.sp,
                             modifier = Modifier.padding(vertical = 12.dp))
@@ -608,58 +640,58 @@ fun SettingsScreen(vm: LauncherViewModel) {
                 }
 
                 SettingsPage.HUB -> {
-                    Group("Project Hub") {
+                    Group(stringResource(R.string.s_project_hub)) {
                         if (vm.hubConnected()) {
-                            ActionRow("Server", vm.hubUrl().orEmpty()) {}
+                            ActionRow(stringResource(R.string.s_server), vm.hubUrl().orEmpty()) {}
                             ActionRow(
-                                "Status",
+                                stringResource(R.string.s_status),
                                 vm.hubError ?: vm.hub?.let { "Connected · updated ${((System.currentTimeMillis() - it.fetchedAt) / 60_000L)} min ago. Tap to update." }
                                     ?: "Connected. Tap to update.",
                             ) { vm.refreshHub(force = true) }
-                            ActionRow("Disconnect", "Forget the address and key on this phone") { vm.disconnectHub() }
+                            ActionRow(stringResource(R.string.s_disconnect), "Forget the address and key on this phone") { vm.disconnectHub() }
                         } else {
-                            ActionRow("Connect", "Scan the QR code on your hub's \"Connect phone\" page, or type the address and key") {
+                            ActionRow(stringResource(R.string.s_connect), "Scan the QR code on your hub's \"Connect phone\" page, or type the address and key") {
                                 dialog = SettingsDialog.HUB
                             }
                         }
                     }
-                    Note("Your own server. Stillpoint connects only to this address. Use https outside your home network.")
+                    Note(stringResource(R.string.s_your_own_server_stillpoint_connects_only))
                 }
 
                 SettingsPage.BACKUP -> {
-                    Group("Backup") {
-                        ActionRow("Save a backup file", "Settings, notes, tasks, projects, pinned apps, favorites, gestures (no keys or tokens)") {
+                    Group(stringResource(R.string.s_backup)) {
+                        ActionRow(stringResource(R.string.s_save_a_backup_file), "Settings, notes, tasks, projects, pinned apps, favorites, gestures (no keys or tokens)") {
                             saveBackup.launch("stillpoint-backup-${java.time.LocalDate.now()}.json")
                         }
-                        ActionRow("Restore from a file", "Puts a backup's setup in place, then Stillpoint restarts") {
+                        ActionRow(stringResource(R.string.s_restore_from_a_file), "Puts a backup's setup in place, then Stillpoint restarts") {
                             openBackup.launch(arrayOf("application/json", "text/plain", "application/octet-stream"))
                         }
                     }
                     backupNote?.let { Note(it) }
-                    Note("Saved where you choose; nothing is uploaded. Keys and tokens are left out. Widgets aren't included.")
+                    Note(stringResource(R.string.s_saved_where_you_choose_nothing_is))
                 }
 
                 SettingsPage.NOTIFY -> {
                     val access = remember(vm.resumeTick) { NotifyHub.hasAccess(ctx) }
-                    Group("Notification access") {
+                    Group(stringResource(R.string.s_notification_access)) {
                         ActionRow(if (access) "Allowed" else "Not allowed · tap to allow",
                             "Read on the phone only. Nothing is kept or sent.") {
                             ctx.safeStart(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
                         }
                     }
-                    if (!access) Note("Switch greyed out? App info › ⋮ › Allow restricted settings.")
-                    Group("Show") {
-                        ToggleRow("Edge light", s.notifyLight) { on -> vm.updateSettings { it.copy(notifyLight = on) } }
-                        ActionRow("Style", s.notifyStyle.label) {
+                    if (!access) Note(stringResource(R.string.s_switch_greyed_out_app_info_allow))
+                    Group(stringResource(R.string.s_show)) {
+                        ToggleRow(stringResource(R.string.s_edge_light), s.notifyLight) { on -> vm.updateSettings { it.copy(notifyLight = on) } }
+                        ActionRow(stringResource(R.string.s_style), s.notifyStyle.label) {
                             vm.updateSettings { it.copy(notifyStyle = NotifyStyle.entries[(it.notifyStyle.ordinal + 1) % NotifyStyle.entries.size]) }
                         }
-                        ToggleRow("Signal dot at the top", s.notifyDot) { on -> vm.updateSettings { it.copy(notifyDot = on) } }
-                        ToggleRow("Dots on apps", s.notifyAppDots) { on -> vm.updateSettings { it.copy(notifyAppDots = on) } }
-                        ActionRow("Send a test notification", "Then go home to see the light and the dots") { NotifyTest.send(ctx) }
+                        ToggleRow(stringResource(R.string.s_signal_dot_at_the_top), s.notifyDot) { on -> vm.updateSettings { it.copy(notifyDot = on) } }
+                        ToggleRow(stringResource(R.string.s_dots_on_apps), s.notifyAppDots) { on -> vm.updateSettings { it.copy(notifyAppDots = on) } }
+                        ActionRow(stringResource(R.string.s_send_a_test_notification), "Then go home to see the light and the dots") { NotifyTest.send(ctx) }
                     }
-                    Note("Uses the edge style from Appearance, in each app's colour.")
-                    Group("Never miss") {
-                        ActionRow("Remind again while unread", if (s.remindEvery == 0) "Off" else "Every ${s.remindEvery} min, up to 3 times") {
+                    Note(stringResource(R.string.s_uses_the_edge_style_from_appearance))
+                    Group(stringResource(R.string.s_never_miss)) {
+                        ActionRow(stringResource(R.string.s_remind_again_while_unread), if (s.remindEvery == 0) "Off" else "Every ${s.remindEvery} min, up to 3 times") {
                             vm.updateSettings { it.copy(remindEvery = when (it.remindEvery) { 0 -> 5; 5 -> 10; 10 -> 15; else -> 0 }) }
                         }
                         s.importantPeople.forEach { name ->
@@ -667,17 +699,17 @@ fun SettingsScreen(vm: LauncherViewModel) {
                                 vm.updateSettings { it.copy(importantPeople = it.importantPeople - name) }
                             }
                         }
-                        ActionRow("Add a person", "A name as it shows in their notifications") {
+                        ActionRow(stringResource(R.string.s_add_a_person), "A name as it shows in their notifications") {
                             textEdit = TextEdit("Important person",
                                 "Type the name as it appears in notifications (for example Mum, or a group's name).", "", "Name") { n ->
                                 if (n.isNotBlank()) vm.updateSettings { it.copy(importantPeople = (it.importantPeople + n.trim()).distinct()) }
                             }
                         }
                     }
-                    Note("Important apps (★) and people shine brighter.")
-                    Group("Apps") {
+                    Note(stringResource(R.string.s_important_apps_and_people_shine_brighter))
+                    Group(stringResource(R.string.s_apps)) {
                         val seen = vm.notifySeenApps()
-                        if (seen.isEmpty()) Text("Apps appear here after they show a notification.", color = Muted, fontSize = 14.sp,
+                        if (seen.isEmpty()) Text(stringResource(R.string.s_apps_appear_here_after_they_show), color = Muted, fontSize = 14.sp,
                             modifier = Modifier.padding(vertical = 12.dp))
                         seen.forEach { app -> NotifyAppRow(vm, app) }
                     }
@@ -691,25 +723,25 @@ fun SettingsScreen(vm: LauncherViewModel) {
                             f = footprint()
                         }
                     }
-                    Group("Right now") {
-                        ActionRow("Memory", "${f.memMb} MB") {}
-                        ActionRow("Processor", "${formatDuration(f.cpuMs).let { if (f.cpuMs < 60_000) "${f.cpuMs / 1000} s" else it }} " +
+                    Group(stringResource(R.string.s_right_now)) {
+                        ActionRow(stringResource(R.string.s_memory), "${f.memMb} MB") {}
+                        ActionRow(stringResource(R.string.s_processor), "${formatDuration(f.cpuMs).let { if (f.cpuMs < 60_000) "${f.cpuMs / 1000} s" else it }} " +
                             "of work since it started ${formatDuration(f.upMs)} ago " +
                             "(${String.format(java.util.Locale.US, "%.2f", f.cpuMs * 100.0 / f.upMs.coerceAtLeast(1))}% of the time)") {}
                     }
-                    Group("Battery") {
-                        ActionRow("Battery use", "Android keeps this figure. Tap to see Stillpoint's page.") {
+                    Group(stringResource(R.string.s_battery)) {
+                        ActionRow(stringResource(R.string.s_battery_use), "Android keeps this figure. Tap to see Stillpoint's page.") {
                             ctx.safeStart(
                                 Intent("android.settings.VIEW_ADVANCED_POWER_USAGE_DETAIL").putExtra("package_name", ctx.packageName),
                                 Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${ctx.packageName}")),
                             )
                         }
                     }
-                    Note("Android shows battery use on its own page. Stillpoint works only while open and wakes briefly for alerts and syncs.")
+                    Note(stringResource(R.string.s_android_shows_battery_use_on_its))
                 }
 
                 SettingsPage.SOURCES -> {
-                    Group("Addresses") {
+                    Group(stringResource(R.string.s_addresses)) {
                         SourceKey.entries.forEach { k ->
                             val custom = vm.sources.isCustom(k)
                             ActionRow(k.label, (if (custom) "Yours · " else "Default · ") +
@@ -719,29 +751,29 @@ fun SettingsScreen(vm: LauncherViewModel) {
                             }
                         }
                     }
-                    Group("Set on their own pages") {
-                        ActionRow("Gold price", s.goldSource.label) { page = SettingsPage.GOLD }
-                        ActionRow("Calendar link", vm.icsUrl()?.let { maskUrl(it) } ?: "Not set") { page = SettingsPage.CALENDAR }
-                        ActionRow("Project Hub", vm.hubUrl() ?: "Not connected") { page = SettingsPage.HUB }
+                    Group(stringResource(R.string.s_set_on_their_own_pages)) {
+                        ActionRow(stringResource(R.string.s_gold_price), s.goldSource.label) { page = SettingsPage.GOLD }
+                        ActionRow(stringResource(R.string.s_calendar_link), vm.icsUrl()?.let { maskUrl(it) } ?: "Not set") { page = SettingsPage.CALENDAR }
+                        ActionRow(stringResource(R.string.s_project_hub), vm.hubUrl() ?: "Not connected") { page = SettingsPage.HUB }
                     }
-                    Note("Leave empty for the default. Prayer times, Qibla and dates are calculated on the phone.")
+                    Note(stringResource(R.string.s_leave_empty_for_the_default_prayer))
                 }
 
                 SettingsPage.LOCK -> {
-                    Group("Lock screen") {
-                        ToggleRow("Show info on the lock screen", s.lockOn) { on ->
+                    Group(stringResource(R.string.s_lock_screen)) {
+                        ToggleRow(stringResource(R.string.s_show_info_on_the_lock_screen), s.lockOn) { on ->
                             if (on && !LockNotification.canPost(ctx)) notifyPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
                             else { vm.updateSettings { it.copy(lockOn = on) }; Refresh.all(ctx) }
                         }
                     }
-                    Group("Show") {
-                        ToggleRow("Next prayer with countdown", s.lockPrayer) { on ->
+                    Group(stringResource(R.string.s_show)) {
+                        ToggleRow(stringResource(R.string.s_next_prayer_with_countdown), s.lockPrayer) { on ->
                             vm.updateSettings { it.copy(lockPrayer = on) }; Refresh.all(ctx)
                         }
-                        ToggleRow("Hijri date", s.lockHijri) { on -> vm.updateSettings { it.copy(lockHijri = on) }; Refresh.all(ctx) }
-                        ToggleRow("Tamil date", s.lockTamil) { on -> vm.updateSettings { it.copy(lockTamil = on) }; Refresh.all(ctx) }
+                        ToggleRow(stringResource(R.string.s_hijri_date), s.lockHijri) { on -> vm.updateSettings { it.copy(lockHijri = on) }; Refresh.all(ctx) }
+                        ToggleRow(stringResource(R.string.s_tamil_date), s.lockTamil) { on -> vm.updateSettings { it.copy(lockTamil = on) }; Refresh.all(ctx) }
                     }
-                    Note("A silent lock-screen notification. Android keeps the countdown, so nothing runs in the background.")
+                    Note(stringResource(R.string.s_a_silent_lock_screen_notification_android))
                 }
 
                 SettingsPage.TASKS -> {
@@ -766,16 +798,16 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         }
                     }
                     when (s.tasksSource) {
-                        TaskSource.PHONE -> Note("Stored on this phone. Swipe a task left to delete it.")
+                        TaskSource.PHONE -> Note(stringResource(R.string.s_stored_on_this_phone_swipe_a))
                         TaskSource.HUB -> SyncGroup(vm, SyncFeature.TASKS, Sync.HUB, s.tasksSync) { dialog = SettingsDialog.SYNC_TASKS }
-                        else -> Group("Sync") {
+                        else -> Group(stringResource(R.string.s_sync)) {
                             Text("${s.tasksSource.label} keeps itself in sync, for example with DAVx5. Stillpoint reads its open " +
                                 "tasks when you open the Shelf; ticking one there marks it done in ${s.tasksSource.label}.",
                                 color = Muted, fontSize = 14.sp, modifier = Modifier.padding(vertical = 12.dp))
-                            ActionRow("Read now", vm.providerError ?: "${vm.providerTasks.size} open tasks") { vm.loadProviderTasks() }
+                            ActionRow(stringResource(R.string.s_read_now), vm.providerError ?: "${vm.providerTasks.size} open tasks") { vm.loadProviderTasks() }
                         }
                     }
-                    Note("Add Tasks to any shelf: Shelf › Add › Stillpoint cards.")
+                    Note(stringResource(R.string.s_add_tasks_to_any_shelf_shelf))
                 }
 
                 SettingsPage.CALENDAR -> {
@@ -792,17 +824,17 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         }
                     }
                     when (s.calendarSource) {
-                        CalendarSource.PHONE -> Note("Android syncs the accounts on this phone by itself. Stillpoint reads today's events.")
+                        CalendarSource.PHONE -> Note(stringResource(R.string.s_android_syncs_the_accounts_on_this))
                         CalendarSource.HUB -> SyncGroup(vm, SyncFeature.CALENDAR, Sync.HUB, s.calendarSync) { dialog = SettingsDialog.SYNC_CALENDAR }
                         CalendarSource.ICS -> {
-                            Group("Calendar link") {
-                                ActionRow("Link", vm.icsUrl()?.let { maskUrl(it) } ?: "Not set · tap to add") { dialog = SettingsDialog.ICS_URL }
+                            Group(stringResource(R.string.s_calendar_link)) {
+                                ActionRow(stringResource(R.string.s_link), vm.icsUrl()?.let { maskUrl(it) } ?: "Not set · tap to add") { dialog = SettingsDialog.ICS_URL }
                             }
                             SyncGroup(vm, SyncFeature.CALENDAR, Sync.ICS, s.calendarSync) { dialog = SettingsDialog.SYNC_CALENDAR }
                         }
                     }
-                    Group("Display") {
-                        ToggleRow("Today's calendar on home", s.showAgenda) { on ->
+                    Group(stringResource(R.string.s_display)) {
+                        ToggleRow(stringResource(R.string.s_today_s_calendar_on_home), s.showAgenda) { on ->
                             val needsPermission = s.calendarSource == CalendarSource.PHONE &&
                                 ctx.checkSelfPermission(Manifest.permission.READ_CALENDAR) != PackageManager.PERMISSION_GRANTED
                             if (on && needsPermission) calendarPermission.launch(Manifest.permission.READ_CALENDAR)
@@ -812,7 +844,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
                 }
 
                 SettingsPage.PRIVACY -> {
-                    Group("Permissions") {
+                    Group(stringResource(R.string.s_permissions)) {
                         ActionRow(
                             "Usage access: ${if (vm.hasUsageAccess) "allowed" else "not allowed"}",
                             "Screen time, most-used apps and data usage. Data stays on the phone.",
@@ -822,42 +854,42 @@ fun SettingsScreen(vm: LauncherViewModel) {
                             "Only for the Lock screen and Notifications gestures.",
                         ) { ctx.safeStart(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
                     }
-                    Group("Data") {
-                        ActionRow("Data usage", "Per-app Wi-Fi and mobile data, from Android's own records") { vm.screen = Screen.DATA }
+                    Group(stringResource(R.string.s_data)) {
+                        ActionRow(stringResource(R.string.s_data_usage), "Per-app Wi-Fi and mobile data, from Android's own records") { vm.screen = Screen.DATA }
                     }
                 }
 
-                SettingsPage.UPDATES -> Group("GitHub releases") { UpdateSection(available) }
+                SettingsPage.UPDATES -> Group(stringResource(R.string.s_github_releases)) { UpdateSection(available) }
 
-                SettingsPage.SYSTEM -> Group("System") {
+                SettingsPage.SYSTEM -> Group(stringResource(R.string.s_system)) {
                     SettingsPage.entries
                         .filter { it.parent == SettingsPage.SYSTEM && (it != SettingsPage.UPDATES || Updater.AVAILABLE) }
                         .forEachIndexed { i, p ->
                             if (i > 0) HorizontalDivider(color = DividerColor, thickness = 0.5.dp, modifier = Modifier.padding(start = 56.dp))
-                            MenuRow(p.icon, p.title, p.summary) { page = p }
+                            MenuRow(p.icon, stringResource(p.title), stringResource(p.summary)) { page = p }
                         }
                 }
 
                 SettingsPage.ABOUT -> {
-                    Group("Stillpoint Launcher") {
-                        ActionRow("Version", BuildConfig.VERSION_NAME) {}
-                        ActionRow("App info", "Android's page for Stillpoint: permissions, notifications, battery, storage") {
+                    Group(stringResource(R.string.s_stillpoint_launcher)) {
+                        ActionRow(stringResource(R.string.s_version), BuildConfig.VERSION_NAME) {}
+                        ActionRow(stringResource(R.string.s_app_info), "Android's page for Stillpoint: permissions, notifications, battery, storage") {
                             ctx.safeStart(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${ctx.packageName}")))
                         }
-                        ActionRow("Made by", "cloudit24 · github.com/cloudit24") {
+                        ActionRow(stringResource(R.string.s_made_by), "cloudit24 · github.com/cloudit24") {
                             ctx.safeStart(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/cloudit24")))
                         }
-                        ActionRow("Source code", "github.com/cloudit24/stillpoint · GPL-3.0") {
+                        ActionRow(stringResource(R.string.s_source_code), "github.com/cloudit24/stillpoint · GPL-3.0") {
                             ctx.safeStart(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/cloudit24/stillpoint")))
                         }
-                        ActionRow("Set as default home app", "Opens the system home app picker") {
+                        ActionRow(stringResource(R.string.s_set_as_default_home_app), "Opens the system home app picker") {
                             ctx.safeStart(Intent(Settings.ACTION_HOME_SETTINGS), Intent(Settings.ACTION_SETTINGS))
                         }
                     }
                     var crash by remember { mutableStateOf(CrashLog.last(ctx)) }
                     crash?.let { (at, text) ->
-                        Group("Last problem") {
-                            ActionRow("Stillpoint closed unexpectedly", "${formatAgo(at)} · tap to share the report") {
+                        Group(stringResource(R.string.s_last_problem)) {
+                            ActionRow(stringResource(R.string.s_stillpoint_closed_unexpectedly), "${formatAgo(at)} · tap to share the report") {
                                 ctx.safeStart(Intent.createChooser(
                                     Intent(Intent.ACTION_SEND).setType("text/plain")
                                         .putExtra(Intent.EXTRA_SUBJECT, "Stillpoint crash report")
@@ -865,11 +897,11 @@ fun SettingsScreen(vm: LauncherViewModel) {
                                     "Share crash report",
                                 ))
                             }
-                            ActionRow("Clear report") { CrashLog.clear(ctx); crash = null }
+                            ActionRow(stringResource(R.string.s_clear_report)) { CrashLog.clear(ctx); crash = null }
                         }
-                        Note("Kept only on this phone. Nothing is sent unless you share it.")
+                        Note(stringResource(R.string.s_kept_only_on_this_phone_nothing))
                     }
-                    Group("Privacy") {
+                    Group(stringResource(R.string.s_privacy)) {
                         Text("No analytics and no accounts. The internet is used only for features you switch on: " +
                             "weather, gold price, public IP, city search, your own Project Hub" +
                             (if (Updater.AVAILABLE) " and update checks. " else ". ") +
@@ -890,10 +922,10 @@ fun SettingsScreen(vm: LauncherViewModel) {
                     val launch = ctx.packageManager.getLaunchIntentForPackage(ctx.packageName)
                     if (launch?.component != null) ctx.startActivity(Intent.makeRestartActivityTask(launch.component))
                     Runtime.getRuntime().exit(0)
-                }) { Text("Restart") }
+                }) { Text(stringResource(R.string.s_restart)) }
             },
-            title = { Text("Restored") },
-            text = { Text("Your setup is back. Stillpoint restarts to load it.") },
+            title = { Text(stringResource(R.string.s_restored)) },
+            text = { Text(stringResource(R.string.s_your_setup_is_back_stillpoint_restarts)) },
         )
     }
 
@@ -998,20 +1030,20 @@ fun HubConnectDialog(vm: LauncherViewModel, onDismiss: () -> Unit, url0: String 
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = { TextButton(onClick = { connect() }) { Text(if (busy) "Checking…" else "Connect") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-        title = { Text("Connect Project Hub") },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.s_cancel)) } },
+        title = { Text(stringResource(R.string.s_connect_project_hub)) },
         text = {
             Column {
-                OutlinedTextField(value = url, onValueChange = { url = it }, singleLine = true, label = { Text("Address") },
-                    placeholder = { Text("https://hub.example.com") },
+                OutlinedTextField(value = url, onValueChange = { url = it }, singleLine = true, label = { Text(stringResource(R.string.s_address)) },
+                    placeholder = { Text(stringResource(R.string.s_https_hub_example_com)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next))
-                OutlinedTextField(value = key, onValueChange = { key = it }, singleLine = true, label = { Text("App key") },
+                OutlinedTextField(value = key, onValueChange = { key = it }, singleLine = true, label = { Text(stringResource(R.string.s_app_key)) },
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = { connect() }),
                     modifier = Modifier.padding(top = 8.dp))
                 if (url.startsWith("http://") && !url.isLocalAddress()) {
-                    Text("This address isn't encrypted. Use https unless the hub is on your home network.",
+                    Text(stringResource(R.string.s_this_address_isn_t_encrypted_use),
                         color = Accent, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
                 }
                 error?.let { Text(it, color = Accent, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp)) }
@@ -1069,7 +1101,7 @@ private fun TileRow(pages: List<SettingsPage>, onClick: (SettingsPage) -> Unit) 
                 Box(Modifier.size(44.dp).clip(CircleShape).background(accent.copy(alpha = 0.16f)), contentAlignment = Alignment.Center) {
                     Icon(p.icon, contentDescription = null, tint = accent, modifier = Modifier.size(22.dp))
                 }
-                Text(p.title, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
+                Text(stringResource(p.title), fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
             }
         }
     }
@@ -1096,8 +1128,8 @@ private fun Stepper(label: String, value: String, onMinus: () -> Unit, onPlus: (
 private fun AccentDialog(current: Long, onDismiss: () -> Unit, onPick: (Long) -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
-        title = { Text("Accent colour") },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.s_close)) } },
+        title = { Text(stringResource(R.string.s_accent_colour)) },
         text = {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 ACCENTS.forEach { a ->
@@ -1125,7 +1157,7 @@ private fun <T> ChoiceDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.s_cancel)) } },
         title = { Text(title) },
         text = {
             LazyColumn(Modifier.heightIn(max = 420.dp)) {
@@ -1158,22 +1190,22 @@ private fun CitySearchDialog(vm: LauncherViewModel, onDismiss: () -> Unit, onPic
     }
     AlertDialog(
         onDismissRequest = onDismiss,
-        confirmButton = { TextButton(onClick = { search() }) { Text("Search") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-        title = { Text("Choose city") },
+        confirmButton = { TextButton(onClick = { search() }) { Text(stringResource(R.string.s_search_2)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.s_cancel)) } },
+        title = { Text(stringResource(R.string.s_choose_city)) },
         text = {
             Column {
                 OutlinedTextField(
                     value = query,
                     onValueChange = { query = it },
                     singleLine = true,
-                    placeholder = { Text("City name, e.g. Dubai") },
+                    placeholder = { Text(stringResource(R.string.s_city_name_e_g_dubai)) },
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     keyboardActions = KeyboardActions(onSearch = { search() }),
                 )
-                if (searching) Text("Searching…", color = Muted, modifier = Modifier.padding(top = 8.dp))
+                if (searching) Text(stringResource(R.string.s_searching), color = Muted, modifier = Modifier.padding(top = 8.dp))
                 if (searched && !searching && results.isEmpty()) {
-                    Text("No match. Check the spelling or your connection.", color = Muted, modifier = Modifier.padding(top = 8.dp))
+                    Text(stringResource(R.string.s_no_match_check_the_spelling_or), color = Muted, modifier = Modifier.padding(top = 8.dp))
                 }
                 LazyColumn(Modifier.heightIn(max = 300.dp)) {
                     items(results) { c ->
@@ -1193,7 +1225,7 @@ private fun CitySearchDialog(vm: LauncherViewModel, onDismiss: () -> Unit, onPic
 private fun TargetPicker(vm: LauncherViewModel, title: String, onPick: (String) -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.s_cancel)) } },
         title = { Text(title) },
         text = {
             LazyColumn(Modifier.heightIn(max = 460.dp)) {
@@ -1204,7 +1236,7 @@ private fun TargetPicker(vm: LauncherViewModel, title: String, onPick: (String) 
                         modifier = Modifier.fillMaxWidth().clickable { onPick(GestureTarget.action(a)) }.padding(vertical = 10.dp),
                     )
                 }
-                item { Text("Open an app", color = Muted, fontSize = 13.sp, modifier = Modifier.padding(top = 16.dp, bottom = 4.dp)) }
+                item { Text(stringResource(R.string.s_open_an_app), color = Muted, fontSize = 13.sp, modifier = Modifier.padding(top = 16.dp, bottom = 4.dp)) }
                 items(vm.visibleApps(), key = { it.key }) { app ->
                     Text(
                         app.label,
@@ -1267,7 +1299,7 @@ private fun UpdateSection(initial: UpdateCheck? = null) {
 /** "Where does it come from?" list with a tick on the chosen source. */
 @Composable
 private fun <T> SourcePicker(options: List<T>, selected: T, label: (T) -> String, detail: (T) -> String, onPick: (T) -> Unit) {
-    Group("Source") {
+    Group(stringResource(R.string.s_source)) {
         options.forEachIndexed { i, o ->
             if (i > 0) HorizontalDivider(color = DividerColor, thickness = 0.5.dp)
             Row(Modifier.fillMaxWidth().clickable { onPick(o) }.padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -1289,11 +1321,11 @@ private fun SyncGroup(vm: LauncherViewModel, feature: SyncFeature, source: Strin
     val tick = vm.syncTick
     val last = remember(tick, source) { vm.syncLast(source) }
     val error = remember(tick, source) { vm.syncError(source) }
-    Group("Sync") {
-        ToggleRow("Auto sync", cfg.auto) { on -> vm.setSync(feature) { it.copy(auto = on) } }
-        ActionRow("Sync every", intervalLabel(cfg.everyMin)) { onEvery() }
-        ToggleRow("Only on Wi-Fi", cfg.wifiOnly) { on -> vm.setSync(feature) { it.copy(wifiOnly = on) } }
-        ActionRow("Last sync", (if (last == 0L) "Never" else formatAgo(last)) + (error?.let { " · $it" } ?: "")) {}
+    Group(stringResource(R.string.s_sync)) {
+        ToggleRow(stringResource(R.string.s_auto_sync), cfg.auto) { on -> vm.setSync(feature) { it.copy(auto = on) } }
+        ActionRow(stringResource(R.string.s_sync_every), intervalLabel(cfg.everyMin)) { onEvery() }
+        ToggleRow(stringResource(R.string.s_only_on_wi_fi), cfg.wifiOnly) { on -> vm.setSync(feature) { it.copy(wifiOnly = on) } }
+        ActionRow(stringResource(R.string.s_last_sync), (if (last == 0L) "Never" else formatAgo(last)) + (error?.let { " · $it" } ?: "")) {}
         ActionRow(if (vm.syncing) "Syncing…" else "Sync now") { vm.syncNow(feature) }
     }
 }
@@ -1316,9 +1348,9 @@ private fun IcsDialog(initial: String, onDismiss: () -> Unit, onSave: (String) -
     var url by remember { mutableStateOf(initial) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        confirmButton = { TextButton(onClick = { onSave(url); onDismiss() }) { Text("Save") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-        title = { Text("Calendar link") },
+        confirmButton = { TextButton(onClick = { onSave(url); onDismiss() }) { Text(stringResource(R.string.s_save)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.s_cancel)) } },
+        title = { Text(stringResource(R.string.s_calendar_link)) },
         text = {
             Column {
                 Text("Paste your calendar's private .ics address. Outlook: Settings, Calendar, Shared calendars, " +
@@ -1326,7 +1358,7 @@ private fun IcsDialog(initial: String, onDismiss: () -> Unit, onSave: (String) -
                     color = Muted, fontSize = 13.sp)
                 OutlinedTextField(
                     value = url, onValueChange = { url = it }, singleLine = true,
-                    placeholder = { Text("https://…/calendar.ics") }, modifier = Modifier.padding(top = 12.dp),
+                    placeholder = { Text(stringResource(R.string.s_https_calendar_ics)) }, modifier = Modifier.padding(top = 12.dp),
                 )
             }
         },
@@ -1360,11 +1392,11 @@ private fun TextSettingDialog(t: TextEdit, onDismiss: () -> Unit) {
     var text by remember { mutableStateOf(t.initial) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        confirmButton = { TextButton(onClick = { t.onSave(text.trim()); onDismiss() }) { Text("Save") } },
+        confirmButton = { TextButton(onClick = { t.onSave(text.trim()); onDismiss() }) { Text(stringResource(R.string.s_save)) } },
         dismissButton = {
             Row {
-                t.onReset?.let { reset -> TextButton(onClick = { reset(); onDismiss() }) { Text("Default") } }
-                TextButton(onClick = onDismiss) { Text("Cancel") }
+                t.onReset?.let { reset -> TextButton(onClick = { reset(); onDismiss() }) { Text(stringResource(R.string.s_default)) } }
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.s_cancel)) }
             }
         },
         title = { Text(t.title) },
@@ -1404,3 +1436,7 @@ private fun NotifyAppRow(vm: LauncherViewModel, app: AppEntry) {
         })
     }
 }
+
+/** The activity behind a context, to restart it after the language changes. */
+private fun Context.findActivity(): Activity? =
+    generateSequence(this) { (it as? ContextWrapper)?.baseContext }.filterIsInstance<Activity>().firstOrNull()
