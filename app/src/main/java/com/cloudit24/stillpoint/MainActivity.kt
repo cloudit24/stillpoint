@@ -48,7 +48,6 @@ import com.cloudit24.stillpoint.ui.DrawerScreen
 import com.cloudit24.stillpoint.ui.PrayerScreen
 import com.cloudit24.stillpoint.ui.FocusScreen
 import com.cloudit24.stillpoint.ui.HomeScreen
-import com.cloudit24.stillpoint.ui.HubConnectDialog
 import com.cloudit24.stillpoint.ui.SettingsScreen
 import com.cloudit24.stillpoint.ui.StillpointTheme
 import com.cloudit24.stillpoint.ui.WidgetsScreen
@@ -82,23 +81,12 @@ class MainActivity : ComponentActivity() {
         setContent {
             StillpointTheme(accent = androidx.compose.ui.graphics.Color(vm.settings.accent), accentStyle = vm.settings.accentStyle, font = vm.settings.font) { LauncherRoot(vm, ::addWidget) }
         }
-        if (savedInstanceState == null) handleHubLink(intent)
+        if (savedInstanceState == null) handleIntent(intent)
     }
 
-    /** stillpoint://hub?url=...&key=... from the QR code on the hub's "Connect phone" page. Only fills in the
-     *  connect form: nothing is saved until the user sees the address and taps Connect. */
-    private fun handleHubLink(intent: Intent?) {
-        // From the "new version is ready" notification.
-        if (intent?.getBooleanExtra(UpdateNotice.EXTRA_OPEN_SETTINGS, false) == true) {
-            vm.screen = Screen.SETTINGS
-            return
-        }
-        val data = intent?.data ?: return
-        if (intent.action != Intent.ACTION_VIEW || data.scheme != "stillpoint" || data.host != "hub") return
-        val url = data.getQueryParameter("url")
-        val key = data.getQueryParameter("key")
-        if (!url.isNullOrBlank() && !key.isNullOrBlank()) vm.pendingHubLink = url to key
-        vm.screen = Screen.HOME
+    /** From the "new version is ready" notification: straight to Settings. */
+    private fun handleIntent(intent: Intent?) {
+        if (intent?.getBooleanExtra(UpdateNotice.EXTRA_OPEN_SETTINGS, false) == true) vm.screen = Screen.SETTINGS
     }
 
     override fun onStart() {
@@ -170,7 +158,7 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         if (intent.action == Intent.ACTION_MAIN) vm.screen = Screen.HOME
-        handleHubLink(intent)
+        handleIntent(intent)
     }
 }
 
@@ -199,15 +187,7 @@ private fun LauncherRoot(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderI
     }
     }
 
-    vm.updatePopup?.takeIf { vm.screen == Screen.HOME }?.let { version ->
-        AlertDialog(
-            onDismissRequest = { vm.updatePopup = null },
-            title = { Text(stringResource(R.string.s_update_available)) },
-            text = { Text("Stillpoint Launcher $version is ready. You have ${BuildConfig.VERSION_NAME}.") },
-            confirmButton = { TextButton(onClick = { vm.updatePopup = null; vm.screen = Screen.SETTINGS }) { Text(stringResource(R.string.s_update)) } },
-            dismissButton = { TextButton(onClick = { vm.updatePopup = null }) { Text(stringResource(R.string.s_later)) } },
-        )
-    }
+    // A new version is announced in the terminal display on home, not in a popup.
 
     vm.blockedMessage?.let { msg ->
         AlertDialog(
@@ -217,9 +197,6 @@ private fun LauncherRoot(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderI
         )
     }
 
-    vm.pendingHubLink?.let { (url, key) ->
-        HubConnectDialog(vm, onDismiss = { vm.pendingHubLink = null }, url0 = url, key0 = key)
-    }
 }
 
 /** Widgets sit left of home and the app list right, so they slide sideways; other pages rise in. */

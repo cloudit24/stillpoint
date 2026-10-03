@@ -14,8 +14,7 @@ data class AppEntry(
     val key: String get() = "$packageName/$className#$userSerial"
 }
 
-/** [due] is a day (epoch day), or -1 for none. */
-/** [due]: epoch day or -1. [remind]: minute of the day to ring on the due day, or -1 for no alert. */
+/** A task from before 0.43, read once to turn it into a note. [due]: epoch day or -1. */
 data class TaskItem(val id: Long, val text: String, val done: Boolean, val due: Long = -1L, val remind: Int = -1)
 
 data class AgendaItem(val title: String, val begin: Long, val end: Long, val allDay: Boolean)
@@ -140,7 +139,6 @@ data class LauncherSettings(
     val homeStyle: HomeStyle = HomeStyle.LIST,
     val showUsage: Boolean = true,
     val showAgenda: Boolean = false,
-    val showTasks: Boolean = true,
     val showIcons: Boolean = false,
     val drawerStart: DrawerTab = DrawerTab.ALL,
     /** ARGB accent colour, see [ACCENTS]. */
@@ -196,7 +194,6 @@ data class LauncherSettings(
     // Notification light (needs Notification access).
     val notifyLight: Boolean = true,
     val notifyStyle: NotifyStyle = NotifyStyle.BREATHE,
-    val notifyDot: Boolean = true,
     val notifyAppDots: Boolean = true,
     val notifyOff: Set<String> = emptySet(),
     val notifyColors: Map<String, Long> = emptyMap(),
@@ -204,21 +201,18 @@ data class LauncherSettings(
     val importantPeople: List<String> = emptyList(),
     val remindEvery: Int = 0,
     val infoPanels: Set<InfoPanel> = setOf(InfoPanel.PRAYER),
-    val showRecent: Boolean = true,
     /** Cities for the world clock card, "Label|Zone", up to three. */
     val worldClocks: List<String> = emptyList(),
-    val showProjects: Boolean = true,
     val dialMode: DialMode = DialMode.PRAYER,
     val compassHaptics: Boolean = true,
     /** Tools (device, security and text, network): off until turned on in Extras. */
     val toolsOn: Boolean = false,
-    // Tasks, calendar and projects: where each comes from and how it syncs.
-    val tasksSource: TaskSource = TaskSource.PHONE,
+    // The calendar: where it comes from and how it syncs.
     val calendarSource: CalendarSource = CalendarSource.PHONE,
-    val projectsSource: ProjectSource = ProjectSource.PHONE,
-    val tasksSync: SyncConfig = SyncConfig(),
     val calendarSync: SyncConfig = SyncConfig(),
-    val projectsSync: SyncConfig = SyncConfig(),
+    // The terminal display above the apps: its look, and the topics switched off.
+    val statusStyle: StatusStyle = StatusStyle.TERMINAL,
+    val statusOff: Set<StatusTopic> = emptySet(),
     // Live data: all off by default. Nothing goes online unless one of these is on.
     val weatherOn: Boolean = false,
     val city: City? = null,
@@ -229,8 +223,6 @@ data class LauncherSettings(
     val goldKarat: Int = 24,
     val goldPerGram: Boolean = true,
     val goldSource: GoldSource = GoldSource.DUBAI,
-    /** Project Hub card on home. Address and key are stored separately, see [Prefs.hubUrl]. */
-    val hubOn: Boolean = false,
     /** GestureSlot -> GestureTarget string. Missing slots fall back to [DEFAULT_GESTURES]. */
     val gestures: Map<GestureSlot, String> = DEFAULT_GESTURES,
     val hidden: Set<String> = emptySet(),
@@ -252,9 +244,7 @@ data class LauncherSettings(
     fun iqamaMin(p: Prayer): Int = iqama[p] ?: DEFAULT_IQAMA[p] ?: 0
 
     fun sync(f: SyncFeature): SyncConfig = when (f) {
-        SyncFeature.TASKS -> tasksSync
         SyncFeature.CALENDAR -> calendarSync
-        SyncFeature.PROJECTS -> projectsSync
     }
 }
 
@@ -285,13 +275,28 @@ enum class IconTint(val label: String) {
     ACCENT("Accent colour"),
 }
 
+/** How the terminal display above the apps looks. */
+enum class StatusStyle(val label: String) { TERMINAL("Terminal"), LCD("Retro LCD"), QUIET("Quiet line") }
+
+/** What the terminal display talks about. The greeting is always there. */
+enum class StatusTopic(val label: String) {
+    PRAYER("Prayer and iqama"),
+    CALLS("Missed calls and messages"),
+    BATTERY("Battery low"),
+    FOCUS("Focus"),
+    CALENDAR("Next on your calendar"),
+    UPDATE("New version"),
+    WEATHER("Weather with the greeting"),
+    NOTES("Latest note"),
+    SETUP("Setup tips"),
+}
+
 /** What the important-info slot under the headline shows. */
 enum class InfoPanel(val label: String) {
     PRAYER("Prayer times"),
     AGENDA("Next on your calendar"),
     DAY("Day and battery"),
     WEEK("This week, with your calendars"),
-    TASKS("Tasks left"),
     WEATHER("Weather now"),
     WORLD("World clock"),
 }
@@ -338,7 +343,7 @@ data class ShelfPage(val id: Int, val name: String, val items: List<Int>)
 /** [retired]: no longer offered or shown; kept so old ids still mean the same thing. */
 enum class BuiltIn(val code: Int, val title: String, val summary: String, val canHalf: Boolean = false, val retired: Boolean = false) {
     NOTES(1, "Notes", "A scribble board"),
-    TASKS(2, "Tasks", "Round ticks and days; syncs with Project Hub or your task app"),
+    TASKS(2, "Tasks", "Moved to the Project Hub app", retired = true),
     PROJECTS(3, "Projects", "Steps and how far along you are", retired = true),
     CALENDAR(10, "Calendar", "This month, with your calendars"),
     CLOCKS(11, "World clock", "Your cities at a glance"),

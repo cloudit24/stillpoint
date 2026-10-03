@@ -3,7 +3,6 @@ package com.cloudit24.stillpoint
 import com.cloudit24.stillpoint.data.SelfHosted
 import com.cloudit24.stillpoint.data.HaEntity
 import com.cloudit24.stillpoint.data.BuiltIn
-import com.cloudit24.stillpoint.ui.dueLabel
 import com.cloudit24.stillpoint.ui.subnet
 import com.cloudit24.stillpoint.data.Calendars
 import com.cloudit24.stillpoint.data.Moon
@@ -175,15 +174,6 @@ class CoreTest {
     }
 
     @Test
-    fun dueDayInWords() {
-        val today = LocalDate.of(2026, 10, 1)
-        assertEquals("today" to false, dueLabel(today.toEpochDay(), today))
-        assertEquals("tomorrow" to false, dueLabel(today.toEpochDay() + 1, today))
-        assertEquals("overdue" to true, dueLabel(today.toEpochDay() - 3, today))
-        assertNull(dueLabel(-1, today))
-    }
-
-    @Test
     fun subnetCalculator() {
         val r = subnet("192.168.1.10/24")!!.toMap()
         assertEquals("192.168.1.0/24", r["Network"])
@@ -200,16 +190,5 @@ class CoreTest {
         assertTrue(isNewerVersion("0.27.1", "0.27.0"))
         assertFalse(isNewerVersion("0.27.0", "0.27.0"))
         assertFalse(isNewerVersion("0.9.0", "0.10.0"))
-    }
-
-    @Test
-    fun taskAlertTime() {
-        val day = java.time.LocalDate.of(2026, 10, 2).toEpochDay()
-        val t = com.cloudit24.stillpoint.data.TaskItem(1, "Pay bill", false, day, 18 * 60)
-        val at = com.cloudit24.stillpoint.widget.TaskAlerts.at(t)
-        assertEquals(java.time.LocalDateTime.of(2026, 10, 2, 18, 0),
-            java.time.LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(at), java.time.ZoneId.systemDefault()))
-        assertEquals(-1L, com.cloudit24.stillpoint.widget.TaskAlerts.at(t.copy(remind = -1)))
-        assertEquals(-1L, com.cloudit24.stillpoint.widget.TaskAlerts.at(t.copy(done = true)))
     }
 }

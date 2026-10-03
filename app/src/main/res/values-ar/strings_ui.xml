@@ -341,4 +341,6 @@
     <string name="s_at_dhuhr_time">عند الظهر</string>
     <string name="s_n_min_before">قبل الجمعة بـ %1$d د</string>
     <string name="s_until_jumuah">حتى صلاة الجمعة</string>
+    <string name="s_terminal_display">شاشة الطرفية</string>
+    <string name="s_terminal_note">فوق تطبيقاتك يخبرك Stillpoint بما يهم الآن، الأهم أولاً. اضغط سطراً للتنفيذ. وإن لم يكن هناك شيء، يحيّيك.</string>
 </resources>

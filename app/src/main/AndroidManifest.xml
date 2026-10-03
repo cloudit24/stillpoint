@@ -20,10 +20,6 @@
     <!-- Prayer popup over the lock screen (optional). -->
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <!-- Only when Tasks.org or OpenTasks is chosen as the task source (asked at that moment). -->
-    <uses-permission android:name="org.tasks.permission.READ_TASKS" />
-    <uses-permission android:name="org.tasks.permission.WRITE_TASKS" />
-    <uses-permission android:name="org.dmfs.permission.READ_TASKS" />
-    <uses-permission android:name="org.dmfs.permission.WRITE_TASKS" />
     <!-- Local IP address on home (opt-in). Granted automatically, no prompt. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- Wi-Fi details in Tools. Granted automatically, no prompt. -->
@@ -67,13 +63,6 @@
                 <category android:name="android.intent.category.HOME" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-            <!-- stillpoint://hub?url=...&key=... : the QR code on a Project Hub's "Connect phone" page. -->
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="stillpoint" android:host="hub" />
             </intent-filter>
         </activity>
 
@@ -141,10 +130,6 @@
             android:name=".widget.PrayerAlertReceiver"
             android:exported="false" />
 
-        <!-- Task alerts (the bell on a task). -->
-        <receiver
-            android:name=".widget.TaskAlertReceiver"
-            android:exported="false" />
 
         <!-- Optional: the notification light. Reads notifications on the phone only; nothing is kept or sent. -->
         <service

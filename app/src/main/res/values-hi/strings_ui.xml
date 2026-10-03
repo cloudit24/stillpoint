@@ -341,4 +341,6 @@
     <string name="s_at_dhuhr_time">ज़ुहर पर</string>
     <string name="s_n_min_before">जुमा से %1$d मिनट पहले</string>
     <string name="s_until_jumuah">जुमा तक</string>
+    <string name="s_terminal_display">टर्मिनल डिस्प्ले</string>
+    <string name="s_terminal_note">आपके ऐप्स के ऊपर, Stillpoint बताता है कि अभी क्या ज़रूरी है। किसी पंक्ति पर टैप करें। कुछ न हो तो अभिवादन करता है।</string>
 </resources>

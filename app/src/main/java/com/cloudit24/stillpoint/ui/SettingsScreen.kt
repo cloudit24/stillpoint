@@ -39,11 +39,11 @@ import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Done
 import androidx.compose.material.icons.outlined.Place
 import com.cloudit24.stillpoint.data.CalendarSource
-import com.cloudit24.stillpoint.data.ProjectSource
 import com.cloudit24.stillpoint.data.SYNC_INTERVALS
 import com.cloudit24.stillpoint.data.SyncConfig
 import com.cloudit24.stillpoint.data.SyncFeature
-import com.cloudit24.stillpoint.data.TaskSource
+import com.cloudit24.stillpoint.data.StatusStyle
+import com.cloudit24.stillpoint.data.StatusTopic
 import com.cloudit24.stillpoint.data.intervalLabel
 import com.cloudit24.stillpoint.sync.Sync
 import androidx.compose.material.icons.outlined.Notifications
@@ -158,12 +158,10 @@ private enum class SettingsPage(@StringRes val section: Int, @StringRes val titl
     SENIOR(R.string.sec_personalization, R.string.pg_senior, R.string.pg_senior_sum, Icons.Outlined.Person),
     LANGUAGE(R.string.sec_personalization, R.string.pg_language, R.string.pg_language_sum, Icons.Outlined.Edit),
     LOCK(R.string.sec_personalization, R.string.pg_lock, R.string.pg_lock_sum, Icons.Outlined.Notifications),
-    TASKS(R.string.sec_productivity, R.string.pg_tasks, R.string.pg_tasks_sum, Icons.Outlined.Done),
     CALENDAR(R.string.sec_productivity, R.string.pg_calendar, R.string.pg_calendar_sum, Icons.Outlined.DateRange),
     PRAYER(R.string.sec_extras, R.string.pg_prayer, R.string.pg_prayer_sum, Icons.Outlined.Place),
     WEATHER(R.string.sec_extras, R.string.pg_weather, R.string.pg_weather_sum, Icons.Outlined.LocationOn),
     GOLD(R.string.sec_extras, R.string.pg_gold, R.string.pg_gold_sum, Icons.Outlined.Star),
-    HUB(R.string.sec_extras, R.string.pg_hub, R.string.pg_hub_sum, Icons.Outlined.CheckCircle),
     SELFHOSTED(R.string.sec_extras, R.string.pg_selfhosted, R.string.pg_selfhosted_sum, Icons.Outlined.Home),
     TOOLS(R.string.sec_extras, R.string.pg_tools, R.string.pg_tools_sum, Icons.Outlined.Build),
     PRIVACY(R.string.sec_system, R.string.pg_privacy, R.string.pg_privacy_sum, Icons.Outlined.Lock),
@@ -248,16 +246,6 @@ fun SettingsScreen(vm: LauncherViewModel) {
     // Any change to the city, method or alerts moves the next alert.
     LaunchedEffect(s.city, s.prayerMethod, s.asrHanafi, s.adhanAlert, s.iqamaAlert, s.iqama, s.remindBefore, s.jumuah, s.jumuahLead) {
         PrayerAlerts.schedule(ctx)
-    }
-
-    var pendingTaskSource by remember { mutableStateOf<TaskSource?>(null) }
-    val taskPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
-        val src = pendingTaskSource
-        pendingTaskSource = null
-        if (src != null) {
-            if (src.readPermission?.let { result[it] } == true) vm.setTaskSource(src)
-            else vm.blockedMessage = "Stillpoint needs permission to read ${src.label}. Allow it in App info, Permissions."
-        }
     }
 
     val calendarPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -382,6 +370,17 @@ fun SettingsScreen(vm: LauncherViewModel) {
                     Group(stringResource(R.string.s_gestures)) {
                         SettingsPage.GESTURES.let { MenuRow(it.icon, stringResource(it.title), stringResource(it.summary)) { page = it } }
                     }
+                    Group(stringResource(R.string.s_terminal_display)) {
+                        ActionRow(stringResource(R.string.s_style), s.statusStyle.label) {
+                            vm.updateSettings { it.copy(statusStyle = StatusStyle.entries[(it.statusStyle.ordinal + 1) % StatusStyle.entries.size]) }
+                        }
+                        StatusTopic.entries.forEach { t ->
+                            ToggleRow(t.label, t !in s.statusOff) { on ->
+                                vm.updateSettings { it.copy(statusOff = if (on) it.statusOff - t else it.statusOff + t) }
+                            }
+                        }
+                    }
+                    Note(stringResource(R.string.s_terminal_note))
                     Group(stringResource(R.string.s_headline)) {
                         ToggleRow(stringResource(R.string.s_screen_time_card), s.showUsage) { on -> vm.updateSettings { it.copy(showUsage = on) } }
                         ActionRow(stringResource(R.string.s_ring_beside_it), s.dialMode.label) { dialog = SettingsDialog.DIAL_MODE }
@@ -425,7 +424,6 @@ fun SettingsScreen(vm: LauncherViewModel) {
                     }
                     Note(stringResource(R.string.s_public_ip_from_api_ipify_org))
                     Group(stringResource(R.string.s_apps)) {
-                        ToggleRow(stringResource(R.string.s_recently_used_24_h), s.showRecent) { on -> vm.updateSettings { it.copy(showRecent = on) } }
                         ToggleRow(stringResource(R.string.s_most_used_today), s.homeMode == HomeMode.AUTO) { on ->
                             vm.updateSettings { it.copy(homeMode = if (on) HomeMode.AUTO else HomeMode.PINNED) }
                         }
@@ -669,28 +667,9 @@ fun SettingsScreen(vm: LauncherViewModel) {
                     Note("Price: " + s.goldSource.detail + ". Exchange rates: European Central Bank. Jewellery adds making charges.")
                 }
 
-                SettingsPage.HUB -> {
-                    Group(stringResource(R.string.s_project_hub)) {
-                        if (vm.hubConnected()) {
-                            ActionRow(stringResource(R.string.s_server), vm.hubUrl().orEmpty()) {}
-                            ActionRow(
-                                stringResource(R.string.s_status),
-                                vm.hubError ?: vm.hub?.let { "Connected · updated ${((System.currentTimeMillis() - it.fetchedAt) / 60_000L)} min ago. Tap to update." }
-                                    ?: "Connected. Tap to update.",
-                            ) { vm.refreshHub(force = true) }
-                            ActionRow(stringResource(R.string.s_disconnect), "Forget the address and key on this phone") { vm.disconnectHub() }
-                        } else {
-                            ActionRow(stringResource(R.string.s_connect), "Scan the QR code on your hub's \"Connect phone\" page, or type the address and key") {
-                                dialog = SettingsDialog.HUB
-                            }
-                        }
-                    }
-                    Note(stringResource(R.string.s_your_own_server_stillpoint_connects_only))
-                }
-
                 SettingsPage.BACKUP -> {
                     Group(stringResource(R.string.s_backup)) {
-                        ActionRow(stringResource(R.string.s_save_a_backup_file), "Settings, notes, tasks, projects, pinned apps, favorites, gestures (no keys or tokens)") {
+                        ActionRow(stringResource(R.string.s_save_a_backup_file), "Settings, notes, pinned apps, favorites, gestures (no keys or tokens)") {
                             saveBackup.launch("stillpoint-backup-${java.time.LocalDate.now()}.json")
                         }
                         ActionRow(stringResource(R.string.s_restore_from_a_file), "Puts a backup's setup in place, then Stillpoint restarts") {
@@ -715,7 +694,6 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         ActionRow(stringResource(R.string.s_style), s.notifyStyle.label) {
                             vm.updateSettings { it.copy(notifyStyle = NotifyStyle.entries[(it.notifyStyle.ordinal + 1) % NotifyStyle.entries.size]) }
                         }
-                        ToggleRow(stringResource(R.string.s_signal_dot_at_the_top), s.notifyDot) { on -> vm.updateSettings { it.copy(notifyDot = on) } }
                         ToggleRow(stringResource(R.string.s_dots_on_apps), s.notifyAppDots) { on -> vm.updateSettings { it.copy(notifyAppDots = on) } }
                         ActionRow(stringResource(R.string.s_send_a_test_notification), "Then go home to see the light and the dots") { NotifyTest.send(ctx) }
                     }
@@ -784,7 +762,6 @@ fun SettingsScreen(vm: LauncherViewModel) {
                     Group(stringResource(R.string.s_set_on_their_own_pages)) {
                         ActionRow(stringResource(R.string.s_gold_price), s.goldSource.label) { page = SettingsPage.GOLD }
                         ActionRow(stringResource(R.string.s_calendar_link), vm.icsUrl()?.let { maskUrl(it) } ?: "Not set") { page = SettingsPage.CALENDAR }
-                        ActionRow(stringResource(R.string.s_project_hub), vm.hubUrl() ?: "Not connected") { page = SettingsPage.HUB }
                     }
                     Note(stringResource(R.string.s_leave_empty_for_the_default_prayer))
                 }
@@ -806,46 +783,9 @@ fun SettingsScreen(vm: LauncherViewModel) {
                     Note(stringResource(R.string.s_a_silent_lock_screen_notification_android))
                 }
 
-                SettingsPage.TASKS -> {
-                    SourcePicker(TaskSource.entries, s.tasksSource, { it.label }, { src ->
-                        src.detail + when {
-                            src.appPackage != null && !vm.providerInstalled(src) -> " Not installed: tap to get it."
-                            src == TaskSource.HUB && !vm.hubConnected() -> " Connect it under Extras first."
-                            else -> ""
-                        }
-                    }) { src ->
-                        when {
-                            src == TaskSource.HUB && !vm.hubConnected() -> page = SettingsPage.HUB
-                            src.appPackage != null && !vm.providerInstalled(src) -> ctx.safeStart(
-                                Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=${src.appPackage}")),
-                                Intent(Intent.ACTION_VIEW, Uri.parse("https://f-droid.org/packages/${src.appPackage}/")),
-                            )
-                            src.readPermission != null && !vm.providerPermitted(src) -> {
-                                pendingTaskSource = src
-                                taskPermission.launch(listOfNotNull(src.readPermission, src.writePermission).toTypedArray())
-                            }
-                            else -> vm.setTaskSource(src)
-                        }
-                    }
-                    when (s.tasksSource) {
-                        TaskSource.PHONE -> Note(stringResource(R.string.s_stored_on_this_phone_swipe_a))
-                        TaskSource.HUB -> SyncGroup(vm, SyncFeature.TASKS, Sync.HUB, s.tasksSync) { dialog = SettingsDialog.SYNC_TASKS }
-                        else -> Group(stringResource(R.string.s_sync)) {
-                            Text("${s.tasksSource.label} keeps itself in sync, for example with DAVx5. Stillpoint reads its open " +
-                                "tasks when you open the Shelf; ticking one there marks it done in ${s.tasksSource.label}.",
-                                color = Muted, fontSize = 14.sp, modifier = Modifier.padding(vertical = 12.dp))
-                            ActionRow(stringResource(R.string.s_read_now), vm.providerError ?: "${vm.providerTasks.size} open tasks") { vm.loadProviderTasks() }
-                        }
-                    }
-                    Note(stringResource(R.string.s_add_tasks_to_any_shelf_shelf))
-                }
-
                 SettingsPage.CALENDAR -> {
-                    SourcePicker(CalendarSource.entries, s.calendarSource, { it.label }, { src ->
-                        src.detail + if (src == CalendarSource.HUB && !vm.hubConnected()) " Connect it under Extras first." else ""
-                    }) { src ->
+                    SourcePicker(CalendarSource.entries, s.calendarSource, { it.label }, { it.detail }) { src ->
                         when {
-                            src == CalendarSource.HUB && !vm.hubConnected() -> page = SettingsPage.HUB
                             src == CalendarSource.ICS && vm.icsUrl() == null -> {
                                 vm.setCalendarSource(src)
                                 dialog = SettingsDialog.ICS_URL
@@ -855,7 +795,6 @@ fun SettingsScreen(vm: LauncherViewModel) {
                     }
                     when (s.calendarSource) {
                         CalendarSource.PHONE -> Note(stringResource(R.string.s_android_syncs_the_accounts_on_this))
-                        CalendarSource.HUB -> SyncGroup(vm, SyncFeature.CALENDAR, Sync.HUB, s.calendarSync) { dialog = SettingsDialog.SYNC_CALENDAR }
                         CalendarSource.ICS -> {
                             Group(stringResource(R.string.s_calendar_link)) {
                                 ActionRow(stringResource(R.string.s_link), vm.icsUrl()?.let { maskUrl(it) } ?: "Not set · tap to add") { dialog = SettingsDialog.ICS_URL }
@@ -933,7 +872,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
                     }
                     Group(stringResource(R.string.s_privacy)) {
                         Text("No analytics and no accounts. The internet is used only for features you switch on: " +
-                            "weather, gold price, public IP, city search, your own Project Hub" +
+                            "weather, gold price, public IP, city search" +
                             (if (Updater.AVAILABLE) " and update checks. " else ". ") +
                             "Prayer times, Qibla, Hijri and Tamil dates are calculated on the phone.",
                             color = Muted, fontSize = 14.sp, modifier = Modifier.padding(vertical = 12.dp))
@@ -998,16 +937,8 @@ fun SettingsScreen(vm: LauncherViewModel) {
         }
         SettingsDialog.PRAYER_METHOD -> ChoiceDialog("Calculation method", PrayerMethod.entries, { it.label },
             onDismiss = { dialog = null }) { pm -> vm.updateSettings { it.copy(prayerMethod = pm) } }
-        SettingsDialog.HUB -> HubConnectDialog(vm, onDismiss = { dialog = null })
-        SettingsDialog.SYNC_TASKS, SettingsDialog.SYNC_CALENDAR, SettingsDialog.SYNC_PROJECTS -> {
-            val f = when (dialog) {
-                SettingsDialog.SYNC_TASKS -> SyncFeature.TASKS
-                SettingsDialog.SYNC_CALENDAR -> SyncFeature.CALENDAR
-                else -> SyncFeature.PROJECTS
-            }
-            ChoiceDialog("Sync every", SYNC_INTERVALS, { intervalLabel(it) }, onDismiss = { dialog = null }) { m ->
-                vm.setSync(f) { it.copy(everyMin = m) }
-            }
+        SettingsDialog.SYNC_CALENDAR -> ChoiceDialog("Sync every", SYNC_INTERVALS, { intervalLabel(it) }, onDismiss = { dialog = null }) { m ->
+            vm.setSync(SyncFeature.CALENDAR) { it.copy(everyMin = m) }
         }
         SettingsDialog.EDGE_STYLE -> ChoiceDialog("Edge light", EdgeStyle.entries, { it.label }, onDismiss = { dialog = null }) { e ->
             vm.updateSettings { it.copy(edgeStyle = e) }
@@ -1034,59 +965,8 @@ fun SettingsScreen(vm: LauncherViewModel) {
 }
 
 private enum class SettingsDialog {
-    ACCENT, HOME_STYLE, DRAWER_START, CLOCK, GOLD_SOURCE, CURRENCY, KARAT, CITY, PRAYER_CITY, PRAYER_METHOD, HUB,
-    SYNC_TASKS, SYNC_CALENDAR, SYNC_PROJECTS, ICS_URL, EDGE_STYLE, ICON_TINT, DIAL_MODE, FONT, GOLD_CUSTOM_CURRENCY,
-}
-
-/** Type in the hub address and app key (from the hub's "Connect phone" page). Tested before it's saved. */
-@Composable
-fun HubConnectDialog(vm: LauncherViewModel, onDismiss: () -> Unit, url0: String = "", key0: String = "") {
-    val scope = rememberCoroutineScope()
-    var url by remember { mutableStateOf(url0) }
-    var key by remember { mutableStateOf(key0) }
-    var busy by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
-    val connect = {
-        if (!busy) {
-            busy = true
-            error = null
-            scope.launch {
-                error = vm.connectHub(url, key)
-                busy = false
-                if (error == null) onDismiss()
-            }
-        }
-    }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = { TextButton(onClick = { connect() }) { Text(if (busy) "Checking…" else "Connect") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.s_cancel)) } },
-        title = { Text(stringResource(R.string.s_connect_project_hub)) },
-        text = {
-            Column {
-                OutlinedTextField(value = url, onValueChange = { url = it }, singleLine = true, label = { Text(stringResource(R.string.s_address)) },
-                    placeholder = { Text(stringResource(R.string.s_https_hub_example_com)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next))
-                OutlinedTextField(value = key, onValueChange = { key = it }, singleLine = true, label = { Text(stringResource(R.string.s_app_key)) },
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = { connect() }),
-                    modifier = Modifier.padding(top = 8.dp))
-                if (url.startsWith("http://") && !url.isLocalAddress()) {
-                    Text(stringResource(R.string.s_this_address_isn_t_encrypted_use),
-                        color = Accent, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
-                }
-                error?.let { Text(it, color = Accent, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp)) }
-            }
-        },
-    )
-}
-
-/** Home-network addresses (192.168.x, 10.x, 172.16-31.x, .local, localhost). */
-private fun String.isLocalAddress(): Boolean {
-    val host = removePrefix("http://").substringBefore('/').substringBefore(':')
-    return host == "localhost" || host.endsWith(".local") || host.startsWith("192.168.") || host.startsWith("10.") ||
-        Regex("""^172\.(1[6-9]|2\d|3[01])\.""").containsMatchIn(host)
+    ACCENT, HOME_STYLE, DRAWER_START, CLOCK, GOLD_SOURCE, CURRENCY, KARAT, CITY, PRAYER_CITY, PRAYER_METHOD,
+    SYNC_CALENDAR, ICS_URL, EDGE_STYLE, ICON_TINT, DIAL_MODE, FONT, GOLD_CUSTOM_CURRENCY,
 }
 
 /** A titled rounded card holding related rows. */

@@ -25,8 +25,6 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import com.cloudit24.stillpoint.data.PrayerTimes
-import com.cloudit24.stillpoint.data.ProjectSource
-import com.cloudit24.stillpoint.data.TaskSource
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.geometry.Offset
@@ -144,15 +142,6 @@ fun HomeScreen(vm: LauncherViewModel) {
             delay(5 * 60_000L)
         }
     }
-    // Project Hub: every 2 minutes while home is shown.
-    // The view model only asks the hub when the page's sync interval has passed.
-    val usesHub = vm.usesHub()
-    LaunchedEffect(usesHub) {
-        while (usesHub) {
-            vm.refreshHub()
-            delay(60_000L)
-        }
-    }
 
     // Edge light on the curved sides.
     // Left: time left in the current prayer. Green, draining down; red and blinking in its last 15 minutes.
@@ -179,7 +168,7 @@ fun HomeScreen(vm: LauncherViewModel) {
     LaunchedEffect(Unit) { edgeGrow.animateTo(1f, tween(1400, easing = FastOutSlowInEasing)) }
     var edgePhase by remember { mutableFloatStateOf(0f) }
     // Notification light: colours of the apps with something unread; important ones shine brighter.
-    val lit = if (s.notifyLight || s.notifyDot) vm.litNotifications() else emptyList()
+    val lit = if (s.notifyLight) vm.litNotifications() else emptyList()
     val litColors = lit.sortedByDescending { it.important }.map { vm.notifyColor(it.pkg) }.distinct()
     val litImportant = lit.any { it.important }
     val edgeMoving = s.edgeMotion && ((edge != null && (edge.ending || edge.starting || edge.started)) || litColors.isNotEmpty())
@@ -201,7 +190,7 @@ fun HomeScreen(vm: LauncherViewModel) {
                 if (edge != null) drawEdges(edge, s.edgeStyle, s.edgeRight, EDGE_BRIGHTNESS[s.edgeBright.coerceIn(1, 3) - 1], edgeGrow.value, edgePhase, accent)
                 if (litColors.isNotEmpty()) {
                     drawNotifyLight(litColors, s.notifyStyle, if (s.edgeStyle == EdgeStyle.OFF) EdgeStyle.FLAT else s.edgeStyle,
-                        edgePhase, s.edgeMotion, s.notifyLight, s.notifyDot, litImportant)
+                        edgePhase, s.edgeMotion, litImportant)
                 }
             }
             .drawBehind {
@@ -264,7 +253,7 @@ fun HomeScreen(vm: LauncherViewModel) {
             .padding(horizontal = 28.dp, vertical = 24.dp),
     ) {
         // The frame (docs/DESIGN.md): headline, fixed · info zone, takes what is left and scrolls inside itself ·
-        // recent apps, fixed · apps, at most a third of the screen, scrolls inside itself · shortcuts, fixed.
+        // terminal display, fixed · apps, at most a third of the screen, scrolls inside itself · shortcuts, fixed.
         // New things go inside a zone; zones never push each other off the screen.
         HeroHeader(vm, s, now)
         val infoScroll = rememberScrollState()
@@ -273,41 +262,14 @@ fun HomeScreen(vm: LauncherViewModel) {
             .verticalScroll(infoScroll, enabled = infoScroll.maxValue > 0)) {
         HeroInfo(vm, s, now)
 
-        if (s.showUsage) {
-            // Screen time itself is one of the flipping headline cards.
-            if (!vm.hasUsageAccess) {
-                Text(
-                    stringResource(R.string.s_allow_usage_access_to_show_screen),
-                    color = Accent, fontSize = 14.sp,
-                    modifier = Modifier
-                        .padding(top = 16.dp)
-                        .clickable { context.safeStart(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) },
-                )
-            }
-        }
-        if (focusActive) {
-            Text(
-                "Focus until ${formatClock(context, s.focusEndsAt)}",
-                color = Accent, fontSize = 14.sp,
-                modifier = Modifier.padding(top = 6.dp).clickable { vm.screen = Screen.FOCUS },
-            )
-        }
-
+        // Focus, usage access and setup tips now speak through the terminal display below.
         Column(Modifier.padding(top = 28.dp)) {
-            if (s.hubOn) {
-                if (s.projectsSource == ProjectSource.HUB) HubCard(vm, now)
-            }
             if (s.showAgenda) AgendaBlock(context, vm.agenda)
         }
         }
 
-        if (homeApps.isEmpty()) {
-            Text(stringResource(R.string.s_swipe_left_for_apps_right_for), color = Muted, fontSize = 14.sp)
-        }
-        if (s.showRecent) {
-            val recent = vm.recentlyUsed(6)
-            if (recent.isNotEmpty()) RecentStrip(vm, recent)
-        }
+        // The terminal display: Stillpoint talks to you here, right above the apps.
+        StatusLine(vm, s, now, Modifier.padding(bottom = 14.dp))
         // A set space for the apps (about a third of the screen); more apps scroll inside it.
         val listScale = 1f
         val maxListHeight = (LocalConfiguration.current.screenHeightDp * 0.34f).dp
@@ -384,21 +346,6 @@ private fun RotatingLine(lines: List<String>) {
     ) { Text(it, color = Muted, fontSize = 13.sp, lineHeight = 18.sp, textAlign = TextAlign.End, minLines = 2) }
 }
 
-/** Apps opened in the last 24 hours, newest first, as a quiet row of icons. */
-@Composable
-private fun RecentStrip(vm: LauncherViewModel, apps: List<AppEntry>) {
-    Column(Modifier.padding(bottom = 16.dp)) {
-        Text(stringResource(R.string.s_recent_2), color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.4.sp)
-        Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            apps.forEach { app ->
-                key(app.key) {
-                    Box(Modifier.clip(RoundedCornerShape(10.dp)).clickable { vm.launch(app) }) { AppIcon(vm, app, 34.dp) }
-                }
-            }
-        }
-    }
-}
-
 @OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 private fun HomeIcons(vm: LauncherViewModel, apps: List<AppEntry>, size: Dp) {
@@ -419,57 +366,6 @@ private fun HomeIcons(vm: LauncherViewModel, apps: List<AppEntry>, size: Dp) {
     }
 }
 
-/**
- * Project Hub: the ONE next thing and why, with Done / Not now. Everything else is one quiet line.
- * Shows the last answer when offline, with its age.
- */
-@Composable
-private fun HubCard(vm: LauncherViewModel, now: Long) {
-    val context = LocalContext.current
-    val g = vm.hub
-    if (g == null) {
-        Text(vm.hubError ?: "Loading Project Hub…", color = Muted, fontSize = 14.sp,
-            modifier = Modifier.padding(bottom = 20.dp).clickable { vm.refreshHub(force = true) })
-        return
-    }
-    val n = g.now
-    Row(Modifier.fillMaxWidth().padding(bottom = 20.dp).height(IntrinsicSize.Min)) {
-        Box(Modifier.width(3.dp).fillMaxHeight().background(Accent))
-        Column(Modifier.padding(start = 14.dp)) {
-            Text(n.label.uppercase(Locale.getDefault()), color = Accent, fontSize = 12.sp, fontWeight = FontWeight.Medium,
-                letterSpacing = 0.8.sp)
-            Text(
-                n.title, color = Ink, fontSize = 22.sp, lineHeight = 27.sp,
-                modifier = Modifier.padding(top = 2.dp).clickable { vm.hubUrl()?.let { context.safeStart(Intent(Intent.ACTION_VIEW, Uri.parse(it))) } },
-            )
-            if (n.project.isNotBlank()) Text(n.project, color = Muted, fontSize = 13.sp)
-            Text(n.why, color = Muted, fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp))
-            if (n.kind == "task") {
-                Row(Modifier.padding(top = 8.dp)) {
-                    Text(stringResource(R.string.s_done), color = Accent, fontSize = 16.sp, fontWeight = FontWeight.Medium,
-                        modifier = Modifier.clickable { vm.hubDone(n.id) }.padding(end = 24.dp, top = 6.dp, bottom = 6.dp))
-                    Text(stringResource(R.string.s_not_now), color = Muted, fontSize = 16.sp,
-                        modifier = Modifier.clickable { vm.hubNotNow(n.id) }.padding(vertical = 6.dp))
-                }
-            }
-            val bits = listOfNotNull(
-                g.doneToday.takeIf { it > 0 }?.let { "$it done today" },
-                g.nextEventStart?.let { "next ${it} ${g.nextEventTitle.orEmpty()}" },
-                g.due.takeIf { it > 0 }?.let { "$it due today" },
-                g.overdue.takeIf { it > 0 }?.let { "$it overdue" },
-                g.lost.takeIf { it > 0 }?.let { "$it lost" },
-            )
-            if (bits.isNotEmpty()) Text(bits.joinToString(" · "), color = Muted, fontSize = 13.sp, maxLines = 2,
-                overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
-            vm.hubError?.let {
-                val mins = ((now - g.fetchedAt) / 60_000L).coerceAtLeast(0)
-                Text("Offline · from ${if (mins < 1) "just now" else "$mins min ago"}", color = Muted, fontSize = 12.sp,
-                    modifier = Modifier.padding(top = 4.dp).clickable { vm.refreshHub(force = true) })
-            }
-        }
-    }
-}
-
 @Composable
 private fun AgendaBlock(context: Context, items: List<AgendaItem>) {
     Text(stringResource(R.string.s_today), color = Muted, fontSize = 13.sp)
@@ -486,31 +382,6 @@ private fun AgendaBlock(context: Context, items: List<AgendaItem>) {
         }
     }
     Spacer(Modifier.height(20.dp))
-}
-
-/** Home card for projects kept on the phone: the first project with a next step. */
-@Composable
-private fun LocalProjectCard(vm: LauncherViewModel) {
-    val p = vm.projects.firstOrNull { it.next.isNotBlank() }
-    if (p == null) {
-        Text(stringResource(R.string.s_no_next_step_yet_add_projects), color = Muted, fontSize = 14.sp,
-            modifier = Modifier.padding(bottom = 20.dp).clickable { vm.screen = Screen.WIDGETS })
-        return
-    }
-    Row(Modifier.fillMaxWidth().padding(bottom = 20.dp).height(IntrinsicSize.Min)) {
-        Box(Modifier.width(3.dp).fillMaxHeight().background(Accent))
-        Column(Modifier.padding(start = 14.dp)) {
-            Text(stringResource(R.string.s_next_step), color = Accent, fontSize = 12.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.8.sp)
-            Text(p.next, color = Ink, fontSize = 22.sp, lineHeight = 27.sp, modifier = Modifier.padding(top = 2.dp))
-            Text(p.name, color = Muted, fontSize = 13.sp)
-            Row(Modifier.padding(top = 8.dp)) {
-                Text(stringResource(R.string.s_done), color = Accent, fontSize = 16.sp, fontWeight = FontWeight.Medium,
-                    modifier = Modifier.clickable { vm.projectStepDone(p.id) }.padding(end = 24.dp, top = 6.dp, bottom = 6.dp))
-                Text(stringResource(R.string.s_later), color = Muted, fontSize = 16.sp,
-                    modifier = Modifier.clickable { vm.projectLater(p.id) }.padding(vertical = 6.dp))
-            }
-        }
-    }
 }
 
 private class EdgeInfo(val progress: Float, val inPrayer: Boolean, val ending: Boolean, val starting: Boolean, val started: Boolean)
@@ -586,12 +457,11 @@ private fun DrawScope.edgeBeam(from: Offset, to: Offset, frac: Float, color: Col
 }
 
 /**
- * Unread notifications on the screen edges, in each app's colour (taking turns when there are several),
- * and a signal dot at the top right, like a BlackBerry LED. Still and softly lit when Animations is off.
+ * Unread notifications on the screen edges, in each app's colour (taking turns when there are several).
+ * Still and softly lit when Animations is off.
  */
 private fun DrawScope.drawNotifyLight(
-    colors: List<Color>, style: NotifyStyle, geo: EdgeStyle, phase: Float, motion: Boolean,
-    edges: Boolean, dot: Boolean, important: Boolean,
+    colors: List<Color>, style: NotifyStyle, geo: EdgeStyle, phase: Float, motion: Boolean, important: Boolean,
 ) {
     val strength = if (important) 1f else 0.75f
     val color = colors[(phase / 2.4f).toInt().coerceAtLeast(0) % colors.size]
@@ -609,7 +479,7 @@ private fun DrawScope.drawNotifyLight(
             listOf(Offset(x, h) to Offset(x, 0f), Offset(w - x, h) to Offset(w - x, 0f))
         }
     }
-    if (edges) for ((a, b) in tracks) {
+    for ((a, b) in tracks) {
         when (style) {
             NotifyStyle.BREATHE -> glowLine(a, b, color, strength * if (motion) 0.25f + 0.65f * wave(phase, 2.4f) else 0.7f)
             NotifyStyle.BLINK -> glowLine(a, b, color, strength * if (!motion || phase % 3f < 0.22f) 1f else 0.06f)
@@ -626,11 +496,6 @@ private fun DrawScope.drawNotifyLight(
                 }
             }
         }
-    }
-    if (dot && (!motion || phase % 2.5f < 0.3f)) {
-        val c = Offset(w - 14.dp.toPx(), 10.dp.toPx())
-        drawCircle(color.copy(alpha = 0.3f * strength), 10.dp.toPx(), c)
-        drawCircle(color.copy(alpha = strength), 4.5.dp.toPx(), c)
     }
 }
 

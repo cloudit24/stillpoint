@@ -343,4 +343,6 @@
     <string name="s_at_dhuhr_time">At Dhuhr</string>
     <string name="s_n_min_before">%1$d min before Jumu\'ah</string>
     <string name="s_until_jumuah">until Jumu\'ah</string>
+    <string name="s_terminal_display">Terminal display</string>
+    <string name="s_terminal_note">Above your apps, Stillpoint tells you what matters now, most pressing first. Tap a line to act on it. With nothing to say, it greets you.</string>
 </resources>

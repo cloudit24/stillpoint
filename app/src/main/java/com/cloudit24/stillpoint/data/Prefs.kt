@@ -22,7 +22,6 @@ class Prefs(context: Context) {
                 .getOrDefault(d.homeStyle),
             showUsage = sp.getBoolean(K_SHOW_USAGE, d.showUsage),
             showAgenda = sp.getBoolean(K_SHOW_AGENDA, d.showAgenda),
-            showTasks = sp.getBoolean(K_SHOW_TASKS, d.showTasks),
             showIcons = sp.getBoolean(K_SHOW_ICONS, d.showIcons),
             drawerStart = runCatching { DrawerTab.valueOf(sp.getString(K_DRAWER_START, d.drawerStart.name)!!) }
                 .getOrDefault(d.drawerStart),
@@ -76,7 +75,6 @@ class Prefs(context: Context) {
             font = runCatching { AppFont.valueOf(sp.getString("app_font", null)!!) }.getOrDefault(d.font),
             notifyLight = sp.getBoolean("notify_light", d.notifyLight),
             notifyStyle = runCatching { NotifyStyle.valueOf(sp.getString("notify_style", null)!!) }.getOrDefault(d.notifyStyle),
-            notifyDot = sp.getBoolean("notify_dot", d.notifyDot),
             notifyAppDots = sp.getBoolean("notify_app_dots", d.notifyAppDots),
             notifyOff = sp.getStringSet("notify_off", null)?.toSet() ?: d.notifyOff,
             notifyColors = (sp.getString("notify_colors", "") ?: "").split(";").mapNotNull { e ->
@@ -86,25 +84,19 @@ class Prefs(context: Context) {
             importantApps = sp.getStringSet("important_apps", null)?.toSet() ?: d.importantApps,
             importantPeople = (sp.getString("important_people", "") ?: "").split("\n").filter { it.isNotBlank() },
             worldClocks = (sp.getString("world_clocks", "") ?: "").split("\n").filter { it.isNotBlank() },
-            showProjects = sp.getBoolean("show_projects", d.showProjects),
             remindEvery = sp.getInt("remind_every", d.remindEvery),
             // Before 0.17 only one could be chosen (key "info_panel").
             infoPanels = (sp.getString(K_INFO_PANELS, null) ?: sp.getString(K_INFO_PANEL, null))
                 ?.split(",")?.mapNotNull { n -> runCatching { InfoPanel.valueOf(n) }.getOrNull() }?.toSet()
                 ?: d.infoPanels,
-            showRecent = sp.getBoolean(K_SHOW_RECENT, d.showRecent),
             dialMode = runCatching { DialMode.valueOf(sp.getString(K_DIAL, null)!!) }.getOrDefault(d.dialMode),
             compassHaptics = sp.getBoolean(K_COMPASS_HAPTICS, d.compassHaptics),
             toolsOn = sp.getBoolean("tools_on", d.toolsOn),
-            // Before 0.11, a connected hub was used for tasks and the home card: keep that on upgrade.
-            tasksSource = runCatching { TaskSource.valueOf(sp.getString(K_TASKS_SRC, null)!!) }
-                .getOrDefault(if (sp.getBoolean(K_HUB_ON, false)) TaskSource.HUB else TaskSource.PHONE),
             calendarSource = runCatching { CalendarSource.valueOf(sp.getString(K_CAL_SRC, null)!!) }.getOrDefault(d.calendarSource),
-            projectsSource = runCatching { ProjectSource.valueOf(sp.getString(K_PROJ_SRC, null)!!) }
-                .getOrDefault(if (sp.getBoolean(K_HUB_ON, false)) ProjectSource.HUB else ProjectSource.PHONE),
-            tasksSync = loadSync(SyncFeature.TASKS),
             calendarSync = loadSync(SyncFeature.CALENDAR),
-            projectsSync = loadSync(SyncFeature.PROJECTS),
+            statusStyle = runCatching { StatusStyle.valueOf(sp.getString("status_style", null)!!) }.getOrDefault(d.statusStyle),
+            statusOff = (sp.getStringSet("status_off", null) ?: emptySet())
+                .mapNotNull { n -> runCatching { StatusTopic.valueOf(n) }.getOrNull() }.toSet(),
             weatherOn = sp.getBoolean(K_WEATHER_ON, d.weatherOn),
             city = sp.getString(K_CITY, null)?.let { raw ->
                 runCatching {
@@ -120,7 +112,6 @@ class Prefs(context: Context) {
             goldPerGram = sp.getBoolean(K_GOLD_PER_GRAM, d.goldPerGram),
             goldSource = runCatching { GoldSource.valueOf(sp.getString(K_GOLD_SOURCE, d.goldSource.name)!!) }
                 .getOrDefault(d.goldSource),
-            hubOn = sp.getBoolean(K_HUB_ON, d.hubOn),
             gestures = loadGestures(),
             hidden = sp.getStringSet(K_HIDDEN, null)?.toSet() ?: emptySet(),
             pinned = readStringList(sp.getString(K_PINNED, null)),
@@ -139,7 +130,6 @@ class Prefs(context: Context) {
             .putString(K_HOME_STYLE, s.homeStyle.name)
             .putBoolean(K_SHOW_USAGE, s.showUsage)
             .putBoolean(K_SHOW_AGENDA, s.showAgenda)
-            .putBoolean(K_SHOW_TASKS, s.showTasks)
             .putBoolean(K_SHOW_ICONS, s.showIcons)
             .putString(K_DRAWER_START, s.drawerStart.name)
             .putLong(K_ACCENT, s.accent)
@@ -181,23 +171,20 @@ class Prefs(context: Context) {
             .putString("app_font", s.font.name)
             .putBoolean("notify_light", s.notifyLight)
             .putString("notify_style", s.notifyStyle.name)
-            .putBoolean("notify_dot", s.notifyDot)
             .putBoolean("notify_app_dots", s.notifyAppDots)
             .putStringSet("notify_off", s.notifyOff)
             .putString("notify_colors", s.notifyColors.entries.joinToString(";") { "${it.key}=${it.value}" })
             .putStringSet("important_apps", s.importantApps)
             .putString("important_people", s.importantPeople.joinToString("\n"))
             .putString("world_clocks", s.worldClocks.joinToString("\n"))
-            .putBoolean("show_projects", s.showProjects)
             .putInt("remind_every", s.remindEvery)
             .putString(K_INFO_PANELS, s.infoPanels.joinToString(",") { it.name })
-            .putBoolean(K_SHOW_RECENT, s.showRecent)
             .putString(K_DIAL, s.dialMode.name)
             .putBoolean(K_COMPASS_HAPTICS, s.compassHaptics)
             .putBoolean("tools_on", s.toolsOn)
-            .putString(K_TASKS_SRC, s.tasksSource.name)
             .putString(K_CAL_SRC, s.calendarSource.name)
-            .putString(K_PROJ_SRC, s.projectsSource.name)
+            .putString("status_style", s.statusStyle.name)
+            .putStringSet("status_off", s.statusOff.map { it.name }.toSet())
             .apply {
                 SyncFeature.entries.forEach { f ->
                     val c = s.sync(f)
@@ -217,7 +204,6 @@ class Prefs(context: Context) {
             .putInt(K_GOLD_KARAT, s.goldKarat)
             .putBoolean(K_GOLD_PER_GRAM, s.goldPerGram)
             .putString(K_GOLD_SOURCE, s.goldSource.name)
-            .putBoolean(K_HUB_ON, s.hubOn)
             .apply { GestureSlot.entries.forEach { putString(K_GESTURE + it.name, s.gesture(it)) } }
             .putStringSet(K_HIDDEN, HashSet(s.hidden))
             .putString(K_PINNED, JSONArray(s.pinned).toString())
@@ -234,32 +220,11 @@ class Prefs(context: Context) {
         wifiOnly = sp.getBoolean("sync_${f.name}_wifi", false),
     )
 
-    fun loadProjects(): List<LocalProject> = sp.getString(K_PROJECTS, null)?.let { raw ->
-        runCatching {
-            val a = JSONArray(raw)
-            List(a.length()) { i ->
-                val o = a.getJSONObject(i)
-                val steps = o.optJSONArray("steps")
-                LocalProject(o.getLong("id"), o.getString("name"), o.optString("next"),
-                    steps?.let { a -> List(a.length()) { a.getString(it) } } ?: emptyList(), o.optInt("done"))
-            }
-        }.getOrNull()
-    } ?: emptyList()
-
-    fun saveProjects(list: List<LocalProject>) {
-        val a = JSONArray()
-        list.forEach {
-            a.put(JSONObject().put("id", it.id).put("name", it.name).put("next", it.next)
-                .put("steps", JSONArray(it.steps)).put("done", it.done))
-        }
-        sp.edit().putString(K_PROJECTS, a.toString()).apply()
-    }
-
     /** Private calendar address; kept here only (backups are off). */
     fun icsUrl(): String? = sp.getString(K_ICS_URL, null)
     fun saveIcsUrl(url: String?) = sp.edit().putString(K_ICS_URL, url).apply()
 
-    /** Last successful sync and last error, per outside source ("HUB", "ICS"). */
+    /** Last successful sync and last error, per outside source ("ICS"). */
     fun syncLast(source: String): Long = sp.getLong("sync_last_$source", 0L)
     fun syncError(source: String): String? = sp.getString("sync_err_$source", null)
     fun markSync(source: String, error: String?) {
@@ -268,7 +233,7 @@ class Prefs(context: Context) {
         e.apply()
     }
 
-    fun loadTasks(): List<TaskItem> {
+    private fun loadTasks(): List<TaskItem> {
         val raw = sp.getString(K_TASKS, null) ?: return emptyList()
         return runCatching {
             val arr = JSONArray(raw)
@@ -277,12 +242,6 @@ class Prefs(context: Context) {
                 TaskItem(o.getLong("id"), o.getString("text"), o.getBoolean("done"), o.optLong("due", -1L), o.optInt("remind", -1))
             }
         }.getOrDefault(emptyList())
-    }
-
-    fun saveTasks(tasks: List<TaskItem>) {
-        val arr = JSONArray()
-        tasks.forEach { arr.put(JSONObject().put("id", it.id).put("text", it.text).put("done", it.done).put("due", it.due).put("remind", it.remind)) }
-        sp.edit().putString(K_TASKS, arr.toString()).apply()
     }
 
     /** Widget ids in page order. Ids belong to the system widget host, so they live apart from settings. */
@@ -325,10 +284,26 @@ class Prefs(context: Context) {
         if (!cur.containsAll(pkgs)) sp.edit().putStringSet("notify_seen", cur + pkgs).apply()
     }
 
-    fun loadNotes(): List<Note> = runCatching {
-        val a = JSONArray(sp.getString("notes", "[]"))
-        (0 until a.length()).map { i -> a.getJSONObject(i).let { Note(it.getLong("id"), it.getString("text"), it.optInt("color", 0)) } }
-    }.getOrDefault(emptyList())
+    fun loadNotes(): List<Note> {
+        tasksToNotes()
+        return runCatching {
+            val a = JSONArray(sp.getString("notes", "[]"))
+            (0 until a.length()).map { i -> a.getJSONObject(i).let { Note(it.getLong("id"), it.getString("text"), it.optInt("color", 0)) } }
+        }.getOrDefault(emptyList())
+    }
+
+    /** Tasks moved to the Project Hub app in 0.43: open tasks become notes once, so nothing is lost. */
+    private fun tasksToNotes() {
+        if (!sp.contains(K_TASKS)) return
+        val open = loadTasks().filter { !it.done }
+        val existing = runCatching { JSONArray(sp.getString("notes", "[]")) }.getOrDefault(JSONArray())
+        open.forEach { t ->
+            val day = if (t.due >= 0) " (" + java.time.LocalDate.ofEpochDay(t.due) + ")" else ""
+            existing.put(JSONObject().put("id", t.id).put("text", t.text + day).put("color", 3))
+        }
+        sp.edit().putString("notes", existing.toString()).remove(K_TASKS).remove(K_PROJECTS)
+            .remove(K_HUB_URL).remove(K_HUB_KEY).remove(K_HUB_CACHE).remove(K_HUB_CACHE_AT).apply()
+    }
 
     fun saveNotes(notes: List<Note>) {
         val a = JSONArray()
@@ -363,12 +338,7 @@ class Prefs(context: Context) {
                 }
             }
         }
-        val s = loadSettings()
-        val cards = buildList {
-            add(BuiltIn.NOTES.id(0))
-            if (s.showTasks) add(BuiltIn.TASKS.id(0))
-        }
-        return listOf(ShelfPage(0, SHELF_NAMES[0], cards + loadWidgetIds()))
+        return listOf(ShelfPage(0, SHELF_NAMES[0], listOf(BuiltIn.NOTES.id(0)) + loadWidgetIds()))
     }
 
     /** Apps opened from search, newest first (app keys). */
@@ -491,29 +461,6 @@ class Prefs(context: Context) {
         }).apply()
     }
 
-    // ---- Project Hub: address + app key live only here (backups are off in the manifest) ----
-
-    fun hubUrl(): String? = sp.getString(K_HUB_URL, null)
-    fun hubKey(): String? = sp.getString(K_HUB_KEY, null)
-
-    fun saveHub(url: String, key: String) {
-        sp.edit().putString(K_HUB_URL, url).putString(K_HUB_KEY, key).apply()
-    }
-
-    fun clearHub() {
-        sp.edit().remove(K_HUB_URL).remove(K_HUB_KEY).remove(K_HUB_CACHE).remove(K_HUB_CACHE_AT).apply()
-    }
-
-    /** Last answer from the hub, so home shows something instantly and while offline. */
-    fun loadHubCache(): HubGlance? {
-        val body = sp.getString(K_HUB_CACHE, null) ?: return null
-        return HubGlance.parse(body, sp.getLong(K_HUB_CACHE_AT, 0L))
-    }
-
-    fun saveHubCache(body: String, at: Long) {
-        sp.edit().putString(K_HUB_CACHE, body).putLong(K_HUB_CACHE_AT, at).apply()
-    }
-
     private fun loadGestures(): Map<GestureSlot, String> {
         // 0.1.x had two on/off switches; carry them over the first time.
         val legacy = mapOf(
@@ -556,7 +503,6 @@ class Prefs(context: Context) {
         const val K_HOME_STYLE = "home_style"
         const val K_SHOW_USAGE = "show_usage"
         const val K_SHOW_AGENDA = "show_agenda"
-        const val K_SHOW_TASKS = "show_tasks"
         const val K_SHOW_ICONS = "show_icons"
         const val K_DRAWER_START = "drawer_start"
         const val K_ACCENT = "accent"
@@ -593,12 +539,9 @@ class Prefs(context: Context) {
         const val K_ICON_TINT = "icon_tint"
         const val K_INFO_PANEL = "info_panel"
         const val K_INFO_PANELS = "info_panels"
-        const val K_SHOW_RECENT = "show_recent"
         const val K_DIAL = "dial_mode"
         const val K_COMPASS_HAPTICS = "compass_haptics"
-        const val K_TASKS_SRC = "tasks_source"
         const val K_CAL_SRC = "calendar_source"
-        const val K_PROJ_SRC = "projects_source"
         const val K_PROJECTS = "projects"
         const val K_ICS_URL = "ics_url"
         const val K_WEATHER_ON = "weather_card_on"
@@ -621,7 +564,6 @@ class Prefs(context: Context) {
         const val K_FOCUS_ALLOWED = "focus_allowed"
         const val K_FOCUS_ENDS = "focus_ends_at"
         const val K_TASKS = "tasks"
-        const val K_HUB_ON = "hub_on"
         const val K_HUB_URL = "hub_url"
         const val K_HUB_KEY = "hub_key"
         const val K_HUB_CACHE = "hub_cache"

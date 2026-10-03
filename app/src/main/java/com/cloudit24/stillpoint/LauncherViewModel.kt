@@ -2,7 +2,6 @@ package com.cloudit24.stillpoint
 
 import com.cloudit24.stillpoint.data.SHELF_NAMES
 import java.time.LocalTime
-import com.cloudit24.stillpoint.widget.TaskAlerts
 import com.cloudit24.stillpoint.data.HaEntity
 import com.cloudit24.stillpoint.data.KumaStatus
 import com.cloudit24.stillpoint.data.SelfMessage
@@ -25,12 +24,8 @@ import com.cloudit24.stillpoint.data.Note
 import com.cloudit24.stillpoint.data.InfoPanel
 import com.cloudit24.stillpoint.data.CalendarSource
 import com.cloudit24.stillpoint.data.Ics
-import com.cloudit24.stillpoint.data.LocalProject
-import com.cloudit24.stillpoint.data.ProjectSource
-import com.cloudit24.stillpoint.data.ProviderTasks
 import com.cloudit24.stillpoint.data.SyncConfig
 import com.cloudit24.stillpoint.data.SyncFeature
-import com.cloudit24.stillpoint.data.TaskSource
 import com.cloudit24.stillpoint.sync.Sync
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -57,8 +52,6 @@ import com.cloudit24.stillpoint.data.CalendarRepository
 import com.cloudit24.stillpoint.data.DataUsageRepository
 import com.cloudit24.stillpoint.data.City
 import com.cloudit24.stillpoint.data.GoldQuote
-import com.cloudit24.stillpoint.data.HubGlance
-import com.cloudit24.stillpoint.data.HubRepository
 import com.cloudit24.stillpoint.data.LiveRepository
 import com.cloudit24.stillpoint.data.WeatherNow
 import com.cloudit24.stillpoint.data.FavFolder
@@ -68,7 +61,6 @@ import com.cloudit24.stillpoint.data.GestureTarget
 import com.cloudit24.stillpoint.data.HomeMode
 import com.cloudit24.stillpoint.data.LauncherSettings
 import com.cloudit24.stillpoint.data.Prefs
-import com.cloudit24.stillpoint.data.TaskItem
 import com.cloudit24.stillpoint.data.UsageRepository
 import com.cloudit24.stillpoint.ui.formatClock
 import kotlinx.coroutines.Dispatchers
@@ -108,7 +100,6 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         "Read ${String.format(java.util.Locale.US, "%,.2f", v)} ${c.currency} per ${if (c.perGram) "gram" else "ounce"} (24K)."
     }
     private val dataRepo = DataUsageRepository(app)
-    private val hubRepo = HubRepository()
 
     var screen by mutableStateOf(Screen.HOME)
     var blockedMessage by mutableStateOf<String?>(null)
@@ -138,8 +129,6 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     var weekUsage by mutableStateOf<Map<String, Long>>(emptyMap())
         private set
     var agenda by mutableStateOf<List<AgendaItem>>(emptyList())
-        private set
-    var tasks by mutableStateOf(prefs.loadTasks())
         private set
     var settings by mutableStateOf(prefs.loadSettings())
         private set
@@ -209,139 +198,13 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    // ---- Project Hub (opt-in, your own server) ----
+    // ---- Calendar: where it comes from and how it syncs ----
 
-    var hub by mutableStateOf(prefs.loadHubCache())
-        private set
-    var hubError by mutableStateOf<String?>(null)
-        private set
-    /** A stillpoint://hub link was opened (QR code on the hub's "Connect phone" page); waiting for the user's OK. */
-    var pendingHubLink by mutableStateOf<Pair<String, String>?>(null)
-    /** Tasks the user said "Not now" to on this phone. Forgotten when Stillpoint restarts. */
-    private val hubSkipped = mutableSetOf<String>()
-    private var hubBusy = false
-
-    fun hubUrl(): String? = prefs.hubUrl()
-    fun hubConnected(): Boolean = prefs.hubUrl() != null && prefs.hubKey() != null
-
-    /** Asks the hub only when shown, connected, and the last answer is older than 2 minutes (or [force]). */
-    fun refreshHub(force: Boolean = false) {
-        val url = prefs.hubUrl() ?: return
-        val key = prefs.hubKey() ?: return
-        if (!usesHub() || hubBusy) return
-        if (!force) {
-            val every = hubAutoInterval() ?: return
-            if (hub.let { it != null && System.currentTimeMillis() - it.fetchedAt < every }) return
-        }
-        hubBusy = true
-        viewModelScope.launch {
-            val skip = hubSkipped.toSet()
-            when (val r = withContext(Dispatchers.IO) { hubRepo.glance(url, key, skip) }) {
-                is HubRepository.Result.Ok -> {
-                    val at = System.currentTimeMillis()
-                    HubGlance.parse(r.value, at)?.let {
-                        hub = it
-                        prefs.saveHubCache(r.value, at)
-                        prefs.markSync(Sync.HUB, null)
-                        hubError = null
-                        if (settings.calendarSource == CalendarSource.HUB && settings.showAgenda) agenda = hubAgenda()
-                        syncTick++
-                    } ?: run { hubError = "The hub sent something Stillpoint doesn't understand. Update both." }
-                }
-                is HubRepository.Result.Failed -> {
-                    hubError = r.reason
-                    prefs.markSync(Sync.HUB, r.reason)
-                }
-            }
-            hubBusy = false
-        }
-    }
-
-    fun hubDone(id: String, done: Boolean = true) = hubWrite { url, key -> hubRepo.setDone(url, key, id, done) }
-
-    fun hubAdd(text: String, due: Long = -1L) {
-        val t = text.trim()
-        val day = if (due >= 0) LocalDate.ofEpochDay(due).toString() else null
-        if (t.isNotEmpty()) hubWrite { url, key -> hubRepo.addTask(url, key, t, day) }
-    }
-
-    fun hubNotNow(id: String) {
-        hubSkipped += id
-        refreshHub(force = true)
-    }
-
-    private fun hubWrite(action: (String, String) -> HubRepository.Result<String>) {
-        val url = prefs.hubUrl() ?: return
-        val key = prefs.hubKey() ?: return
-        viewModelScope.launch {
-            when (val r = withContext(Dispatchers.IO) { action(url, key) }) {
-                is HubRepository.Result.Ok -> refreshHub(force = true)
-                is HubRepository.Result.Failed -> blockedMessage = r.reason
-            }
-        }
-    }
-
-    /** Checks the address and key with a real request before saving them. Returns null on success, else why not. */
-    suspend fun connectHub(rawUrl: String, key: String): String? {
-        var url = rawUrl.trim().trimEnd('/')
-        if (url.isEmpty() || key.isBlank()) return "Enter the address and the app key."
-        if (!url.startsWith("http://") && !url.startsWith("https://")) url = "https://$url"
-        return when (val r = withContext(Dispatchers.IO) { hubRepo.glance(url, key.trim(), emptySet()) }) {
-            is HubRepository.Result.Failed -> r.reason
-            is HubRepository.Result.Ok -> {
-                val at = System.currentTimeMillis()
-                prefs.saveHub(url, key.trim())
-                prefs.saveHubCache(r.value, at)
-                hub = HubGlance.parse(r.value, at)
-                hubError = null
-                // A new hub is used for tasks and projects right away; calendar stays as chosen.
-                updateSettings { it.copy(hubOn = true, tasksSource = TaskSource.HUB, projectsSource = ProjectSource.HUB) }
-                prefs.markSync(Sync.HUB, null)
-                Sync.schedule(getApplication())
-                null
-            }
-        }
-    }
-
-    fun disconnectHub() {
-        prefs.clearHub()
-        hub = null
-        hubError = null
-        hubSkipped.clear()
-        updateSettings {
-            it.copy(
-                hubOn = false,
-                tasksSource = if (it.tasksSource == TaskSource.HUB) TaskSource.PHONE else it.tasksSource,
-                calendarSource = if (it.calendarSource == CalendarSource.HUB) CalendarSource.PHONE else it.calendarSource,
-                projectsSource = if (it.projectsSource == ProjectSource.HUB) ProjectSource.PHONE else it.projectsSource,
-            )
-        }
-        Sync.schedule(getApplication())
-    }
-
-    // ---- Tasks, calendar and projects: where they come from and how they sync ----
-
-    private val providerRepo = ProviderTasks(app)
-    var providerTasks by mutableStateOf<List<TaskItem>>(emptyList())
-        private set
-    var providerError by mutableStateOf<String?>(null)
-        private set
-    var projects by mutableStateOf(prefs.loadProjects())
-        private set
     /** Bumped after every sync so Settings re-reads the last-sync times. */
     var syncTick by mutableIntStateOf(0)
         private set
     var syncing by mutableStateOf(false)
         private set
-
-    fun usesHub(): Boolean = settings.let {
-        it.tasksSource == TaskSource.HUB || it.calendarSource == CalendarSource.HUB || it.projectsSource == ProjectSource.HUB
-    }
-
-    /** Shortest auto-sync interval among the pages using the hub, or null when none sync automatically. */
-    private fun hubAutoInterval(): Long? = SyncFeature.entries
-        .filter { Sync.sourceOf(settings, it) == Sync.HUB && settings.sync(it).auto }
-        .minOfOrNull { settings.sync(it).everyMin * 60_000L }
 
     fun syncLast(source: String): Long = prefs.syncLast(source)
     fun syncError(source: String): String? = prefs.syncError(source)
@@ -351,9 +214,6 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         syncing = true
         viewModelScope.launch {
             Sync.run(getApplication(), force = true, only = feature)
-            hub = prefs.loadHubCache()
-            hubError = prefs.syncError(Sync.HUB)
-            if (settings.tasksSource.authority != null) loadProviderTasks()
             agenda = loadAgenda()
             syncing = false
             syncTick++
@@ -363,61 +223,16 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     fun setSync(feature: SyncFeature, transform: (SyncConfig) -> SyncConfig) {
         updateSettings { s ->
             when (feature) {
-                SyncFeature.TASKS -> s.copy(tasksSync = transform(s.tasksSync))
                 SyncFeature.CALENDAR -> s.copy(calendarSync = transform(s.calendarSync))
-                SyncFeature.PROJECTS -> s.copy(projectsSync = transform(s.projectsSync))
             }
         }
         Sync.schedule(getApplication())
-    }
-
-    fun setTaskSource(src: TaskSource) {
-        updateSettings { it.copy(tasksSource = src) }
-        Sync.schedule(getApplication())
-        if (src.authority != null) loadProviderTasks()
-        if (src == TaskSource.HUB) refreshHub(force = true)
     }
 
     fun setCalendarSource(src: CalendarSource) {
         updateSettings { it.copy(calendarSource = src) }
         Sync.schedule(getApplication())
         if (src == CalendarSource.PHONE) refresh() else syncNow(SyncFeature.CALENDAR)
-    }
-
-    fun setProjectSource(src: ProjectSource) {
-        updateSettings { it.copy(projectsSource = src) }
-        Sync.schedule(getApplication())
-        if (src == ProjectSource.HUB) refreshHub(force = true)
-    }
-
-    fun providerInstalled(src: TaskSource): Boolean = providerRepo.installed(src)
-    fun providerPermitted(src: TaskSource): Boolean = providerRepo.hasPermission(src)
-
-    fun loadProviderTasks() {
-        val src = settings.tasksSource
-        if (src.authority == null) return
-        viewModelScope.launch {
-            withContext(Dispatchers.IO) { runCatching { providerRepo.open(src) } }
-                .onSuccess { providerTasks = it; providerError = null }
-                .onFailure { providerError = it.message ?: "Couldn't read ${src.label}." }
-        }
-    }
-
-    fun providerDone(id: Long) = providerWrite { providerRepo.setDone(it, id, true) }
-
-    fun providerAdd(text: String, due: Long = -1L) {
-        val t = text.trim()
-        if (t.isNotEmpty()) providerWrite { providerRepo.add(it, t, due) }
-    }
-
-    private fun providerWrite(action: (TaskSource) -> Unit) {
-        val src = settings.tasksSource
-        if (src.authority == null) return
-        viewModelScope.launch {
-            withContext(Dispatchers.IO) { runCatching { action(src) } }
-                .onFailure { blockedMessage = "${src.label} didn't accept the change: ${it.message ?: "unknown reason"}" }
-            loadProviderTasks()
-        }
     }
 
     fun icsUrl(): String? = prefs.icsUrl()
@@ -433,7 +248,6 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         if (!settings.showAgenda && InfoPanel.AGENDA !in settings.infoPanels) return emptyList()
         return when (settings.calendarSource) {
             CalendarSource.PHONE -> withContext(Dispatchers.IO) { runCatching { calendarRepo.today() }.getOrDefault(emptyList()) }
-            CalendarSource.HUB -> hubAgenda()
             CalendarSource.ICS -> withContext(Dispatchers.IO) {
                 val f = Sync.icsFile(getApplication())
                 if (!f.exists()) emptyList() else runCatching {
@@ -442,51 +256,6 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
                 }.getOrDefault(emptyList())
             }
         }
-    }
-
-    private fun hubAgenda(): List<AgendaItem> {
-        val g = hub ?: return emptyList()
-        val title = g.nextEventTitle?.takeIf { it.isNotBlank() } ?: return emptyList()
-        val ms = g.nextEventStart?.let { s ->
-            runCatching { OffsetDateTime.parse(s).toInstant().toEpochMilli() }.getOrNull()
-                ?: runCatching { LocalDateTime.parse(s).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli() }.getOrNull()
-        }
-        return listOf(AgendaItem(title, ms ?: 0L, ms ?: 0L, allDay = ms == null))
-    }
-
-    fun addProject(name: String, steps: List<String>) {
-        val n = name.trim()
-        if (n.isEmpty()) return
-        projects = projects + LocalProject(System.currentTimeMillis(), n, steps.firstOrNull() ?: "", steps.drop(1))
-        prefs.saveProjects(projects)
-    }
-
-    fun updateProject(p: LocalProject) {
-        projects = projects.map { if (it.id == p.id) p.copy(name = p.name.trim(), next = p.next.trim()) else it }
-        prefs.saveProjects(projects)
-    }
-
-    fun deleteProject(id: Long) {
-        val i = projects.indexOfFirst { it.id == id }
-        if (i < 0) return
-        val gone = projects[i]
-        projects = projects.filter { it.id != id }
-        prefs.saveProjects(projects)
-        offerUndo("Project deleted") {
-            if (projects.none { it.id == id }) {
-                projects = projects.reinsert(i, gone)
-                prefs.saveProjects(projects)
-            }
-        }
-    }
-
-    /** The next step is done: the following step moves up. With none left, the project moves to the end. */
-    fun projectStepDone(id: Long) {
-        val p = projects.find { it.id == id } ?: return
-        val moved = p.copy(done = p.done + 1, next = p.steps.firstOrNull() ?: "", steps = p.steps.drop(1))
-        projects = if (moved.next.isBlank()) projects.filter { it.id != id } + moved
-        else projects.map { if (it.id == id) moved else it }
-        prefs.saveProjects(projects)
     }
 
     // ---- Undo, for a few seconds after something is deleted on the Shelf ----
@@ -513,12 +282,6 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun <T> List<T>.reinsert(i: Int, item: T): List<T> = toMutableList().apply { add(i.coerceIn(0, size), item) }
-
-    fun projectLater(id: Long) {
-        val p = projects.find { it.id == id } ?: return
-        projects = projects.filter { it.id != id } + p
-        prefs.saveProjects(projects)
-    }
 
     suspend fun dataUsage(start: Long, end: Long): List<AppDataUsage> {
         val labels = apps.associate { it.packageName to it.label }
@@ -840,13 +603,11 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
             lastUsed = loaded.lastUsed
             agenda = loadAgenda()
             refreshLive()
-            refreshHub()
             Sync.schedule(getApplication())
             UpdateNotice.check()?.let {
                 UpdateNotice.notifyOnce(getApplication(), it)
                 if (UpdateNotice.popupDue(getApplication(), it.version)) updatePopup = it.version
             }
-            if (settings.tasksSource.authority != null) loadProviderTasks()
             if (settings.calendarSource == CalendarSource.ICS) {
                 Sync.run(getApplication(), force = false, only = SyncFeature.CALENDAR)
                 agenda = loadAgenda()
@@ -1033,70 +794,4 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun endFocus() = updateSettings { it.copy(focusEndsAt = 0L) }
-
-    // ---- Tasks ----
-
-    /** Saves the tasks and moves the next alert. */
-    private fun saveTasks() {
-        prefs.saveTasks(tasks)
-        runCatching { TaskAlerts.schedule(getApplication<Application>()) }
-    }
-
-    /** An alert needs a day: without one it takes today, or tomorrow when that time has passed. */
-    private fun dayFor(due: Long, remind: Int): Long {
-        if (remind < 0 || due >= 0) return due
-        val now = LocalTime.now()
-        val today = LocalDate.now().toEpochDay()
-        return if (now.hour * 60 + now.minute < remind) today else today + 1
-    }
-
-    fun addTask(text: String, due: Long = -1L, remind: Int = -1) {
-        val t = text.trim()
-        if (t.isEmpty()) return
-        tasks = tasks + TaskItem(System.currentTimeMillis(), t, false, dayFor(due, remind), remind)
-        saveTasks()
-    }
-
-    fun updateTask(id: Long, text: String, due: Long, remind: Int) {
-        val t = text.trim()
-        if (t.isEmpty()) return
-        tasks = tasks.map { if (it.id == id) it.copy(text = t, due = dayFor(due, remind), remind = remind) else it }
-        saveTasks()
-    }
-
-    /** The bell: a minute of the day to ring, or -1 for no alert. */
-    fun setTaskRemind(id: Long, remind: Int) {
-        tasks = tasks.map { if (it.id == id) it.copy(remind = remind, due = dayFor(it.due, remind)) else it }
-        saveTasks()
-    }
-
-    fun clearDoneTasks() {
-        val gone = tasks.filter { it.done }
-        if (gone.isEmpty()) return
-        tasks = tasks.filter { !it.done }
-        saveTasks()
-        offerUndo(if (gone.size == 1) "1 task cleared" else "${gone.size} tasks cleared") {
-            tasks = tasks + gone.filter { g -> tasks.none { it.id == g.id } }
-            saveTasks()
-        }
-    }
-
-    fun toggleTask(id: Long) {
-        tasks = tasks.map { if (it.id == id) it.copy(done = !it.done) else it }
-        saveTasks()
-    }
-
-    fun deleteTask(id: Long) {
-        val i = tasks.indexOfFirst { it.id == id }
-        if (i < 0) return
-        val gone = tasks[i]
-        tasks = tasks.filterNot { it.id == id }
-        saveTasks()
-        offerUndo("Task deleted") {
-            if (tasks.none { it.id == id }) {
-                tasks = tasks.reinsert(i, gone)
-                saveTasks()
-            }
-        }
-    }
 }

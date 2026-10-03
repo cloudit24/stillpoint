@@ -341,4 +341,6 @@
     <string name="s_at_dhuhr_time">ளுஹர் நேரத்தில்</string>
     <string name="s_n_min_before">ஜும்ஆவுக்கு %1$d நிமி முன்</string>
     <string name="s_until_jumuah">ஜும்ஆ வரை</string>
+    <string name="s_terminal_display">டெர்மினல் காட்சி</string>
+    <string name="s_terminal_note">உங்கள் ஆப்களுக்கு மேல், இப்போது முக்கியமானதை Stillpoint சொல்லும். ஒரு வரியைத் தட்டுங்கள். சொல்ல ஏதும் இல்லையெனில் வணக்கம் சொல்லும்.</string>
 </resources>

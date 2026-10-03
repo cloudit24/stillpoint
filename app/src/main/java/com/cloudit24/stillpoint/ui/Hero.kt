@@ -7,7 +7,6 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import java.time.temporal.TemporalAdjusters
 import java.time.temporal.WeekFields
-import com.cloudit24.stillpoint.data.TaskSource
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.BoxWithConstraints
 import com.cloudit24.stillpoint.data.Moon
@@ -105,7 +104,7 @@ private data class HeroCard(val title: String, val subtitle: String, val color: 
 
 /**
  * Clock-free header: accent date line, a big headline that flips like a live tile
- * (greeting, next prayer, gold, Hijri, Tamil), page dots, and a glass strip with network, memory and IP.
+ * (time, screen time, weather, Hijri, Tamil), page dots, and a glass strip with network, memory and IP.
  */
 @Composable
 fun HeroHeader(vm: LauncherViewModel, s: LauncherSettings, now: Long) {
@@ -117,13 +116,8 @@ fun HeroHeader(vm: LauncherViewModel, s: LauncherSettings, now: Long) {
     }
 
     val cards = buildList {
-        val greeting = when (zdt.hour) {
-            in 5..11 -> "Good morning"
-            in 12..16 -> "Good afternoon"
-            in 17..20 -> "Good evening"
-            else -> "Good night"
-        }
-        add(HeroCard(greeting, "It's ${formatClock(context, now)}", Ink))
+        // The greeting lives in the terminal display now; the headline starts with the time.
+        add(HeroCard(formatClock(context, now), DateTimeFormatter.ofPattern("EEEE", Locale.getDefault()).format(zdt), Ink))
         if (s.showUsage && vm.hasUsageAccess && vm.totalUsage > 0) {
             add(HeroCard(formatDuration(vm.totalUsage), "on screen today", Ink))
         }
@@ -337,7 +331,6 @@ private fun InfoPage(vm: LauncherViewModel, s: LauncherSettings, now: Long, pane
         InfoPanel.AGENDA -> AgendaInfo(vm, now, Modifier)
         InfoPanel.DAY -> DayInfo(now, Modifier)
         InfoPanel.WEEK -> WeekInfo(s, Modifier)
-        InfoPanel.TASKS -> TasksInfo(vm, s, Modifier)
         InfoPanel.WEATHER -> WeatherInfo(vm, s, Modifier)
         InfoPanel.WORLD -> WorldInfo(s, now, Modifier)
     }
@@ -381,39 +374,6 @@ private fun WeekInfo(s: LauncherSettings, modifier: Modifier) {
         Text(line, color = Muted, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(top = 10.dp))
     }
-}
-
-/** How many tasks are left, the first one, and what is late. Tap for the Shelf. */
-@Composable
-private fun TasksInfo(vm: LauncherViewModel, s: LauncherSettings, modifier: Modifier) {
-    val src = s.tasksSource
-    LaunchedEffect(src) { if (src.authority != null) vm.loadProviderTasks() }
-    val today = LocalDate.now().toEpochDay()
-    val (open, doneCount) = when {
-        src == TaskSource.HUB -> vm.hub?.tasks.orEmpty().let { l ->
-            l.filter { !it.done }.map { t ->
-                t.text to (t.due?.let { d -> runCatching { LocalDate.parse(d.take(10)).toEpochDay() }.getOrNull() } ?: -1L)
-            } to l.count { it.done }
-        }
-        src.authority != null -> vm.providerTasks.map { it.text to it.due } to 0
-        else -> sortTasks(vm.tasks.filter { !it.done }).map { it.text to it.due } to vm.tasks.count { it.done }
-    }
-    val overdue = open.count { it.second in 0 until today }
-    val dueToday = open.count { it.second == today }
-    val total = open.size + doneCount
-    InfoLayout(
-        title = if (open.isEmpty()) "All done" else if (open.size == 1) "1 task left" else "${open.size} tasks left",
-        titleExtra = null,
-        sub = open.firstOrNull()?.first ?: "Nothing left on your list",
-        right = when {
-            overdue > 0 -> "$overdue overdue"
-            dueToday > 0 -> "$dueToday today"
-            else -> ""
-        },
-        rightSub = "",
-        modifier = modifier,
-        onClick = { vm.screen = Screen.WIDGETS },
-    ) { accent -> progressTrack(accent, if (total == 0) 1f else doneCount / total.toFloat()) }
 }
 
 /** The weather now, bigger than the headline card, with when it was last fetched. */

@@ -3,6 +3,12 @@
 Every version of Stillpoint Launcher, newest first. Each links to its APK.
 The newest is always at **[Download the latest APK](https://github.com/cloudit24/stillpoint/releases/latest/download/Stillpoint-Launcher.apk)**.
 
+## v0.43.0 · not yet released
+- Terminal display above your apps: the one place Stillpoint talks to you. Iqama and prayer, missed calls and messages, low battery, focus, your next event, a new version, setup tips and your latest note, most pressing first. Tap a line to act on it. With nothing to say, it greets you. Choose Terminal, Retro LCD or Quiet line, and which topics it covers, in Settings, Home screen.
+- The greeting moved from the flipping headline to the terminal display; the headline now starts with the time.
+- Project Hub and Tasks are out of the launcher; they'll come back as a separate Project Hub app with its own widget for the Shelf. Your open tasks are kept as notes.
+- Removed: the recent apps strip, the signal dot at the top, and the update popup on home (the terminal display tells you instead).
+
 ## v0.42.0 · 4 Oct 2026
 - Friday in the UAE: the alert comes at Dhuhr time, early enough to reach the mosque, with a countdown to Jumu'ah at 12:45 PM. There's no alert at 12:45 itself, since the adhan is already given by then. Settings, Prayer, Alerts, Friday alert: at Dhuhr, or 15 to 60 minutes before Jumu'ah.
 

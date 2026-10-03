@@ -20,41 +20,14 @@ import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 
-// ---- Where tasks, calendar and projects come from ----
-
-/** [authority] and permissions are for task apps that share their list through the OpenTasks provider. */
-enum class TaskSource(
-    val label: String,
-    val detail: String,
-    val authority: String? = null,
-    val readPermission: String? = null,
-    val writePermission: String? = null,
-    val appPackage: String? = null,
-) {
-    PHONE("On this phone", "Stored only in Stillpoint"),
-    HUB("Project Hub", "Today's and overdue tasks from your hub. Done and new tasks go back to it."),
-    TASKS_ORG(
-        "Tasks.org", "Open-source tasks app. Syncs with Nextcloud, CalDAV and more.",
-        "org.tasks.opentasks", "org.tasks.permission.READ_TASKS", "org.tasks.permission.WRITE_TASKS", "org.tasks",
-    ),
-    OPENTASKS(
-        "OpenTasks", "Open-source tasks app. Syncs with CalDAV through DAVx5.",
-        "org.dmfs.tasks", "org.dmfs.permission.READ_TASKS", "org.dmfs.permission.WRITE_TASKS", "org.dmfs.tasks",
-    ),
-}
+// ---- Where the calendar comes from ----
 
 enum class CalendarSource(val label: String, val detail: String) {
     PHONE("Phone calendar", "Android's calendar: Google, Outlook, work and other accounts on this phone"),
-    HUB("Project Hub", "Your next event from the hub"),
     ICS("Calendar link (.ics)", "A private calendar address, for example from Outlook or Google. Read-only."),
 }
 
-enum class ProjectSource(val label: String, val detail: String) {
-    PHONE("On this phone", "A simple list of projects, each with its next step"),
-    HUB("Project Hub", "The one next thing to do and why, from your hub"),
-}
-
-enum class SyncFeature(val label: String) { TASKS("Tasks"), CALENDAR("Calendar"), PROJECTS("Projects") }
+enum class SyncFeature(val label: String) { CALENDAR("Calendar") }
 
 /** How an outside source is kept up to date. */
 data class SyncConfig(val auto: Boolean = true, val everyMin: Int = 60, val wifiOnly: Boolean = false)
@@ -65,70 +38,6 @@ fun intervalLabel(min: Int): String = when {
     min < 60 -> "$min minutes"
     min == 60 -> "1 hour"
     else -> "${min / 60} hours"
-}
-
-/** A project on the phone: [next] is the step to do now, [steps] the ones after it, [done] how many are finished. */
-data class LocalProject(val id: Long, val name: String, val next: String, val steps: List<String> = emptyList(), val done: Int = 0)
-
-// ---- Task apps (Tasks.org, OpenTasks) through their shared task provider ----
-
-/** Reads and writes the task list of an installed task app. The app does its own syncing. Call off the main thread. */
-class ProviderTasks(private val context: Context) {
-
-    fun installed(src: TaskSource): Boolean = src.appPackage?.let { pkg ->
-        runCatching { context.packageManager.getPackageInfo(pkg, 0); true }.getOrDefault(false)
-    } ?: false
-
-    fun hasPermission(src: TaskSource): Boolean = src.readPermission?.let {
-        context.checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED
-    } ?: false
-
-    private fun tasksUri(src: TaskSource) = Uri.parse("content://${src.authority}/tasks")
-
-    /** Open tasks, soonest due first. Throws with a readable message when the app refuses. */
-    fun open(src: TaskSource, limit: Int = 40): List<TaskItem> {
-        val out = ArrayList<TaskItem>()
-        val c = context.contentResolver.query(
-            tasksUri(src), arrayOf("_id", "title", "status", "due"), "(status IS NULL OR status < 2)", null, "due IS NULL, due ASC",
-        ) ?: throw IOException("${src.label} didn't answer. Open it once, then try again.")
-        c.use {
-            while (it.moveToNext() && out.size < limit) {
-                val due = if (it.isNull(3)) -1L
-                else Instant.ofEpochMilli(it.getLong(3)).atZone(ZoneId.systemDefault()).toLocalDate().toEpochDay()
-                out += TaskItem(it.getLong(0), it.getString(1) ?: "(no title)", false, due)
-            }
-        }
-        return out
-    }
-
-    fun setDone(src: TaskSource, id: Long, done: Boolean) {
-        val v = ContentValues().apply {
-            put("status", if (done) 2 else 0)
-            if (done) put("completed", System.currentTimeMillis()) else putNull("completed")
-        }
-        context.contentResolver.update(ContentUris.withAppendedId(tasksUri(src), id), v, null, null)
-    }
-
-    /** Adds to the app's first list. */
-    fun add(src: TaskSource, title: String, due: Long = -1L) {
-        val listId = context.contentResolver.query(
-            Uri.parse("content://${src.authority}/tasklists"), arrayOf("_id"), null, null, null,
-        )?.use { if (it.moveToFirst()) it.getLong(0) else null }
-            ?: throw IOException("${src.label} has no task list yet. Create one there first.")
-        val v = ContentValues().apply {
-            put("list_id", listId)
-            put("title", title)
-        }
-        // An all-day due date; if the app refuses it, the task is still added without one.
-        if (due >= 0) {
-            val withDue = ContentValues(v).apply {
-                put("due", due * 86_400_000L)
-                put("is_allday", 1)
-            }
-            if (runCatching { context.contentResolver.insert(tasksUri(src), withDue) }.getOrNull() != null) return
-        }
-        context.contentResolver.insert(tasksUri(src), v)
-    }
 }
 
 // ---- Calendar link (.ics) ----

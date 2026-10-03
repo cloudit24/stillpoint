@@ -82,8 +82,6 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TextButton
-import com.cloudit24.stillpoint.data.LocalProject
-import com.cloudit24.stillpoint.data.ProjectSource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
@@ -202,7 +200,7 @@ fun WidgetsScreen(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderInfo) ->
                 modifier = Modifier.clickable { editing = !editing }.padding(8.dp))
         }
 
-        // The Shelf: things to keep near but off the home screen. Notes, tasks, projects, then widgets.
+        // The Shelf: things to keep near but off the home screen. Notes, Stillpoint cards, then widgets.
         Column(Modifier.weight(1f).padding(top = 16.dp).onGloballyPositioned { viewport = it.boundsInRoot() }
             .verticalScroll(shelfScroll, enabled = drag.id == null)) {
             if (editing) Text(stringResource(R.string.s_drag_to_move_corner_to_resize), color = Muted, fontSize = 13.sp,
