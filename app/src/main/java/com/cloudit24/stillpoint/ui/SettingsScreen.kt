@@ -246,7 +246,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
         }
     }
     // Any change to the city, method or alerts moves the next alert.
-    LaunchedEffect(s.city, s.prayerMethod, s.asrHanafi, s.adhanAlert, s.iqamaAlert, s.iqama, s.remindBefore, s.jumuah) {
+    LaunchedEffect(s.city, s.prayerMethod, s.asrHanafi, s.adhanAlert, s.iqamaAlert, s.iqama, s.remindBefore, s.jumuah, s.jumuahLead) {
         PrayerAlerts.schedule(ctx)
     }
 
@@ -527,6 +527,11 @@ fun SettingsScreen(vm: LauncherViewModel) {
                                     }
                                 }.show()
                             }
+                            val lead = listOf(0, 15, 30, 45, 60)
+                            Stepper(stringResource(R.string.s_friday_alert),
+                                if (s.jumuahLead <= 0) stringResource(R.string.s_at_dhuhr_time) else stringResource(R.string.s_n_min_before, s.jumuahLead),
+                                onMinus = { vm.updateSettings { it.copy(jumuahLead = lead.lastOrNull { m -> m < it.jumuahLead } ?: 0) } },
+                                onPlus = { vm.updateSettings { it.copy(jumuahLead = lead.firstOrNull { m -> m > it.jumuahLead } ?: 60) } })
                         }
                     }
                     Note(stringResource(R.string.s_popup_note))

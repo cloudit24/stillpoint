@@ -3,6 +3,11 @@
 Every version of Stillpoint Launcher, newest first. Each links to its APK.
 The newest is always at **[Download the latest APK](https://github.com/cloudit24/stillpoint/releases/latest/download/Stillpoint-Launcher.apk)**.
 
+## v0.42.0 · 4 Oct 2026
+- Friday in the UAE: the alert comes at Dhuhr time, early enough to reach the mosque, with a countdown to Jumu'ah at 12:45 PM. There's no alert at 12:45 itself, since the adhan is already given by then. Settings, Prayer, Alerts, Friday alert: at Dhuhr, or 15 to 60 minutes before Jumu'ah.
+
+[stillpoint-v0.42.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.42.0/stillpoint-v0.42.0.apk)
+
 ## v0.41.2 · 4 Oct 2026
 - Jumu'ah: in the UAE it's at the fixed national time, 12:45 PM by default (change it in Settings, Prayer, Alerts if it moves). Anywhere else, Bahrain for example, Friday simply follows the calculated Dhuhr time and the setting is hidden.
 

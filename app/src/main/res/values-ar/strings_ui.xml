@@ -337,4 +337,8 @@
     <string name="s_until_iqama">حتى الإقامة</string>
     <string name="s_iqama">الإقامة</string>
     <string name="s_the_prayer_is_starting">الصلاة تبدأ الآن</string>
+    <string name="s_friday_alert">تنبيه الجمعة</string>
+    <string name="s_at_dhuhr_time">عند الظهر</string>
+    <string name="s_n_min_before">قبل الجمعة بـ %1$d د</string>
+    <string name="s_until_jumuah">حتى صلاة الجمعة</string>
 </resources>

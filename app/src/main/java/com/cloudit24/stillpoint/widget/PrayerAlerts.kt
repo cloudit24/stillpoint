@@ -82,17 +82,29 @@ object PrayerAlerts {
         if (Build.VERSION.SDK_INT >= 34) Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, Uri.parse("package:${context.packageName}"))
         else Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
 
-    /** The five prayers for [date]; on Fridays in the UAE the fixed Jumu'ah time replaces Dhuhr. */
+    /** On a UAE Friday, the fixed Jumu'ah time of the day [at] falls on; null on other days and elsewhere. */
+    fun jumuahOn(s: LauncherSettings, at: Long): Long? {
+        val minutes = s.jumuahAt ?: return null
+        val date = java.time.Instant.ofEpochMilli(at).atZone(ZoneId.systemDefault()).toLocalDate()
+        if (date.dayOfWeek != DayOfWeek.FRIDAY) return null
+        return date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli() + minutes * 60_000L
+    }
+
+    /**
+     * The five prayers for [date]. On a UAE Friday the Dhuhr alert comes at the calculated Dhuhr time, or the
+     * chosen minutes before Jumu'ah, since the Jumu'ah adhan is already given by its fixed time.
+     */
     private fun times(s: LauncherSettings, date: LocalDate): Map<Prayer, Long> {
         val city = s.city ?: return emptyMap()
         val t = PrayerTimes.forDate(date, city.lat, city.lon, s.prayerMethod, s.asrHanafi).filterKeys { it.isPrayer }
-        val jumuah = s.jumuahAt
-        if (jumuah == null || date.dayOfWeek != DayOfWeek.FRIDAY) return t
-        val at = date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli() + jumuah * 60_000L
-        return t + (Prayer.DHUHR to at)
+        val dhuhr = t[Prayer.DHUHR] ?: return t
+        val jumuah = jumuahOn(s, dhuhr) ?: return t
+        return if (s.jumuahLead > 0) t + (Prayer.DHUHR to jumuah - s.jumuahLead * 60_000L) else t
     }
 
-    fun iqamaAt(s: LauncherSettings, prayer: Prayer, prayerAt: Long): Long = prayerAt + s.iqamaMin(prayer) * 60_000L
+    /** When the prayer starts: the iqama, or Jumu'ah on a UAE Friday. */
+    fun iqamaAt(s: LauncherSettings, prayer: Prayer, prayerAt: Long): Long =
+        (if (prayer == Prayer.DHUHR) jumuahOn(s, prayerAt) else null) ?: (prayerAt + s.iqamaMin(prayer) * 60_000L)
 
     /** "Remind in 5 min" only while the iqama is more than 5 minutes away, so it can't make you miss it. */
     fun canSnooze(s: LauncherSettings, prayer: Prayer, prayerAt: Long, now: Long = System.currentTimeMillis()): Boolean =
@@ -107,7 +119,8 @@ object PrayerAlerts {
                 listOfNotNull(
                     if (s.remindBefore > 0) Alert(p, Kind.BEFORE, t - s.remindBefore * 60_000L, t) else null,
                     if (s.adhanAlert) Alert(p, Kind.ADHAN, t, t) else null,
-                    if (s.iqamaAlert) Alert(p, Kind.IQAMA, iqamaAt(s, p, t), t) else null,
+                    // No alert at Jumu'ah itself: by then the adhan is given and the khutbah has begun.
+                    if (s.iqamaAlert && !(p == Prayer.DHUHR && jumuahOn(s, t) != null)) Alert(p, Kind.IQAMA, iqamaAt(s, p, t), t) else null,
                 )
             }
         }.filter { it.at > now }.minByOrNull { it.at }
@@ -189,8 +202,8 @@ object PrayerAlerts {
         if (!LockNotification.canPost(context)) return
         channels(context)
 
-        val name = if (prayer == Prayer.DHUHR && s.jumuahAt != null &&
-            LocalDate.now().dayOfWeek == DayOfWeek.FRIDAY) "Jumu'ah" else prayer.label
+        val friday = prayer == Prayer.DHUHR && jumuahOn(s, prayerAt) != null
+        val name = if (friday) "Jumu'ah" else prayer.label
         val time = DateFormat.getTimeFormat(context).format(Date(prayerAt))
         val iqamaAt = iqamaAt(s, prayer, prayerAt)
         val channel = when (kind) { Kind.BEFORE -> CH_BEFORE; Kind.ADHAN -> CH_PRAYER; Kind.IQAMA -> CH_IQAMA }
@@ -207,6 +220,10 @@ object PrayerAlerts {
             kind == Kind.IQAMA -> b.setContentTitle("Iqama · $name")
                 .setContentText("${prayer.arabic} · the prayer is starting")
                 .setTimeoutAfter(20 * 60_000L)
+            friday -> b.setContentTitle("$name · ${DateFormat.getTimeFormat(context).format(Date(iqamaAt))}")
+                .setContentText("${prayer.arabic} · Jumu'ah starts at ${DateFormat.getTimeFormat(context).format(Date(iqamaAt))}")
+                .setWhen(iqamaAt).setShowWhen(true).setUsesChronometer(true).setChronometerCountDown(true)
+                .setTimeoutAfter((iqamaAt - now).coerceAtLeast(60_000L))
             s.iqamaAlert -> b.setContentTitle("$name · $time")
                 // Android counts down to the iqama on its own.
                 .setContentText("${prayer.arabic} · iqama in ${s.iqamaMin(prayer)} min")

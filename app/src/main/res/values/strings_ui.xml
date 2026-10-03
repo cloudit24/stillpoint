@@ -339,4 +339,8 @@
     <string name="s_until_iqama">until iqama</string>
     <string name="s_iqama">Iqama</string>
     <string name="s_the_prayer_is_starting">The prayer is starting</string>
+    <string name="s_friday_alert">Friday alert</string>
+    <string name="s_at_dhuhr_time">At Dhuhr</string>
+    <string name="s_n_min_before">%1$d min before Jumu\'ah</string>
+    <string name="s_until_jumuah">until Jumu\'ah</string>
 </resources>

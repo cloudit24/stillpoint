@@ -337,4 +337,8 @@
     <string name="s_until_iqama">इक़ामत तक</string>
     <string name="s_iqama">इक़ामत</string>
     <string name="s_the_prayer_is_starting">नमाज़ शुरू हो रही है</string>
+    <string name="s_friday_alert">शुक्रवार अलर्ट</string>
+    <string name="s_at_dhuhr_time">ज़ुहर पर</string>
+    <string name="s_n_min_before">जुमा से %1$d मिनट पहले</string>
+    <string name="s_until_jumuah">जुमा तक</string>
 </resources>

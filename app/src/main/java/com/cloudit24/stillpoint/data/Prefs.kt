@@ -50,6 +50,7 @@ class Prefs(context: Context) {
             prayerPopup = sp.getBoolean(K_PRAYER_POPUP, d.prayerPopup),
             remindBefore = sp.getInt(K_REMIND_BEFORE, d.remindBefore),
             jumuah = sp.getInt(K_JUMUAH, d.jumuah),
+            jumuahLead = sp.getInt(K_JUMUAH_LEAD, d.jumuahLead),
             // Before 0.13 the light was on/off; curved Motorola Edge phones start on the curved style.
             edgeStyle = runCatching { EdgeStyle.valueOf(sp.getString(K_EDGE_STYLE, null)!!) }.getOrElse {
                 when {
@@ -164,6 +165,7 @@ class Prefs(context: Context) {
             .putBoolean(K_PRAYER_POPUP, s.prayerPopup)
             .putInt(K_REMIND_BEFORE, s.remindBefore)
             .putInt(K_JUMUAH, s.jumuah)
+            .putInt(K_JUMUAH_LEAD, s.jumuahLead)
             .putString(K_EDGE_STYLE, s.edgeStyle.name)
             .putInt(K_EDGE_BRIGHT, s.edgeBright)
             .putInt(K_EDGE_WARN, s.edgeWarnMin)
@@ -581,6 +583,7 @@ class Prefs(context: Context) {
         const val K_PRAYER_POPUP = "prayer_popup"
         const val K_REMIND_BEFORE = "prayer_remind_before"
         const val K_JUMUAH = "prayer_jumuah_uae"
+        const val K_JUMUAH_LEAD = "prayer_jumuah_lead"
         const val K_EDGE_LIGHT = "edge_light"
         const val K_EDGE_STYLE = "edge_style"
         const val K_EDGE_BRIGHT = "edge_bright"

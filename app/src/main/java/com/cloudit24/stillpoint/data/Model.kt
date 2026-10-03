@@ -184,6 +184,8 @@ data class LauncherSettings(
     val prayerPopup: Boolean = true,
     val remindBefore: Int = 0,
     val jumuah: Int = 12 * 60 + 45,
+    // Friday alert in the UAE: 0 = at the calculated Dhuhr time, otherwise minutes before Jumu'ah.
+    val jumuahLead: Int = 0,
     val edgeStyle: EdgeStyle = EdgeStyle.FLAT,
     val edgeBright: Int = 2,
     val edgeWarnMin: Int = 15,

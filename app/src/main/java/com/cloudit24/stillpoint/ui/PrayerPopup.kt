@@ -74,6 +74,7 @@ class PrayerPopupActivity : ComponentActivity() {
         val iqama = intent.getStringExtra(PrayerAlerts.EXTRA_KIND) == PrayerAlerts.Kind.IQAMA.name
         val prayerAt = intent.getLongExtra(PrayerAlerts.EXTRA_PRAYER_AT, System.currentTimeMillis())
         val s = Prefs(this).loadSettings()
+        val friday = prayer == Prayer.DHUHR && PrayerAlerts.jumuahOn(s, prayerAt) != null
         val close = {
             getSystemService(NotificationManager::class.java)?.cancel(PrayerAlerts.ID)
             finish()
@@ -81,7 +82,8 @@ class PrayerPopupActivity : ComponentActivity() {
         setContent {
             StillpointTheme(accent = Color(s.accent), accentStyle = s.accentStyle, font = s.font) {
                 PrayerPopup(
-                    name = if (prayer == Prayer.DHUHR && s.jumuahAt != null && LocalDate.now().dayOfWeek == DayOfWeek.FRIDAY) "Jumu'ah" else prayer.label,
+                    name = if (friday) "Jumu'ah" else prayer.label,
+                    friday = friday,
                     arabic = prayer.arabic,
                     iqama = iqama,
                     iqamaAt = PrayerAlerts.iqamaAt(s, prayer, prayerAt),
@@ -96,7 +98,7 @@ class PrayerPopupActivity : ComponentActivity() {
 
 @Composable
 private fun PrayerPopup(
-    name: String, arabic: String, iqama: Boolean, iqamaAt: Long,
+    name: String, friday: Boolean, arabic: String, iqama: Boolean, iqamaAt: Long,
     canSnooze: () -> Boolean, onSnooze: () -> Unit, onClose: () -> Unit,
 ) {
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -121,7 +123,7 @@ private fun PrayerPopup(
             Box(Modifier.size(170.dp).border(3.dp, green, CircleShape), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("%d:%02d".format(left / 60, left % 60), color = Color.White, fontSize = 38.sp)
-                    Text(stringResource(R.string.s_until_iqama), color = Color(0xFFAAAAAA), fontSize = 13.sp)
+                    Text(stringResource(if (friday) R.string.s_until_jumuah else R.string.s_until_iqama), color = Color(0xFFAAAAAA), fontSize = 13.sp)
                 }
             }
         }

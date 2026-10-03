@@ -337,4 +337,8 @@
     <string name="s_until_iqama">இகாமத் வரை</string>
     <string name="s_iqama">இகாமத்</string>
     <string name="s_the_prayer_is_starting">தொழுகை தொடங்குகிறது</string>
+    <string name="s_friday_alert">வெள்ளி எச்சரிக்கை</string>
+    <string name="s_at_dhuhr_time">ளுஹர் நேரத்தில்</string>
+    <string name="s_n_min_before">ஜும்ஆவுக்கு %1$d நிமி முன்</string>
+    <string name="s_until_jumuah">ஜும்ஆ வரை</string>
 </resources>
