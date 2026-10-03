@@ -516,7 +516,6 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         Stepper(stringResource(R.string.s_remind_before), minText(s.remindBefore),
                             onMinus = { vm.updateSettings { it.copy(remindBefore = before.lastOrNull { m -> m < it.remindBefore } ?: 0) } },
                             onPlus = { vm.updateSettings { it.copy(remindBefore = before.firstOrNull { m -> m > it.remindBefore } ?: 30) } })
-                        }
                         ActionRow(stringResource(R.string.s_friday_jumuah),
                             if (s.jumuah < 0) stringResource(R.string.s_same_as_dhuhr) else "%d:%02d".format(s.jumuah / 60, s.jumuah % 60)) {
                             val start = if (s.jumuah < 0) 13 * 60 + 15 else s.jumuah
