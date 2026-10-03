@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -200,41 +201,46 @@ private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modi
     }
     val blink = rememberInfiniteTransition(label = "cursor")
     val cursor by blink.animateFloat(1f, 0f, infiniteRepeatable(tween(530), RepeatMode.Reverse), label = "cursor")
-    Column(modifier.fillMaxWidth().height(66.dp), verticalArrangement = androidx.compose.foundation.layout.Arrangement.Bottom) {
+    Column(modifier.fillMaxWidth().heightIn(min = 84.dp), verticalArrangement = androidx.compose.foundation.layout.Arrangement.Bottom) {
         rest.forEach { m ->
             TermLine("> ${m.text}", accent.copy(alpha = 0.45f), m.onTap)
         }
         Row(verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.then(top.onTap?.let { Modifier.clickable(onClick = it) } ?: Modifier)) {
-            Text("> " + top.text.take(typed), color = accent, fontSize = 13.sp, fontFamily = FontFamily.Monospace,
+            Text("> " + top.text.take(typed), color = accent, fontSize = 15.sp, fontFamily = FontFamily.Monospace,
                 maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-            Box(Modifier.padding(start = 3.dp).size(7.dp, 14.dp).alpha(if (motion) cursor else 1f).background(accent))
+            Box(Modifier.padding(start = 3.dp).size(8.dp, 17.dp).alpha(if (motion) cursor else 1f).background(accent))
         }
     }
 }
 
 @Composable
 private fun TermLine(text: String, color: Color, onTap: (() -> Unit)?) {
-    Text(text, color = color, fontSize = 13.sp, fontFamily = FontFamily.Monospace, maxLines = 1, overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.fillMaxWidth().padding(bottom = 3.dp).then(onTap?.let { Modifier.clickable(onClick = it) } ?: Modifier))
+    Text(text, color = color, fontSize = 15.sp, fontFamily = FontFamily.Monospace, maxLines = 1, overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp).then(onTap?.let { Modifier.clickable(onClick = it) } ?: Modifier))
 }
 
-/** An amber segment-style panel: one message at a time; tap the count to see the next. */
+/** An amber segment-style panel: the main message big, the next two under it. Tap a line to act; tap 1/4 for the next. */
 @Composable
 private fun LcdStyle(msgs: List<StatusMsg>, modifier: Modifier) {
     var index by remember { mutableIntStateOf(0) }
     val i = index % msgs.size
     val m = msgs[i]
-    val shape = RoundedCornerShape(8.dp)
-    Column(modifier.fillMaxWidth().height(66.dp).clip(shape).background(LcdBack).border(1.dp, Color(0xFF3A3420), shape)
-        .padding(horizontal = 12.dp, vertical = 9.dp)) {
-        Text(m.text.uppercase(), color = Lcd, fontSize = 14.sp, letterSpacing = 1.sp, fontFamily = FontFamily.Monospace,
-            maxLines = 1, overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.fillMaxWidth().then(m.onTap?.let { Modifier.clickable(onClick = it) } ?: Modifier))
-        val next = msgs.getOrNull((i + 1) % msgs.size)?.takeIf { msgs.size > 1 }
-        Text("${i + 1}/${msgs.size}" + (next?.let { " · ${it.text.uppercase()}" } ?: ""), color = LcdDim, fontSize = 11.sp,
-            fontFamily = FontFamily.Monospace, maxLines = 1, overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(top = 6.dp).fillMaxWidth().clickable { index++ })
+    val shape = RoundedCornerShape(10.dp)
+    Column(modifier.fillMaxWidth().heightIn(min = 104.dp).clip(shape).background(LcdBack).border(1.dp, Color(0xFF3A3420), shape)
+        .padding(horizontal = 14.dp, vertical = 12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(m.text.uppercase(), color = Lcd, fontSize = 18.sp, letterSpacing = 1.sp, fontFamily = FontFamily.Monospace,
+                maxLines = 2, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f).then(m.onTap?.let { Modifier.clickable(onClick = it) } ?: Modifier))
+            if (msgs.size > 1) Text("${i + 1}/${msgs.size}", color = LcdDim, fontSize = 13.sp, fontFamily = FontFamily.Monospace,
+                modifier = Modifier.clip(RoundedCornerShape(50)).clickable { index++ }.padding(start = 10.dp, top = 4.dp, bottom = 4.dp))
+        }
+        (1..2).mapNotNull { k -> msgs.getOrNull((i + k) % msgs.size)?.takeIf { msgs.size > k } }.forEach { n ->
+            Text(n.text.uppercase(), color = LcdDim, fontSize = 13.sp, letterSpacing = 1.sp, fontFamily = FontFamily.Monospace,
+                maxLines = 1, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = 6.dp).fillMaxWidth().then(n.onTap?.let { Modifier.clickable(onClick = it) } ?: Modifier))
+        }
     }
 }
 
@@ -245,9 +251,9 @@ private fun QuietStyle(msgs: List<StatusMsg>, modifier: Modifier) {
     var index by remember { mutableIntStateOf(0) }
     val i = index % msgs.size
     val m = msgs[i]
-    Row(modifier.fillMaxWidth().height(40.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(modifier.fillMaxWidth().heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(6.dp).clip(CircleShape).background(accent))
-        Text(m.text.replaceFirstChar { it.uppercase() }, color = Ink, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+        Text(m.text.replaceFirstChar { it.uppercase() }, color = Ink, fontSize = 17.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f).padding(start = 10.dp).then(m.onTap?.let { Modifier.clickable(onClick = it) } ?: Modifier))
         if (msgs.size > 1) Text("${i + 1}/${msgs.size}", color = Muted, fontSize = 12.sp,
             modifier = Modifier.clip(RoundedCornerShape(50)).clickable { index++ }.padding(horizontal = 10.dp, vertical = 6.dp))

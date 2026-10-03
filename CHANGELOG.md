@@ -3,6 +3,9 @@
 Every version of Stillpoint Launcher, newest first. Each links to its APK.
 The newest is always at **[Download the latest APK](https://github.com/cloudit24/stillpoint/releases/latest/download/Stillpoint-Launcher.apk)**.
 
+## v0.43.1 · not yet released
+- The terminal display is bigger and never cuts a line in half. Retro LCD shows the main message large with the next two under it.
+
 ## v0.43.0 · 4 Oct 2026
 - Terminal display above your apps: the one place Stillpoint talks to you. Iqama and prayer, missed calls and messages, low battery, focus, your next event, a new version, setup tips and your latest note, most pressing first. Tap a line to act on it. With nothing to say, it greets you. Choose Terminal, Retro LCD or Quiet line, and which topics it covers, in Settings, Home screen.
 - The greeting moved from the flipping headline to the terminal display; the headline now starts with the time.
