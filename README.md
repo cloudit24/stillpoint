@@ -17,6 +17,17 @@
   <a href="CHANGELOG.md">All versions</a>
 </p>
 
+<p align="center">
+  <img src="docs/screenshots/shelf.png" width="200" alt="The Shelf: sticky notes and tasks with alerts">
+  <img src="docs/screenshots/favorites.png" width="200" alt="Favorites as live tiles">
+  <img src="docs/screenshots/senior.png" width="200" alt="Senior mode: big clock and six large tiles">
+</p>
+<p align="center">
+  <img src="docs/screenshots/home.png" width="200" alt="Home: greeting, date and the prayer ring">
+  <img src="docs/screenshots/apps.png" width="200" alt="App list with letter squares">
+  <img src="docs/screenshots/settings.png" width="200" alt="Settings">
+</p>
+
 ---
 
 ## Download and install
