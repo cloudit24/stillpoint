@@ -151,8 +151,6 @@ object PrayerAlerts {
         setAlarm(context, at, pending(context, 5, intent))
     }
 
-    }
-
     /** v0.41.0 could turn on Do Not Disturb at the iqama; this undoes one still pending after updating. */
     private fun unsilence(context: Context) {
         val sp = context.getSharedPreferences("stillpoint", Context.MODE_PRIVATE)
