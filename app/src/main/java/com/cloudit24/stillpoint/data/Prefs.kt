@@ -342,11 +342,16 @@ class Prefs(context: Context) {
                     ShelfPage(o.getInt("id"), o.getString("name"), List(items.length()) { j -> items.getInt(j) })
                 }
             }.getOrNull()?.takeIf { it.isNotEmpty() }?.let { pages ->
-                return pages.mapIndexed { idx, pg ->
+                val named = pages.mapIndexed { idx, pg ->
                     // Shelves still called "Shelf" or "Shelf 2" take their own short name.
                     val plain = pg.name == "Shelf" || Regex("""Shelf \d+""").matches(pg.name)
                     pg.copy(name = if (plain) SHELF_NAMES.getOrElse(idx) { pg.name } else pg.name,
                         items = pg.items.filter { i -> BuiltIn.of(i)?.retired != true })
+                }
+                // Three shelves at most. Setups from before the limit: a fourth shelf's things move onto the third.
+                val max = SHELF_NAMES.size
+                return if (named.size <= max) named else named.take(max).mapIndexed { i, pg ->
+                    if (i == max - 1) pg.copy(items = (pg.items + named.drop(max).flatMap { it.items }).distinct()) else pg
                 }
             }
         }
