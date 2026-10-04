@@ -219,7 +219,7 @@ private fun FlipCard(key: Int, card: HeroCard, modifier: Modifier) {
                 lineHeight = if (display.clock) 52.sp else 46.sp,
                 fontWeight = if (display.clock) FontWeight.ExtraLight else FontWeight.Light,
                 letterSpacing = if (display.clock) 1.5.sp else androidx.compose.ui.unit.TextUnit.Unspecified,
-                fontFeatureSettings = if (display.clock) "tnum" else null,
+                style = androidx.compose.material3.LocalTextStyle.current.copy(fontFeatureSettings = if (display.clock) "tnum" else null),
                 maxLines = 1, softWrap = false,
                 overflow = if (size > 22f) TextOverflow.Clip else TextOverflow.Ellipsis,
                 modifier = Modifier.wrapContentHeight(unbounded = true),
