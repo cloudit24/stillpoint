@@ -18,12 +18,12 @@
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/shelf.png" width="200" alt="The Shelf: sticky notes and tasks with alerts">
+  <img src="docs/screenshots/shelf.png" width="200" alt="The Shelf: sticky notes and widgets">
   <img src="docs/screenshots/favorites.png" width="200" alt="Favorites as live tiles">
   <img src="docs/screenshots/senior.png" width="200" alt="Senior mode: big clock and six large tiles">
 </p>
 <p align="center">
-  <img src="docs/screenshots/home.png" width="200" alt="Home: greeting, date and the prayer ring">
+  <img src="docs/screenshots/home.png" width="200" alt="Home: the headline and the prayer ring">
   <img src="docs/screenshots/apps.png" width="200" alt="App list with letter squares">
   <img src="docs/screenshots/settings.png" width="200" alt="Settings">
 </p>
@@ -42,22 +42,34 @@ Every older version is listed in the **[changelog](CHANGELOG.md)** and on the **
 ## What it does
 
 **Home**
-- A headline that flips between a greeting, screen time, weather and the Hijri and Tamil dates.
+- A headline that flips between the time, screen time, weather and the Hijri and Tamil dates.
 - A clean ring beside it: the current prayer and the time left, or battery, or time left today.
-- Your choice of calendar, battery and network under it; recently used and pinned apps below.
+- A terminal display above your apps: the one place Stillpoint talks to you. Iqama, missed calls,
+  low battery, focus, your next event, your screen time, most pressing first. Tap a line to act.
+  Terminal, Retro LCD or a quiet line, and you choose the topics.
+- Your choice of calendar, battery and network under the headline; pinned apps below.
 - Every swipe, double-tap and bottom shortcut can open any app or action.
 - Home is a fixed frame: new things never push others off the screen ([design rules](docs/DESIGN.md)).
 
 **The Shelf** (swipe right)
-- Notes, tasks and projects, and widgets from any app, side by side, resized and moved by dragging.
+- Sticky notes, Stillpoint cards and widgets from any app, side by side, resized and moved by dragging.
 
 **Islamic prayer** (optional)
 - Prayer times calculated on the phone, prayer and iqama alerts, a Qibla compass that ticks as you turn,
   the moon phase, and an edge light that shows the prayer time running out.
+- A full-screen alert at the adhan and the iqama, even over the lock screen. In a meeting, Remind in 5 min,
+  offered only while the iqama is still far enough away. A quiet heads-up before each prayer if you like.
+- Friday in the UAE: the alert comes at Dhuhr time, with a countdown to Jumu'ah at 12:45. Elsewhere
+  Friday follows Dhuhr. All of it works without internet.
 
-**Productivity**
-- Tasks from the phone, Tasks.org, OpenTasks or your own Project Hub; calendar from the phone or a calendar link.
-- Focus mode that blocks chosen apps for a set time.
+**Focus and wellbeing**
+- Focus profiles (Work, Prayer, Sleep, Family, or your own), each with its apps, a length and an optional
+  daily schedule.
+- Always-allowed apps you choose, for family and work emergencies.
+- A few seconds' pause before apps that are hard to put down, daily limits per app, a screen-time goal,
+  and a calm home without icons, times or dots.
+- Optional stronger guard: the same pause and focus for apps opened from notifications.
+- Calendar from the phone or a calendar link. Project Hub is coming as a separate app.
 
 **Your look**
 - Accent colours, grey or accent-tinted icons, five fonts, and Stillpoint widgets for any launcher.
@@ -75,7 +87,7 @@ It goes online only for features you switch on, and **every address can be chang
 | Currency rates | [Frankfurter](https://frankfurter.dev) (open source) | A currency code |
 | Public IP | [ipify](https://www.ipify.org) (open source) | Nothing |
 | Updates | GitHub Releases | Nothing |
-| Project Hub, calendar link | Your own server | What you add or tick off |
+| Calendar link | Your own server | Nothing |
 
 Prayer times, Qibla, moon phase and dates are calculated on the phone.
 
@@ -107,11 +119,11 @@ release with that changelog section as its notes.
 | Exact alarms | Prayer and iqama alerts on the minute |
 | Internet | Only the features above that you switch on |
 | Install packages | `github` build only: installing an update you chose |
-| Accessibility service | Double-tap to lock and swipe for notifications only; cannot read the screen |
+| Accessibility service | Double-tap to lock, swipe for notifications, and (only if Stronger guard is on) noticing which app opens; cannot read the screen |
 
 ## Known limits
 
-- Focus mode blocks apps opened from this launcher only.
+- Focus and the pause cover apps opened from this launcher, unless Stronger guard is on.
 - The background is plain black; wallpaper isn't shown.
 - Gold prices don't include jewellery making charges.
 

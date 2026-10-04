@@ -2,10 +2,11 @@ Stillpoint Launcher is a calm, minimal home screen. Black background, text first
 
 <b>Home</b>
 <ul>
-<li>A headline that flips like a live tile: greeting, screen time, weather, Hijri and Tamil dates</li>
+<li>A headline that flips like a live tile: the time, screen time, weather, Hijri and Tamil dates</li>
+<li>A terminal display above your apps that tells you what matters now: iqama, missed calls, battery, focus, your next event. Terminal, Retro LCD or a quiet line</li>
 <li>A ring beside it: countdown to the next prayer, battery, or time left today</li>
 <li>Under it, your choice of prayer times, the next calendar event, or the day and battery</li>
-<li>Recently used apps (24 hours) and your most used or pinned apps, as text or icons</li>
+<li>Your most used or pinned apps, as text or icons</li>
 <li>Edge light: a line on the screen edge that fills towards the next prayer. Made for curved screens, with styles for flat ones</li>
 <li>Gestures for every swipe and double-tap, a search button, accent colours and grey icons</li>
 </ul>
@@ -14,15 +15,18 @@ Stillpoint Launcher is a calm, minimal home screen. Black background, text first
 <ul>
 <li>Prayer times calculated on the phone, with ten methods and Hanafi Asr</li>
 <li>Prayer and iqama alerts, with iqama times you set per prayer</li>
+<li>A full-screen alert at the adhan and iqama, with Remind in 5 min only while the iqama is far enough away</li>
+<li>Friday in the UAE: the alert comes at Dhuhr, with a countdown to Jumu'ah</li>
 <li>Qibla compass that ticks as you turn and taps when you face the Qibla</li>
 <li>Lock screen countdown to the next prayer</li>
 </ul>
 
-<b>Productivity</b>
+<b>Focus and wellbeing</b>
 <ul>
-<li>Tasks on the phone, from Tasks.org or OpenTasks, or from your own Project Hub</li>
-<li>Calendar from the phone, a calendar link (.ics) or Project Hub</li>
-<li>Focus mode that blocks chosen apps for a set time</li>
+<li>Focus profiles: Work, Prayer, Sleep, Family or your own, each with its apps and an optional daily schedule</li>
+<li>Always-allowed apps for family and work emergencies</li>
+<li>A short pause before apps that are hard to put down, daily limits, a screen-time goal and a calm home</li>
+<li>Sticky notes on the Shelf, and your calendar from the phone or a calendar link (.ics)</li>
 </ul>
 
 <b>Also</b>

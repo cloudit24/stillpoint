@@ -3,18 +3,18 @@
 Every version of Stillpoint Launcher, newest first. Each links to its APK.
 The newest is always at **[Download the latest APK](https://github.com/cloudit24/stillpoint/releases/latest/download/Stillpoint-Launcher.apk)**.
 
-## v0.45.0 · not yet released
+## v0.45.0 · 4 Oct 2026
 - Focus profiles: Work, Prayer, Sleep and Family, plus your own. Each has its apps, a length, and can turn on by itself every day (for example Sleep from 23:00 to 06:00).
 - Always allowed: apps you choose open in every focus and without a pause, for family and work emergencies.
 - Wellbeing (Settings, Productivity): a pause of a few seconds before apps you find hard to put down, with today's time and opens; daily limits per app; a screen-time goal; a calm home without icons, times or dots.
 - The terminal display shows your unlocks, your goal, limits used up and, on Fridays, the week.
 - The time in the headline has more room: a little larger, thinner, with evenly spaced digits.
 - Stronger guard (optional, off by default): the same pause and focus for apps opened from notifications or recent apps, through the gesture service. It reads nothing on screen.
-
-## v0.44.0 · not yet released
 - Terminal display: a small framed window that types each message in turn while older lines scroll up; the pressing ones stay longer.
 - The greeting no longer repeats the weather already shown in the headline.
 - Settings, Productivity: Tools sits next to Calendar.
+
+[stillpoint-v0.45.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.45.0/stillpoint-v0.45.0.apk)
 
 ## v0.43.1 · 4 Oct 2026
 - The terminal display is bigger and never cuts a line in half. Retro LCD shows the main message large with the next two under it.
