@@ -504,6 +504,11 @@ fun SettingsScreen(vm: LauncherViewModel) {
                     Group(stringResource(R.string.s_alerts)) {
                         ToggleRow(stringResource(R.string.s_prayer_time_alert), s.adhanAlert) { on -> alertToggle(on) { it.copy(adhanAlert = on) } }
                         ToggleRow(stringResource(R.string.s_iqama_alert), s.iqamaAlert) { on -> alertToggle(on) { it.copy(iqamaAlert = on) } }
+                        if (s.iqamaAlert && !s.adhanAlert) {
+                            ActionRow(stringResource(R.string.s_turn_on_prayer_alert_for_remind), stringResource(R.string.s_remind_comes_with_prayer_alert)) {
+                                alertToggle(true) { it.copy(adhanAlert = true) }
+                            }
+                        }
                         if (s.adhanAlert || s.iqamaAlert) {
                             ActionRow(stringResource(R.string.s_alert_sound_and_vibration), "Android settings") { ctx.safeStart(PrayerAlerts.soundSettings(ctx)) }
                             ToggleRow(stringResource(R.string.s_full_screen_popup), s.prayerPopup) { on -> vm.updateSettings { it.copy(prayerPopup = on) } }

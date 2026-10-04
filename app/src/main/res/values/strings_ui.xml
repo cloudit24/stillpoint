@@ -327,6 +327,8 @@
     <string name="tab_most">most used</string>
     <string name="tab_recent">recent</string>
     <string name="s_full_screen_popup">Full-screen popup</string>
+    <string name="s_turn_on_prayer_alert_for_remind">Turn on the prayer time alert</string>
+    <string name="s_remind_comes_with_prayer_alert">The popup and Remind in 5 min come at the adhan; the iqama alert alone comes when the prayer starts</string>
     <string name="s_allow_full_screen_alerts">Allow full-screen alerts</string>
     <string name="s_remind_before">Remind before</string>
     <string name="s_friday_jumuah">Friday: Jumu\'ah (UAE)</string>

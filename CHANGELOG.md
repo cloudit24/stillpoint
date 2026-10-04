@@ -3,6 +3,10 @@
 Every version of Stillpoint Launcher, newest first. Each links to its APK.
 The newest is always at **[Download the latest APK](https://github.com/cloudit24/stillpoint/releases/latest/download/Stillpoint-Launcher.apk)**.
 
+## v0.45.1 · not yet released
+- Prayer popup: while you're using the phone it now opens full screen too, instead of only a banner, when the gesture service is on.
+- Settings, Prayer: with only the iqama alert on, a row offers to turn on the prayer time alert, which brings the popup and Remind in 5 min before the iqama.
+
 ## v0.45.0 · 4 Oct 2026
 - Focus profiles: Work, Prayer, Sleep and Family, plus your own. Each has its apps, a length, and can turn on by itself every day (for example Sleep from 23:00 to 06:00).
 - Always allowed: apps you choose open in every focus and without a pause, for family and work emergencies.

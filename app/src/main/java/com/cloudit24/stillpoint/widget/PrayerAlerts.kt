@@ -245,6 +245,13 @@ object PrayerAlerts {
                 .putExtra(EXTRA_PRAYER_AT, prayerAt)
             val pi = PendingIntent.getActivity(context, 7, popup, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
             b.setFullScreenIntent(pi, true).setContentIntent(pi)
+            context.getSystemService(NotificationManager::class.java)?.notify(ID, b.build())
+            // While the phone is in use Android shows only a banner; open the popup ourselves. Android allows this
+            // when the gesture service is on, and simply ignores it otherwise, leaving the banner.
+            val power = context.getSystemService(android.os.PowerManager::class.java)
+            val locked = context.getSystemService(android.app.KeyguardManager::class.java)?.isKeyguardLocked == true
+            if (power?.isInteractive == true && !locked) runCatching { context.startActivity(popup) }
+            return
         }
         context.getSystemService(NotificationManager::class.java)?.notify(ID, b.build())
     }
