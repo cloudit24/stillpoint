@@ -48,6 +48,8 @@ import com.cloudit24.stillpoint.ui.DrawerScreen
 import com.cloudit24.stillpoint.ui.PrayerScreen
 import com.cloudit24.stillpoint.ui.FocusScreen
 import com.cloudit24.stillpoint.ui.HomeScreen
+import com.cloudit24.stillpoint.ui.PauseScreen
+import com.cloudit24.stillpoint.service.Guard
 import com.cloudit24.stillpoint.ui.SettingsScreen
 import com.cloudit24.stillpoint.ui.StillpointTheme
 import com.cloudit24.stillpoint.ui.WidgetsScreen
@@ -87,6 +89,7 @@ class MainActivity : ComponentActivity() {
     /** From the "new version is ready" notification: straight to Settings. */
     private fun handleIntent(intent: Intent?) {
         if (intent?.getBooleanExtra(UpdateNotice.EXTRA_OPEN_SETTINGS, false) == true) vm.screen = Screen.SETTINGS
+        intent?.getStringExtra(Guard.EXTRA_PKG)?.let { vm.guard(it, intent.getBooleanExtra(Guard.EXTRA_BLOCK, false)) }
     }
 
     override fun onStart() {
@@ -188,6 +191,8 @@ private fun LauncherRoot(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderI
     }
 
     // A new version is announced in the terminal display on home, not in a popup.
+
+    vm.pausing?.let { PauseScreen(vm, it) }
 
     vm.blockedMessage?.let { msg ->
         AlertDialog(

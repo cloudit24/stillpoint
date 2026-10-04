@@ -2,7 +2,7 @@
     <string name="app_name">Stillpoint Launcher</string>
     <string name="notify_label">Stillpoint notification light</string>
     <string name="a11y_label">Stillpoint gestures</string>
-    <string name="a11y_description">Locks the screen on double-tap and opens the notification shade on swipe-down. Reads no screen content and collects no data.</string>
+    <string name="a11y_description">Locks the screen on double-tap and opens the notification shade on swipe-down. If you turn on Stronger guard in Stillpoint, it also notices which app opens, to pause or hold back the apps you chose. Reads no screen content and collects no data.</string>
     <string name="widget_name">Stillpoint Widget</string>
     <string name="widget_description">Clock, date, Hijri and Tamil dates, and the next prayer</string>
     <string name="prayer_widget_name">Stillpoint Prayer</string>

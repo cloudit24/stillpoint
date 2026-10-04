@@ -75,6 +75,35 @@ class UsageRepository(private val context: Context) {
         return totals.filterValues { it > 0 }
     }
 
+    /** Today's opens per app (switching to it from another app) and unlocks (Android 9+; -1 when unknown). */
+    @Suppress("DEPRECATION")
+    fun todayCounts(): Pair<Map<String, Int>, Int> {
+        if (!hasPermission()) return emptyMap<String, Int>() to -1
+        val start = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val events = runCatching { usm.queryEvents(start, System.currentTimeMillis()) }.getOrNull() ?: return emptyMap<String, Int>() to -1
+        val event = UsageEvents.Event()
+        val opens = HashMap<String, Int>()
+        var unlocks = 0
+        var last: String? = null
+        while (events.hasNextEvent()) {
+            events.getNextEvent(event)
+            when (event.eventType) {
+                UsageEvents.Event.MOVE_TO_FOREGROUND -> {
+                    val pkg = event.packageName ?: continue
+                    if (pkg != last) opens[pkg] = (opens[pkg] ?: 0) + 1
+                    last = pkg
+                }
+                KEYGUARD_HIDDEN -> unlocks++
+            }
+        }
+        return opens to if (Build.VERSION.SDK_INT >= 28) unlocks else -1
+    }
+
+    private companion object {
+        /** UsageEvents.Event.KEYGUARD_HIDDEN, Android 9+. */
+        const val KEYGUARD_HIDDEN = 18
+    }
+
     /** packageName -> when it was last opened, for apps used in the last 24 hours. Excludes this launcher. */
     @Suppress("DEPRECATION")
     fun lastUsed24h(): Map<String, Long> {

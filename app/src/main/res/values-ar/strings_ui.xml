@@ -343,4 +343,7 @@
     <string name="s_until_jumuah">حتى صلاة الجمعة</string>
     <string name="s_terminal_display">شاشة الطرفية</string>
     <string name="s_terminal_note">فوق تطبيقاتك يخبرك Stillpoint بما يهم الآن، الأهم أولاً. اضغط سطراً للتنفيذ. وإن لم يكن هناك شيء، يحيّيك.</string>
+    <string name="pg_wellbeing">الرفاهية الرقمية</string>
+    <string name="pg_wellbeing_sum">توقف، حدود، وقت الشاشة</string>
+    <string name="s_focus_profiles_note">اختر ملفاً للبدء. تبقى تطبيقاته والتطبيقات المسموح بها دائماً متاحة.</string>
 </resources>

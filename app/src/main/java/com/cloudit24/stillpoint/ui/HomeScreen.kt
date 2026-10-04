@@ -281,12 +281,12 @@ fun HomeScreen(vm: LauncherViewModel) {
                 homeApps.forEach { app -> key(app.key) {
                     AppRow(
                         label = app.label,
-                        usageMs = if (s.showUsage) vm.usage[app.packageName] else null,
+                        usageMs = if (s.showUsage && !s.calmHome) vm.usage[app.packageName] else null,
                         fontSize = (s.homeSize * listScale).sp,
                         onClick = { vm.launch(app) },
-                        icon = appIcon(vm, app, (s.homeSize * 1.4f * listScale).dp),
+                        icon = if (s.calmHome) null else appIcon(vm, app, (s.homeSize * 1.4f * listScale).dp),
                         rowPadding = 5.dp,
-                        dot = vm.dotFor(app.packageName),
+                        dot = if (s.calmHome) null else vm.dotFor(app.packageName),
                     )
                 } }
             }

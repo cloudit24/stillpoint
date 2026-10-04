@@ -58,6 +58,7 @@ import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.List
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.DateRange
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Face
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Info
@@ -159,6 +160,7 @@ private enum class SettingsPage(@StringRes val section: Int, @StringRes val titl
     LANGUAGE(R.string.sec_personalization, R.string.pg_language, R.string.pg_language_sum, Icons.Outlined.Edit),
     LOCK(R.string.sec_personalization, R.string.pg_lock, R.string.pg_lock_sum, Icons.Outlined.Notifications),
     CALENDAR(R.string.sec_productivity, R.string.pg_calendar, R.string.pg_calendar_sum, Icons.Outlined.DateRange),
+    WELLBEING(R.string.sec_productivity, R.string.pg_wellbeing, R.string.pg_wellbeing_sum, Icons.Outlined.FavoriteBorder),
     PRAYER(R.string.sec_extras, R.string.pg_prayer, R.string.pg_prayer_sum, Icons.Outlined.Place),
     WEATHER(R.string.sec_extras, R.string.pg_weather, R.string.pg_weather_sum, Icons.Outlined.LocationOn),
     GOLD(R.string.sec_extras, R.string.pg_gold, R.string.pg_gold_sum, Icons.Outlined.Star),
@@ -812,6 +814,8 @@ fun SettingsScreen(vm: LauncherViewModel) {
                     }
                 }
 
+                SettingsPage.WELLBEING -> WellbeingSettings(vm)
+
                 SettingsPage.PRIVACY -> {
                     Group(stringResource(R.string.s_permissions)) {
                         ActionRow(
@@ -1023,7 +1027,7 @@ internal fun Note(text: String) {
 }
 
 @Composable
-private fun Stepper(label: String, value: String, onMinus: () -> Unit, onPlus: () -> Unit) {
+internal fun Stepper(label: String, value: String, onMinus: () -> Unit, onPlus: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(label, fontSize = 16.sp, modifier = Modifier.weight(1f))
         Text("−", fontSize = 22.sp, modifier = Modifier.clip(CircleShape).clickable(onClick = onMinus).padding(horizontal = 14.dp))

@@ -345,4 +345,7 @@
     <string name="s_until_jumuah">until Jumu\'ah</string>
     <string name="s_terminal_display">Terminal display</string>
     <string name="s_terminal_note">Above your apps, Stillpoint tells you what matters now, most pressing first. Tap a line to act on it. With nothing to say, it greets you.</string>
+    <string name="pg_wellbeing">Wellbeing</string>
+    <string name="pg_wellbeing_sum">Pause, limits, screen time</string>
+    <string name="s_focus_profiles_note">Pick a profile to start. Its apps, and the ones you always allow, stay open.</string>
 </resources>

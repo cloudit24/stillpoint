@@ -55,6 +55,9 @@ import com.cloudit24.stillpoint.data.GoldQuote
 import com.cloudit24.stillpoint.data.LiveRepository
 import com.cloudit24.stillpoint.data.WeatherNow
 import com.cloudit24.stillpoint.data.FavFolder
+import com.cloudit24.stillpoint.data.FocusProfile
+import com.cloudit24.stillpoint.data.focusAt
+import com.cloudit24.stillpoint.data.focusUntil
 import com.cloudit24.stillpoint.data.GestureSlot
 import com.cloudit24.stillpoint.data.HomeAction
 import com.cloudit24.stillpoint.data.GestureTarget
@@ -593,6 +596,7 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
                     usage = usageRepo.todayUsage(),
                     weekUsage = usageRepo.weekUsage(),
                     lastUsed = usageRepo.lastUsed24h(),
+                    counts = usageRepo.todayCounts(),
                 )
             }
             apps = loaded.apps
@@ -601,6 +605,8 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
             usage = loaded.usage
             weekUsage = loaded.weekUsage
             lastUsed = loaded.lastUsed
+            opensToday = loaded.counts.first
+            unlocksToday = loaded.counts.second
             agenda = loadAgenda()
             refreshLive()
             Sync.schedule(getApplication())
@@ -625,6 +631,7 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         val usage: Map<String, Long>,
         val weekUsage: Map<String, Long>,
         val lastUsed: Map<String, Long>,
+        val counts: Pair<Map<String, Int>, Int>,
     )
 
     private companion object {
@@ -641,12 +648,20 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
 
     // ---- App lists ----
 
-    fun isFocusActive(now: Long = System.currentTimeMillis()): Boolean = settings.focusEndsAt > now
+    fun isFocusActive(now: Long = System.currentTimeMillis()): Boolean = activeFocus(now) != null
+
+    /** The focus profile in force: started by hand, or on its schedule. */
+    fun activeFocus(now: Long = System.currentTimeMillis()): FocusProfile? = settings.focusAt(now)
+
+    fun focusUntil(now: Long = System.currentTimeMillis()): Long = settings.focusUntil(now)
+
+    /** What may open right now: the profile's apps plus the always-allowed ones. */
+    fun focusAllowedNow(): Set<String> = (activeFocus()?.apps ?: emptySet()) + settings.alwaysAllowed
 
     /** Non-hidden apps; during focus, only allowed apps. */
     fun visibleApps(): List<AppEntry> {
         val base = apps.filter { it.key !in settings.hidden }
-        return if (isFocusActive()) base.filter { it.key in settings.focusAllowed } else base
+        return if (isFocusActive()) base.filter { it.key in focusAllowedNow() } else base
     }
 
     fun homeApps(): List<AppEntry> {
@@ -744,11 +759,55 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
             screen = Screen.SETTINGS
             return
         }
-        if (isFocusActive() && app.key !in settings.focusAllowed) {
-            blockedMessage = "${app.label} is blocked until ${formatClock(getApplication(), settings.focusEndsAt)}."
+        val focus = activeFocus()
+        if (focus != null && app.key !in focusAllowedNow()) {
+            blockedMessage = "${app.label} waits until ${formatClock(getApplication(), focusUntil())} (${focus.name} focus)."
             return
         }
+        if (needsPause(app)) {
+            pausing = app
+            return
+        }
+        launchNow(app)
+    }
+
+    /** Opens without the pause: after the pause screen's Open. Tells the guard to let it be for a few minutes. */
+    fun launchNow(app: AppEntry) {
+        pausing = null
+        prefs.passGuard(app.packageName)
         if (!appsRepo.launch(app)) blockedMessage = "${app.label} could not be opened."
+    }
+
+    // ---- Wellbeing ----
+
+    var opensToday by mutableStateOf<Map<String, Int>>(emptyMap())
+        private set
+    var unlocksToday by mutableIntStateOf(-1)
+        private set
+    /** An app waiting behind the pause screen. */
+    var pausing by mutableStateOf<AppEntry?>(null)
+
+    fun overLimit(app: AppEntry): Boolean =
+        settings.appLimits[app.key]?.let { (usage[app.packageName] ?: 0L) >= it * 60_000L } == true
+
+    fun needsPause(app: AppEntry): Boolean =
+        app.key !in settings.alwaysAllowed && (app.key in settings.hookedApps || overLimit(app))
+
+    /** Longer once the day's limit is used up. */
+    fun pauseLength(app: AppEntry): Int = settings.pauseSeconds * if (overLimit(app)) 3 else 1
+
+    /** The stronger guard (gesture service) caught [pkg] opening outside the launcher. */
+    fun guard(pkg: String, block: Boolean) {
+        val app = apps.firstOrNull { it.packageName == pkg } ?: return
+        screen = Screen.HOME
+        if (block) blockedMessage = "${app.label} waits until ${formatClock(getApplication(), focusUntil())} (${activeFocus()?.name ?: "Focus"} focus)."
+        else pausing = app
+    }
+
+    fun setAlways(key: String, on: Boolean) = updateSettings { it.copy(alwaysAllowed = if (on) it.alwaysAllowed + key else it.alwaysAllowed - key) }
+    fun setHooked(key: String, on: Boolean) = updateSettings { it.copy(hookedApps = if (on) it.hookedApps + key else it.hookedApps - key) }
+    fun setLimit(key: String, minutes: Int) = updateSettings {
+        it.copy(appLimits = if (minutes <= 0) it.appLimits - key else it.appLimits + (key to minutes))
     }
 
     // ---- Gestures and shortcuts ----
@@ -785,13 +844,20 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
 
     // ---- Focus ----
 
-    fun toggleFocusAllowed(app: AppEntry) = updateSettings { s ->
-        s.copy(focusAllowed = if (app.key in s.focusAllowed) s.focusAllowed - app.key else s.focusAllowed + app.key)
+    fun startFocus(p: FocusProfile) = updateSettings {
+        it.copy(focusProfileId = p.id, focusEndsAt = System.currentTimeMillis() + p.minutes * 60_000L, focusSkipUntil = 0L)
     }
 
-    fun startFocus(minutes: Int) = updateSettings {
-        it.copy(focusEndsAt = System.currentTimeMillis() + minutes * 60_000L)
+    /** Ends a focus started by hand, or skips a scheduled one until its window closes. */
+    fun endFocus() {
+        val now = System.currentTimeMillis()
+        val until = focusUntil(now)
+        updateSettings { if (it.focusEndsAt > now) it.copy(focusEndsAt = 0L) else it.copy(focusSkipUntil = until) }
     }
 
-    fun endFocus() = updateSettings { it.copy(focusEndsAt = 0L) }
+    fun saveProfile(p: FocusProfile) = updateSettings { s ->
+        s.copy(focusProfiles = if (s.focusProfiles.any { it.id == p.id }) s.focusProfiles.map { if (it.id == p.id) p else it } else s.focusProfiles + p)
+    }
+
+    fun deleteProfile(id: Long) = updateSettings { s -> s.copy(focusProfiles = s.focusProfiles.filter { it.id != id }) }
 }

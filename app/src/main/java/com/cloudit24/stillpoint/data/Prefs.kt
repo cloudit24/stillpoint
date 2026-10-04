@@ -119,6 +119,21 @@ class Prefs(context: Context) {
             folders = readFolders(sp.getString(K_FOLDERS, null)),
             focusAllowed = sp.getStringSet(K_FOCUS_ALLOWED, null)?.toSet() ?: emptySet(),
             focusEndsAt = sp.getLong(K_FOCUS_ENDS, 0L),
+            // Before 0.45 there was one list of allowed apps: it becomes the Work profile.
+            focusProfiles = readProfiles(sp.getString("focus_profiles", null))
+                ?: DEFAULT_PROFILES.map { if (it.kind == 0) it.copy(apps = sp.getStringSet(K_FOCUS_ALLOWED, null)?.toSet() ?: emptySet()) else it },
+            focusProfileId = sp.getLong("focus_profile", 0L),
+            focusSkipUntil = sp.getLong("focus_skip_until", 0L),
+            alwaysAllowed = sp.getStringSet("always_allowed", null)?.toSet() ?: emptySet(),
+            hookedApps = sp.getStringSet("hooked_apps", null)?.toSet() ?: emptySet(),
+            appLimits = runCatching {
+                val o = JSONObject(sp.getString("app_limits", "{}")!!)
+                o.keys().asSequence().associateWith { o.getInt(it) }
+            }.getOrDefault(emptyMap()),
+            pauseSeconds = sp.getInt("pause_seconds", d.pauseSeconds),
+            screenGoal = sp.getInt("screen_goal", d.screenGoal),
+            calmHome = sp.getBoolean("calm_home", d.calmHome),
+            guardAll = sp.getBoolean("guard_all", d.guardAll),
         )
     }
 
@@ -211,6 +226,16 @@ class Prefs(context: Context) {
             .putString(K_FOLDERS, writeFolders(s.folders))
             .putStringSet(K_FOCUS_ALLOWED, HashSet(s.focusAllowed))
             .putLong(K_FOCUS_ENDS, s.focusEndsAt)
+            .putString("focus_profiles", writeProfiles(s.focusProfiles))
+            .putLong("focus_profile", s.focusProfileId)
+            .putLong("focus_skip_until", s.focusSkipUntil)
+            .putStringSet("always_allowed", HashSet(s.alwaysAllowed))
+            .putStringSet("hooked_apps", HashSet(s.hookedApps))
+            .putString("app_limits", JSONObject(s.appLimits as Map<*, *>).toString())
+            .putInt("pause_seconds", s.pauseSeconds)
+            .putInt("screen_goal", s.screenGoal)
+            .putBoolean("calm_home", s.calmHome)
+            .putBoolean("guard_all", s.guardAll)
             .apply()
     }
 
@@ -489,6 +514,30 @@ class Prefs(context: Context) {
                 FavFolder(o.getLong("id"), o.getString("name"), readStringList(o.getJSONArray("apps").toString()))
             }
         }.getOrDefault(emptyList())
+
+    private fun readProfiles(raw: String?): List<FocusProfile>? = raw?.let {
+        runCatching {
+            val a = JSONArray(it)
+            List(a.length()) { i ->
+                val o = a.getJSONObject(i)
+                FocusProfile(o.getLong("id"), o.getString("name"), o.optInt("kind", 4),
+                    readStringList(o.getJSONArray("apps").toString()).toSet(), o.optInt("minutes", 60), o.optInt("from", -1), o.optInt("to", -1))
+            }
+        }.getOrNull()
+    }
+
+    private fun writeProfiles(list: List<FocusProfile>): String {
+        val a = JSONArray()
+        list.forEach {
+            a.put(JSONObject().put("id", it.id).put("name", it.name).put("kind", it.kind).put("apps", JSONArray(it.apps.toList()))
+                .put("minutes", it.minutes).put("from", it.from).put("to", it.to))
+        }
+        return a.toString()
+    }
+
+    /** "Open" was chosen on the pause screen for [pkg]: the guard lets it be for a few minutes. Read by the gesture service. */
+    fun passGuard(pkg: String) = sp.edit().putLong("guard_pass_$pkg", System.currentTimeMillis()).apply()
+    fun guardPassedAt(pkg: String): Long = sp.getLong("guard_pass_$pkg", 0L)
 
     private fun writeFolders(folders: List<FavFolder>): String {
         val arr = JSONArray()

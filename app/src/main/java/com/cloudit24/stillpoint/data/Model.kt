@@ -232,6 +232,20 @@ data class LauncherSettings(
     val folders: List<FavFolder> = emptyList(),
     val focusAllowed: Set<String> = emptySet(),
     val focusEndsAt: Long = 0L,
+    // Focus profiles: the one running by hand, and a scheduled one skipped until this time.
+    val focusProfiles: List<FocusProfile> = DEFAULT_PROFILES,
+    val focusProfileId: Long = 0L,
+    val focusSkipUntil: Long = 0L,
+    /** Apps that always open: in focus, at bedtime, and without a pause. For family and work emergencies. */
+    val alwaysAllowed: Set<String> = emptySet(),
+    // Wellbeing: apps that pause before opening, daily limits (app key -> minutes), the pause length,
+    // a daily screen-time goal in minutes (0 = none), a quieter home, and the stronger guard.
+    val hookedApps: Set<String> = emptySet(),
+    val appLimits: Map<String, Int> = emptyMap(),
+    val pauseSeconds: Int = 5,
+    val screenGoal: Int = 0,
+    val calmHome: Boolean = false,
+    val guardAll: Boolean = false,
 ) {
     fun gesture(slot: GestureSlot): String = gestures[slot] ?: DEFAULT_GESTURES.getValue(slot)
 
@@ -275,6 +289,45 @@ enum class IconTint(val label: String) {
     ACCENT("Accent colour"),
 }
 
+/**
+ * A focus profile: the apps it lets through, how long it runs when started by hand, and an optional daily
+ * window ([from]..[to], minutes after midnight; -1 = no schedule) when it turns on by itself.
+ * [kind]: 0 work, 1 prayer, 2 sleep, 3 family, 4 other.
+ */
+data class FocusProfile(
+    val id: Long, val name: String, val kind: Int, val apps: Set<String> = emptySet(),
+    val minutes: Int = 60, val from: Int = -1, val to: Int = -1,
+) {
+    val scheduled: Boolean get() = from >= 0 && to >= 0 && from != to
+
+    /** Inside the daily window at [minute] of the day (a window may pass midnight). */
+    fun inWindow(minute: Int): Boolean = scheduled && if (from < to) minute in from until to else minute >= from || minute < to
+}
+
+/** The profile in force at [now]: one started by hand, else one whose daily window is on (unless skipped). */
+fun LauncherSettings.focusAt(now: Long): FocusProfile? {
+    if (focusEndsAt > now) return focusProfiles.firstOrNull { it.id == focusProfileId } ?: FocusProfile(0, "Focus", 4, focusAllowed)
+    if (focusSkipUntil > now) return null
+    val z = java.time.Instant.ofEpochMilli(now).atZone(java.time.ZoneId.systemDefault())
+    return focusProfiles.firstOrNull { it.inWindow(z.hour * 60 + z.minute) }
+}
+
+/** When the focus in force at [now] ends, or 0. */
+fun LauncherSettings.focusUntil(now: Long): Long {
+    if (focusEndsAt > now) return focusEndsAt
+    val p = focusAt(now) ?: return 0L
+    val z = java.time.Instant.ofEpochMilli(now).atZone(java.time.ZoneId.systemDefault())
+    val left = ((p.to - (z.hour * 60 + z.minute)) + 1440) % 1440
+    return now - now % 60_000L + left * 60_000L
+}
+
+val DEFAULT_PROFILES = listOf(
+    FocusProfile(1, "Work", 0, minutes = 120),
+    FocusProfile(2, "Prayer", 1, minutes = 20),
+    FocusProfile(3, "Sleep", 2, minutes = 480),
+    FocusProfile(4, "Family", 3, minutes = 60),
+)
+
 /** How the terminal display above the apps looks. */
 enum class StatusStyle(val label: String) { TERMINAL("Terminal"), LCD("Retro LCD"), QUIET("Quiet line") }
 
@@ -287,6 +340,7 @@ enum class StatusTopic(val label: String) {
     CALENDAR("Next on your calendar"),
     UPDATE("New version"),
     NOTES("Latest note"),
+    WELLBEING("Screen time, unlocks and limits"),
     SETUP("Setup tips"),
 }
 

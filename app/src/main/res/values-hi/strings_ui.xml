@@ -343,4 +343,7 @@
     <string name="s_until_jumuah">जुमा तक</string>
     <string name="s_terminal_display">टर्मिनल डिस्प्ले</string>
     <string name="s_terminal_note">आपके ऐप्स के ऊपर, Stillpoint बताता है कि अभी क्या ज़रूरी है। किसी पंक्ति पर टैप करें। कुछ न हो तो अभिवादन करता है।</string>
+    <string name="pg_wellbeing">डिजिटल संतुलन</string>
+    <string name="pg_wellbeing_sum">ठहराव, सीमा, स्क्रीन टाइम</string>
+    <string name="s_focus_profiles_note">शुरू करने के लिए एक प्रोफ़ाइल चुनें। उसके ऐप और हमेशा अनुमत ऐप खुले रहते हैं।</string>
 </resources>

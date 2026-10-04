@@ -141,8 +141,29 @@ private fun statusMessages(vm: LauncherViewModel, s: LauncherSettings, now: Long
     }
 
     // Focus.
-    if (on(StatusTopic.FOCUS) && s.focusEndsAt > now) {
-        out += StatusMsg("focus until ${formatClock(context, s.focusEndsAt)} · only allowed apps", 75) { vm.screen = Screen.FOCUS }
+    vm.activeFocus(now)?.takeIf { on(StatusTopic.FOCUS) }?.let { p ->
+        out += StatusMsg("${p.name.lowercase()} focus · until ${formatClock(context, vm.focusUntil(now))} · ${vm.focusAllowedNow().size} apps", 75) {
+            vm.screen = Screen.FOCUS
+        }
+    }
+
+    // Wellbeing: unlocks, the screen-time goal, limits used up, and on Fridays the week.
+    if (on(StatusTopic.WELLBEING)) {
+        if (vm.unlocksToday > 0) out += StatusMsg("${vm.unlocksToday} unlocks today", 12)
+        val total = vm.totalUsage
+        if (s.screenGoal > 0) {
+            val goal = s.screenGoal * 60_000L
+            out += if (total >= goal) StatusMsg("over your ${formatDuration(goal)} screen goal · ${formatDuration(total)}", 60)
+            else StatusMsg("screen time ${formatDuration(total)} of ${formatDuration(goal)}", 18)
+        }
+        s.appLimits.forEach { (key, minutes) ->
+            val app = vm.apps.firstOrNull { it.key == key } ?: return@forEach
+            if ((vm.usage[app.packageName] ?: 0L) >= minutes * 60_000L) out += StatusMsg("${app.label.lowercase()}: daily limit reached", 50)
+        }
+        if (java.time.LocalDate.now().dayOfWeek == java.time.DayOfWeek.FRIDAY && vm.weekUsage.isNotEmpty()) {
+            val top = vm.weekUsage.maxByOrNull { it.value }?.key?.let { k -> vm.apps.firstOrNull { it.packageName == k }?.label }
+            out += StatusMsg("this week: ${formatDuration(vm.weekUsage.values.sum() / 7)} a day" + (top?.let { " · most: ${it.lowercase()}" } ?: ""), 20)
+        }
     }
 
     // Calendar: the next event within two hours.
