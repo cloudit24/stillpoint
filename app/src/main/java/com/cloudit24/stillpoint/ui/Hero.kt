@@ -100,7 +100,7 @@ import kotlin.math.roundToInt
 private val HeroPrayer = Color(0xFF8FC4A8)
 private val HeroWeather = Color(0xFFA9C8E8)
 
-private data class HeroCard(val title: String, val subtitle: String, val color: Color, val small: Boolean = false)
+private data class HeroCard(val title: String, val subtitle: String, val color: Color, val small: Boolean = false, val clock: Boolean = false)
 
 /**
  * Clock-free header: accent date line, a big headline that flips like a live tile
@@ -117,7 +117,7 @@ fun HeroHeader(vm: LauncherViewModel, s: LauncherSettings, now: Long) {
 
     val cards = buildList {
         // The greeting lives in the terminal display now; the headline starts with the time.
-        add(HeroCard(formatClock(context, now), DateTimeFormatter.ofPattern("EEEE", Locale.getDefault()).format(zdt), Ink))
+        add(HeroCard(formatClock(context, now), DateTimeFormatter.ofPattern("EEEE", Locale.getDefault()).format(zdt), Ink, clock = true))
         if (s.showUsage && vm.hasUsageAccess && vm.totalUsage > 0) {
             add(HeroCard(formatDuration(vm.totalUsage), "on screen today", Ink))
         }
@@ -215,8 +215,12 @@ private fun FlipCard(key: Int, card: HeroCard, modifier: Modifier) {
         // so nothing below moves when the card flips.
         var size by remember(display.title) { mutableFloatStateOf(if (display.small) 30f else 40f) }
         Box(Modifier.fillMaxWidth().height(54.dp), contentAlignment = Alignment.CenterStart) {
-            Text(display.title, color = display.color, fontSize = size.sp, lineHeight = 46.sp,
-                fontWeight = FontWeight.Light, maxLines = 1, softWrap = false,
+            Text(display.title, color = display.color, fontSize = if (display.clock) 48.sp else size.sp,
+                lineHeight = if (display.clock) 52.sp else 46.sp,
+                fontWeight = if (display.clock) FontWeight.ExtraLight else FontWeight.Light,
+                letterSpacing = if (display.clock) 1.5.sp else androidx.compose.ui.unit.TextUnit.Unspecified,
+                fontFeatureSettings = if (display.clock) "tnum" else null,
+                maxLines = 1, softWrap = false,
                 overflow = if (size > 22f) TextOverflow.Clip else TextOverflow.Ellipsis,
                 modifier = Modifier.wrapContentHeight(unbounded = true),
                 onTextLayout = { if (it.hasVisualOverflow && size > 22f) size -= 2f })
