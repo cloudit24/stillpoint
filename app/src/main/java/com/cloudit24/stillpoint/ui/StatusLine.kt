@@ -53,6 +53,8 @@ import com.cloudit24.stillpoint.data.LauncherSettings
 import com.cloudit24.stillpoint.data.PrayerTimes
 import com.cloudit24.stillpoint.data.StatusStyle
 import com.cloudit24.stillpoint.data.StatusTopic
+import com.cloudit24.stillpoint.data.AppTheme
+import androidx.compose.foundation.layout.offset
 import com.cloudit24.stillpoint.update.UpdateNotice
 import com.cloudit24.stillpoint.widget.PrayerAlerts
 import kotlinx.coroutines.delay
@@ -77,7 +79,8 @@ fun StatusLine(vm: LauncherViewModel, s: LauncherSettings, now: Long, modifier: 
     val context = LocalContext.current
     val msgs = statusMessages(vm, s, now, context)
     when (s.statusStyle) {
-        StatusStyle.TERMINAL -> TerminalStyle(msgs, s.edgeMotion, modifier)
+        StatusStyle.TERMINAL -> TerminalStyle(msgs, s.edgeMotion, modifier,
+            cat = s.theme == AppTheme.NEON && s.themeCat, drone = s.theme == AppTheme.NEON && s.themeDrone)
         StatusStyle.LCD -> LcdStyle(msgs, modifier)
         StatusStyle.QUIET -> QuietStyle(msgs, modifier)
     }
@@ -215,8 +218,9 @@ private fun statusMessages(vm: LauncherViewModel, s: LauncherSettings, now: Long
  * scroll up. The most pressing ones stay a little longer. Tap a line to act on it.
  */
 @Composable
-private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modifier) {
+private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modifier, cat: Boolean = false, drone: Boolean = false) {
     val accent = Accent
+    val neon = LocalNeon.current
     val n = msgs.size
     var step by remember { mutableIntStateOf(0) }
     var typed by remember { mutableIntStateOf(0) }
@@ -229,10 +233,12 @@ private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modi
     val blink = rememberInfiniteTransition(label = "cursor")
     val cursor by blink.animateFloat(1f, 0f, infiniteRepeatable(tween(530), RepeatMode.Reverse), label = "cursor")
     val shape = RoundedCornerShape(10.dp)
-    Column(modifier.fillMaxWidth().clip(shape).background(accent.copy(alpha = 0.05f))
+    Box(modifier.fillMaxWidth()) {
+    Column(Modifier.fillMaxWidth().clip(shape).background(accent.copy(alpha = 0.05f))
         .border(1.dp, accent.copy(alpha = 0.35f), shape).padding(horizontal = 14.dp, vertical = 10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            repeat(3) { Box(Modifier.padding(end = 5.dp).size(6.dp).clip(CircleShape).background(accent.copy(alpha = 0.45f))) }
+            val dots = if (neon) listOf(NeonOrange, NeonTeal, Muted) else List(3) { accent.copy(alpha = 0.45f) }
+            dots.forEach { c -> Box(Modifier.padding(end = 5.dp).size(6.dp).clip(CircleShape).background(c)) }
             Text("stillpoint", color = accent.copy(alpha = 0.55f), fontSize = 11.sp, fontFamily = FontFamily.Monospace,
                 modifier = Modifier.padding(start = 4.dp).weight(1f))
             if (n > 1) Text("${step % n + 1}/$n", color = accent.copy(alpha = 0.55f), fontSize = 11.sp, fontFamily = FontFamily.Monospace)
@@ -261,6 +267,66 @@ private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modi
                 }
             }
         }
+    }
+    // The cat wakes for anything that matters; otherwise it naps on the window's edge.
+    if (cat) AlleyCat(awake = msgs.any { it.rank >= 50 }, Modifier.align(Alignment.TopEnd))
+    if (drone) Drone(motion, Modifier.align(Alignment.TopStart).offset(x = (-10).dp, y = (-13).dp))
+    }
+}
+
+/** A line-drawn cat sitting on the terminal window. Tap it for a purr. */
+@Composable
+private fun AlleyCat(awake: Boolean, modifier: Modifier) {
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+    val w = if (awake) 36.dp else 50.dp
+    val h = if (awake) 40.dp else 29.dp
+    androidx.compose.foundation.Canvas(modifier.offset(x = (-16).dp, y = -(h - 1.5.dp)).size(w, h)
+        .clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) {
+            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+        }) {
+        val u = size.width / (if (awake) 40f else 58f)
+        fun o(x: Float, y: Float) = androidx.compose.ui.geometry.Offset(x * u, y * u)
+        val line = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.5f * u, cap = androidx.compose.ui.graphics.StrokeCap.Round,
+            join = androidx.compose.ui.graphics.StrokeJoin.Round)
+        val body = androidx.compose.ui.graphics.Path()
+        val extra = androidx.compose.ui.graphics.Path()
+        if (awake) {
+            body.moveTo(10 * u, 42 * u); body.cubicTo(8 * u, 30 * u, 10 * u, 22 * u, 14 * u, 18 * u)
+            body.lineTo(12 * u, 8 * u); body.lineTo(18 * u, 14 * u); body.lineTo(24 * u, 14 * u); body.lineTo(30 * u, 8 * u)
+            body.lineTo(28 * u, 18 * u); body.cubicTo(32 * u, 22 * u, 34 * u, 30 * u, 32 * u, 42 * u); body.close()
+            extra.moveTo(32 * u, 40 * u); extra.cubicTo(38 * u, 38 * u, 38 * u, 30 * u, 34 * u, 28 * u)
+        } else {
+            body.moveTo(6 * u, 30 * u); body.cubicTo(6 * u, 16 * u, 20 * u, 12 * u, 32 * u, 14 * u)
+            body.cubicTo(44 * u, 12 * u, 54 * u, 18 * u, 52 * u, 30 * u); body.close()
+            extra.moveTo(40 * u, 16 * u); extra.lineTo(43 * u, 9 * u); extra.lineTo(46 * u, 15 * u)
+            extra.lineTo(50 * u, 10 * u); extra.lineTo(51 * u, 18 * u)
+            extra.moveTo(6 * u, 30 * u); extra.cubicTo(2 * u, 28 * u, 2 * u, 22 * u, 8 * u, 22 * u)
+            extra.moveTo(42 * u, 22 * u); extra.cubicTo(42.7f * u, 23 * u, 45.3f * u, 23 * u, 46 * u, 22 * u)
+            extra.moveTo(47 * u, 22 * u); extra.cubicTo(47.7f * u, 23 * u, 50.3f * u, 23 * u, 51 * u, 22 * u)
+        }
+        drawPath(body, NeonBack)
+        drawPath(body, NeonOrange, style = line)
+        drawPath(extra, NeonOrange, style = line)
+        if (awake) { drawCircle(NeonTeal, 1.9f * u, o(17f, 21f)); drawCircle(NeonTeal, 1.9f * u, o(25f, 21f)) }
+    }
+}
+
+/** A small companion drone perched on the window's corner, bobbing gently. */
+@Composable
+private fun Drone(motion: Boolean, modifier: Modifier) {
+    val bob = rememberInfiniteTransition(label = "drone")
+    val y by bob.animateFloat(0f, -3f, infiniteRepeatable(tween(1400), RepeatMode.Reverse), label = "drone")
+    androidx.compose.foundation.Canvas(modifier.offset(y = if (motion) y.dp else 0.dp).size(26.dp, 20.dp)) {
+        val u = size.width / 26f
+        val line = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.5f * u, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+        val tl = androidx.compose.ui.geometry.Offset(3 * u, 4 * u)
+        val sz = androidx.compose.ui.geometry.Size(20 * u, 12 * u)
+        val r = androidx.compose.ui.geometry.CornerRadius(6 * u)
+        drawRoundRect(NeonBack, tl, sz, r)
+        drawRoundRect(NeonTeal, tl, sz, r, style = line)
+        drawCircle(NeonTeal, 2.5f * u, androidx.compose.ui.geometry.Offset(13 * u, 10 * u))
+        drawLine(NeonTeal, androidx.compose.ui.geometry.Offset(8 * u, 4 * u), androidx.compose.ui.geometry.Offset(6 * u, 0.5f * u), 1.2f * u)
+        drawLine(NeonTeal, androidx.compose.ui.geometry.Offset(18 * u, 4 * u), androidx.compose.ui.geometry.Offset(20 * u, 0.5f * u), 1.2f * u)
     }
 }
 

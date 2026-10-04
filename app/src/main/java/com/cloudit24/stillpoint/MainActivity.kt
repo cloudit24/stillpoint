@@ -81,7 +81,8 @@ class MainActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
         )
         setContent {
-            StillpointTheme(accent = androidx.compose.ui.graphics.Color(vm.settings.accent), accentStyle = vm.settings.accentStyle, font = vm.settings.font) { LauncherRoot(vm, ::addWidget) }
+            StillpointTheme(accent = androidx.compose.ui.graphics.Color(vm.settings.accent), accentStyle = vm.settings.accentStyle, font = vm.settings.font,
+                neon = vm.settings.theme == com.cloudit24.stillpoint.data.AppTheme.NEON) { LauncherRoot(vm, ::addWidget) }
         }
         if (savedInstanceState == null) handleIntent(intent)
     }

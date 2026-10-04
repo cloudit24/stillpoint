@@ -73,6 +73,7 @@ Every older version is listed in the **[changelog](CHANGELOG.md)** and on the **
 
 **Your look**
 - Accent colours, grey or accent-tinted icons, five fonts, and Stillpoint widgets for any launcher.
+- Neon Alley theme: warm orange and teal neon, a little cat that naps on the terminal display, and a drone companion.
 
 ## Private by design
 

@@ -215,7 +215,7 @@ private fun FlipCard(key: Int, card: HeroCard, modifier: Modifier) {
         // so nothing below moves when the card flips.
         var size by remember(display.title) { mutableFloatStateOf(if (display.small) 30f else 40f) }
         Box(Modifier.fillMaxWidth().height(54.dp), contentAlignment = Alignment.CenterStart) {
-            Text(display.title, color = display.color, fontSize = if (display.clock) 48.sp else size.sp,
+            Text(display.title, color = if (display.clock && LocalNeon.current) NeonClock else display.color, fontSize = if (display.clock) 48.sp else size.sp,
                 lineHeight = if (display.clock) 52.sp else 46.sp,
                 fontWeight = if (display.clock) FontWeight.ExtraLight else FontWeight.Light,
                 letterSpacing = if (display.clock) 1.5.sp else androidx.compose.ui.unit.TextUnit.Unspecified,

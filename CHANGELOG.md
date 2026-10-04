@@ -3,9 +3,12 @@
 Every version of Stillpoint Launcher, newest first. Each links to its APK.
 The newest is always at **[Download the latest APK](https://github.com/cloudit24/stillpoint/releases/latest/download/Stillpoint-Launcher.apk)**.
 
-## v0.45.1 · not yet released
+## v0.46.0 · 4 Oct 2026
+- Neon Alley theme (Settings, Appearance, Theme): warm orange neon and teal on a dark street. A line-drawn cat naps on the terminal display and wakes when something matters (tap it for a purr), and a little drone perches on the corner. Switch the cat or the drone off if you like. Your own accent colour comes back when you return to Stillpoint.
 - Prayer popup: while you're using the phone it now opens full screen too, instead of only a banner, when the gesture service is on.
 - Settings, Prayer: with only the iqama alert on, a row offers to turn on the prayer time alert, which brings the popup and Remind in 5 min before the iqama.
+
+[stillpoint-v0.46.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.46.0/stillpoint-v0.46.0.apk)
 
 ## v0.45.0 · 4 Oct 2026
 - Focus profiles: Work, Prayer, Sleep and Family, plus your own. Each has its apps, a length, and can turn on by itself every day (for example Sleep from 23:00 to 06:00).

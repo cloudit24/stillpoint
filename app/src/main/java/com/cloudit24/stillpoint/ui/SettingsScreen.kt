@@ -10,6 +10,7 @@ import androidx.compose.ui.res.stringResource
 import com.cloudit24.stillpoint.R
 import androidx.compose.material.icons.outlined.Person
 import com.cloudit24.stillpoint.data.AccentStyle
+import com.cloudit24.stillpoint.data.AppTheme
 import androidx.compose.foundation.layout.height
 import com.cloudit24.stillpoint.notify.NotifyTest
 import com.cloudit24.stillpoint.notify.NotifyHub
@@ -312,11 +313,33 @@ fun SettingsScreen(vm: LauncherViewModel) {
 
                 SettingsPage.APPEARANCE -> {
                     Group(stringResource(R.string.s_theme)) {
+                        // Whole looks: Stillpoint, or Neon Alley with its cat and drone.
+                        Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            AppTheme.entries.forEach { t ->
+                                val on = s.theme == t
+                                val neonCard = t == AppTheme.NEON
+                                val shape = RoundedCornerShape(12.dp)
+                                Column(Modifier.weight(1f).clip(shape).clickable { vm.updateSettings { it.copy(theme = t) } },
+                                    horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Box(Modifier.fillMaxWidth().height(56.dp).clip(shape).background(if (neonCard) NeonBack else Color.Black)
+                                        .border(if (on) 2.dp else 1.dp, if (on) Ink else if (neonCard) NeonOrange.copy(alpha = 0.5f) else Muted.copy(alpha = 0.4f), shape),
+                                        contentAlignment = Alignment.Center) {
+                                        Text("4:12", color = if (neonCard) NeonClock else Ink, fontSize = 22.sp, fontWeight = FontWeight.Light)
+                                    }
+                                    Text(t.label, fontSize = 12.sp, color = if (on) Ink else Muted, modifier = Modifier.padding(top = 4.dp))
+                                }
+                            }
+                        }
+                        if (s.theme == AppTheme.NEON) {
+                            ToggleRow("Alley cat on the terminal display", s.themeCat) { on -> vm.updateSettings { it.copy(themeCat = on) } }
+                            ToggleRow("Drone companion", s.themeDrone) { on -> vm.updateSettings { it.copy(themeDrone = on) } }
+                        }
                         Row(Modifier.fillMaxWidth().clickable { dialog = SettingsDialog.ACCENT }.padding(vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text(stringResource(R.string.s_accent_colour), fontSize = 16.sp)
-                                Text(ACCENTS.firstOrNull { it.argb == s.accent }?.name ?: "Custom", color = Muted, fontSize = 13.sp)
+                                Text(if (s.theme == AppTheme.NEON) "Neon orange in Neon Alley; yours returns with Stillpoint"
+                                    else ACCENTS.firstOrNull { it.argb == s.accent }?.name ?: "Custom", color = Muted, fontSize = 13.sp)
                             }
                             Box(Modifier.size(28.dp).clip(CircleShape).background(Color(s.accent)))
                         }

@@ -26,6 +26,9 @@ class Prefs(context: Context) {
             drawerStart = runCatching { DrawerTab.valueOf(sp.getString(K_DRAWER_START, d.drawerStart.name)!!) }
                 .getOrDefault(d.drawerStart),
             accent = sp.getLong(K_ACCENT, d.accent),
+            theme = runCatching { AppTheme.valueOf(sp.getString(K_THEME, d.theme.name)!!) }.getOrDefault(d.theme),
+            themeCat = sp.getBoolean(K_THEME_CAT, d.themeCat),
+            themeDrone = sp.getBoolean(K_THEME_DRONE, d.themeDrone),
             clockStyle = ClockStyle.HEADLINE,
             showStats = sp.getBoolean(K_SHOW_STATS, d.showStats),
             showLocalIp = sp.getBoolean(K_LOCAL_IP, d.showLocalIp),
@@ -148,6 +151,9 @@ class Prefs(context: Context) {
             .putBoolean(K_SHOW_ICONS, s.showIcons)
             .putString(K_DRAWER_START, s.drawerStart.name)
             .putLong(K_ACCENT, s.accent)
+            .putString(K_THEME, s.theme.name)
+            .putBoolean(K_THEME_CAT, s.themeCat)
+            .putBoolean(K_THEME_DRONE, s.themeDrone)
             .putString(K_CLOCK, s.clockStyle.name)
             .putBoolean(K_SHOW_STATS, s.showStats)
             .putBoolean(K_LOCAL_IP, s.showLocalIp)
@@ -555,6 +561,9 @@ class Prefs(context: Context) {
         const val K_SHOW_ICONS = "show_icons"
         const val K_DRAWER_START = "drawer_start"
         const val K_ACCENT = "accent"
+        const val K_THEME = "theme"
+        const val K_THEME_CAT = "theme_cat"
+        const val K_THEME_DRONE = "theme_drone"
         const val K_WIDGET_IDS = "widget_ids"
         const val K_GESTURE = "gesture_"
         const val K_CLOCK = "clock_style"

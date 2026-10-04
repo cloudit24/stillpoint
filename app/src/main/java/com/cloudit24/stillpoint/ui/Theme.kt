@@ -37,6 +37,13 @@ val Muted = Color(0xFF7D7A74)
 val Slate = Color(0xFF9FB4C7)
 
 val LocalAccent = staticCompositionLocalOf { Slate }
+
+// Neon Alley: warm orange neon and teal on a dark brown-black street.
+val NeonOrange = Color(0xFFFF9A3C)
+val NeonTeal = Color(0xFF4FD1C5)
+val NeonClock = Color(0xFFFFB36B)
+val NeonBack = Color(0xFF12100E)
+val LocalNeon = staticCompositionLocalOf { false }
 val LocalAccentStyle = staticCompositionLocalOf { AccentStyle.SOLID }
 
 /** The accent as a fill for tiles and squares, in the chosen style. */
@@ -98,23 +105,26 @@ private fun Typography.withFont(ff: FontFamily): Typography {
 }
 
 @Composable
-fun StillpointTheme(accent: Color = Slate, accentStyle: AccentStyle = AccentStyle.SOLID, font: AppFont = AppFont.SYSTEM, content: @Composable () -> Unit) {
+fun StillpointTheme(accent: Color = Slate, accentStyle: AccentStyle = AccentStyle.SOLID, font: AppFont = AppFont.SYSTEM,
+                    neon: Boolean = false, content: @Composable () -> Unit) {
+    val back = if (neon) NeonBack else Color.Black
+    val tint = if (neon) NeonOrange else accent
     val typography = remember(font) { Typography().withFont(fontFamilyFor(font)) }
     MaterialTheme(
         typography = typography,
         colorScheme = darkColorScheme(
-            background = Color.Black,
-            surface = Color(0xFF161615),
-            surfaceContainer = Color(0xFF161615),
-            surfaceContainerHigh = Color(0xFF1E1E1C),
-            primary = accent,
+            background = back,
+            surface = if (neon) Color(0xFF1D1915) else Color(0xFF161615),
+            surfaceContainer = if (neon) Color(0xFF1D1915) else Color(0xFF161615),
+            surfaceContainerHigh = if (neon) Color(0xFF26211B) else Color(0xFF1E1E1C),
+            primary = tint,
             onPrimary = Color.White,
             onBackground = Ink,
             onSurface = Ink,
         ),
     ) {
-        CompositionLocalProvider(LocalAccent provides accent, LocalAccentStyle provides accentStyle) {
-            Surface(Modifier.fillMaxSize(), color = Color.Black, contentColor = Ink) { content() }
+        CompositionLocalProvider(LocalAccent provides tint, LocalAccentStyle provides accentStyle, LocalNeon provides neon) {
+            Surface(Modifier.fillMaxSize(), color = back, contentColor = Ink) { content() }
         }
     }
 }

@@ -144,6 +144,10 @@ data class LauncherSettings(
     /** ARGB accent colour, see [ACCENTS]. */
     val accent: Long = 0xFF1BA1E2,
     val accentStyle: AccentStyle = AccentStyle.SOLID,
+    /** A look that sets colours and extras at once. The accent above is kept and comes back with Stillpoint. */
+    val theme: AppTheme = AppTheme.STILLPOINT,
+    val themeCat: Boolean = true,
+    val themeDrone: Boolean = true,
     /** Senior mode: big text, six tiles (app keys, "" for empty) and one person to call. */
     val seniorMode: Boolean = false,
     val seniorApps: List<String> = emptyList(),
@@ -281,6 +285,9 @@ enum class EdgeStyle(val label: String, val detail: String) {
 
 /** How the accent fills tiles and squares: flat, or one of three soft gradients. */
 enum class AccentStyle(val label: String) { SOLID("Solid"), SOFT("Soft"), DUO("Duo"), GLOW("Glow") }
+
+/** Whole looks. Neon Alley: warm neon on a dark street, a cat napping on the terminal display and a little drone. */
+enum class AppTheme(val label: String) { STILLPOINT("Stillpoint"), NEON("Neon Alley") }
 
 enum class IconTint(val label: String) {
     ORIGINAL("Original colours"),
