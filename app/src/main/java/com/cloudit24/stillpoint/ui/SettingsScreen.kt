@@ -330,10 +330,6 @@ fun SettingsScreen(vm: LauncherViewModel) {
                                 }
                             }
                         }
-                        if (s.theme == AppTheme.NEON) {
-                            ToggleRow("Alley cat on the terminal display", s.themeCat) { on -> vm.updateSettings { it.copy(themeCat = on) } }
-                            ToggleRow("Drone companion", s.themeDrone) { on -> vm.updateSettings { it.copy(themeDrone = on) } }
-                        }
                         Row(Modifier.fillMaxWidth().clickable { dialog = SettingsDialog.ACCENT }.padding(vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
@@ -358,6 +354,17 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         }
                         ActionRow(stringResource(R.string.s_icon_colours), s.iconTint.label) { dialog = SettingsDialog.ICON_TINT }
                         ActionRow(stringResource(R.string.s_font), s.font.label) { dialog = SettingsDialog.FONT }
+                    }
+                    if (s.theme == AppTheme.NEON) {
+                        Group("Neon Alley") {
+                            ToggleRow("Alley cat", s.themeCat) { on -> vm.updateSettings { it.copy(themeCat = on) } }
+                            if (s.themeCat) {
+                                ToggleRow("Roams along the display", s.catRoam) { on -> vm.updateSettings { it.copy(catRoam = on) } }
+                                ToggleRow("Reacts to messages, calls and prayer", s.catReact) { on -> vm.updateSettings { it.copy(catReact = on) } }
+                            }
+                            ToggleRow("Drone companion", s.themeDrone) { on -> vm.updateSettings { it.copy(themeDrone = on) } }
+                        }
+                        Note("They live on the terminal display in Terminal style. The cat sleeps at night and in Sleep focus. Tap the cat for a purr, the drone for the next message. Your special person is in Settings, Notifications.")
                     }
                     Group(stringResource(R.string.s_apps)) {
                         ActionRow(stringResource(R.string.s_home_apps_as), s.homeStyle.label) { dialog = SettingsDialog.HOME_STYLE }
@@ -712,6 +719,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
 
                 SettingsPage.NOTIFY -> {
                     val access = remember(vm.resumeTick) { NotifyHub.hasAccess(ctx) }
+                    var pickSpecial by remember { mutableStateOf(false) }
                     Group(stringResource(R.string.s_notification_access)) {
                         ActionRow(if (access) "Allowed" else "Not allowed · tap to allow",
                             "Read on the phone only. Nothing is kept or sent.") {
@@ -745,6 +753,38 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         }
                     }
                     Note(stringResource(R.string.s_important_apps_and_people_shine_brighter))
+                    Group("Special person") {
+                        ActionRow(s.specialPerson.ifBlank { "None" }, "One person whose messages feel different") { pickSpecial = true }
+                        if (s.specialPerson.isNotBlank()) {
+                            ToggleRow("Soft pink glow around the screen", s.specialGlow) { on -> vm.updateSettings { it.copy(specialGlow = on) } }
+                        }
+                    }
+                    Note("Their messages show a heart in the terminal display and a pink glow until you read them. In Neon Alley the cat runs to greet them with little hearts. Only the name is matched, on the phone.")
+                    if (pickSpecial) AlertDialog(
+                        onDismissRequest = { pickSpecial = false },
+                        title = { Text("Special person") },
+                        text = {
+                            Column {
+                                s.importantPeople.forEach { name ->
+                                    Text(name, fontSize = 17.sp, color = if (name == s.specialPerson) Accent else Ink,
+                                        modifier = Modifier.fillMaxWidth().clickable { vm.updateSettings { it.copy(specialPerson = name) }; pickSpecial = false }
+                                            .padding(vertical = 12.dp))
+                                }
+                                Text("Type a name", fontSize = 17.sp, color = Accent,
+                                    modifier = Modifier.fillMaxWidth().clickable {
+                                        pickSpecial = false
+                                        textEdit = TextEdit("Special person",
+                                            "Type the name as it shows in their notifications, for example in WhatsApp.", s.specialPerson, "Name") { n ->
+                                            vm.updateSettings { it.copy(specialPerson = n.trim()) }
+                                        }
+                                    }.padding(vertical = 12.dp))
+                                if (s.specialPerson.isNotBlank()) Text("None", fontSize = 17.sp, color = Muted,
+                                    modifier = Modifier.fillMaxWidth().clickable { vm.updateSettings { it.copy(specialPerson = "") }; pickSpecial = false }
+                                        .padding(vertical = 12.dp))
+                            }
+                        },
+                        confirmButton = { TextButton(onClick = { pickSpecial = false }) { Text(stringResource(R.string.s_cancel)) } },
+                    )
                     Group(stringResource(R.string.s_apps)) {
                         val seen = vm.notifySeenApps()
                         if (seen.isEmpty()) Text(stringResource(R.string.s_apps_appear_here_after_they_show), color = Muted, fontSize = 14.sp,

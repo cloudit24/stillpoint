@@ -148,6 +148,11 @@ data class LauncherSettings(
     val theme: AppTheme = AppTheme.STILLPOINT,
     val themeCat: Boolean = true,
     val themeDrone: Boolean = true,
+    val catRoam: Boolean = true,
+    val catReact: Boolean = true,
+    /** One person whose messages feel different: a heart, a pink glow, and the cat runs to greet them. */
+    val specialPerson: String = "",
+    val specialGlow: Boolean = true,
     /** Senior mode: big text, six tiles (app keys, "" for empty) and one person to call. */
     val seniorMode: Boolean = false,
     val seniorApps: List<String> = emptyList(),

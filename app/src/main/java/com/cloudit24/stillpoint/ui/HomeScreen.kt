@@ -168,9 +168,12 @@ fun HomeScreen(vm: LauncherViewModel) {
     LaunchedEffect(Unit) { edgeGrow.animateTo(1f, tween(1400, easing = FastOutSlowInEasing)) }
     var edgePhase by remember { mutableFloatStateOf(0f) }
     // Notification light: colours of the apps with something unread; important ones shine brighter.
-    val lit = if (s.notifyLight) vm.litNotifications() else emptyList()
-    val litColors = lit.sortedByDescending { it.important }.map { vm.notifyColor(it.pkg) }.distinct()
-    val litImportant = lit.any { it.important }
+    val allLit = if (s.notifyLight || s.specialGlow) vm.litNotifications() else emptyList()
+    val special = s.specialGlow && allLit.any { it.special }
+    val lit = if (s.notifyLight) allLit else emptyList()
+    // Your special person: one soft pink breath around the screen until it's read.
+    val litColors = if (special) listOf(SpecialPink) else lit.sortedByDescending { it.important }.map { vm.notifyColor(it.pkg) }.distinct()
+    val litImportant = special || lit.any { it.important }
     val edgeMoving = s.edgeMotion && ((edge != null && (edge.ending || edge.starting || edge.started)) || litColors.isNotEmpty())
     LaunchedEffect(edgeMoving) {
         if (edgeMoving) {
@@ -189,7 +192,7 @@ fun HomeScreen(vm: LauncherViewModel) {
                 drawContent()
                 if (edge != null) drawEdges(edge, s.edgeStyle, s.edgeRight, EDGE_BRIGHTNESS[s.edgeBright.coerceIn(1, 3) - 1], edgeGrow.value, edgePhase, accent)
                 if (litColors.isNotEmpty()) {
-                    drawNotifyLight(litColors, s.notifyStyle, if (s.edgeStyle == EdgeStyle.OFF) EdgeStyle.FLAT else s.edgeStyle,
+                    drawNotifyLight(litColors, if (special) NotifyStyle.BREATHE else s.notifyStyle, if (s.edgeStyle == EdgeStyle.OFF) EdgeStyle.FLAT else s.edgeStyle,
                         edgePhase, s.edgeMotion, litImportant)
                 }
             }

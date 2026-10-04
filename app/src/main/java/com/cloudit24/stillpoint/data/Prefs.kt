@@ -29,6 +29,10 @@ class Prefs(context: Context) {
             theme = runCatching { AppTheme.valueOf(sp.getString(K_THEME, d.theme.name)!!) }.getOrDefault(d.theme),
             themeCat = sp.getBoolean(K_THEME_CAT, d.themeCat),
             themeDrone = sp.getBoolean(K_THEME_DRONE, d.themeDrone),
+            catRoam = sp.getBoolean("cat_roam", d.catRoam),
+            catReact = sp.getBoolean("cat_react", d.catReact),
+            specialPerson = sp.getString("special_person", d.specialPerson) ?: "",
+            specialGlow = sp.getBoolean("special_glow", d.specialGlow),
             clockStyle = ClockStyle.HEADLINE,
             showStats = sp.getBoolean(K_SHOW_STATS, d.showStats),
             showLocalIp = sp.getBoolean(K_LOCAL_IP, d.showLocalIp),
@@ -154,6 +158,10 @@ class Prefs(context: Context) {
             .putString(K_THEME, s.theme.name)
             .putBoolean(K_THEME_CAT, s.themeCat)
             .putBoolean(K_THEME_DRONE, s.themeDrone)
+            .putBoolean("cat_roam", s.catRoam)
+            .putBoolean("cat_react", s.catReact)
+            .putString("special_person", s.specialPerson)
+            .putBoolean("special_glow", s.specialGlow)
             .putString(K_CLOCK, s.clockStyle.name)
             .putBoolean(K_SHOW_STATS, s.showStats)
             .putBoolean(K_LOCAL_IP, s.showLocalIp)

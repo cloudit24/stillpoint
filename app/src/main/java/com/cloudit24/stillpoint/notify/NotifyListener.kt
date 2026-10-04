@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 /** One unread notification, as the launcher needs it: which app, when, and whether it matters to you. */
-data class NotifyItem(val key: String, val pkg: String, val postTime: Long, val important: Boolean)
+data class NotifyItem(val key: String, val pkg: String, val postTime: Long, val important: Boolean, val special: Boolean = false)
 
 /**
  * The notifications waiting right now, shared with the home screen (edge light, signal dot, dots on apps).
@@ -43,13 +43,21 @@ object NotifyHub {
     internal fun isImportant(s: LauncherSettings, sbn: StatusBarNotification): Boolean {
         if (sbn.packageName in s.importantApps) return true
         if (s.importantPeople.isEmpty()) return false
+        val who = who(sbn)
+        return s.importantPeople.any { it.isNotBlank() && who.contains(it.trim().lowercase()) }
+    }
+
+    /** From your special person: their name in the sender or chat title. */
+    internal fun isSpecial(s: LauncherSettings, sbn: StatusBarNotification): Boolean =
+        s.specialPerson.isNotBlank() && who(sbn).contains(s.specialPerson.trim().lowercase())
+
+    private fun who(sbn: StatusBarNotification): String {
         val ex = sbn.notification.extras
-        val who = listOfNotNull(
+        return listOfNotNull(
             ex.getCharSequence(Notification.EXTRA_TITLE),
             ex.getCharSequence(Notification.EXTRA_CONVERSATION_TITLE),
             ex.getCharSequence(Notification.EXTRA_TITLE_BIG),
         ).joinToString(" ").lowercase()
-        return s.importantPeople.any { it.isNotBlank() && who.contains(it.trim().lowercase()) }
     }
 }
 
@@ -79,7 +87,7 @@ class NotifyListener : NotificationListenerService() {
         val s = Prefs(this).loadSettings()
         val list = runCatching { activeNotifications }.getOrNull().orEmpty()
             .filter(::shown)
-            .map { NotifyItem(it.key, it.packageName, it.postTime, NotifyHub.isImportant(s, it)) }
+            .map { NotifyItem(it.key, it.packageName, it.postTime, NotifyHub.isImportant(s, it), NotifyHub.isSpecial(s, it)) }
         NotifyHub.publish(this, list)
     }
 

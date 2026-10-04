@@ -43,6 +43,7 @@ val NeonOrange = Color(0xFFFF9A3C)
 val NeonTeal = Color(0xFF4FD1C5)
 val NeonClock = Color(0xFFFFB36B)
 val NeonBack = Color(0xFF12100E)
+val SpecialPink = Color(0xFFFF6FAE)
 val LocalNeon = staticCompositionLocalOf { false }
 val LocalAccentStyle = staticCompositionLocalOf { AccentStyle.SOLID }
 
