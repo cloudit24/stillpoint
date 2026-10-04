@@ -286,7 +286,6 @@ enum class StatusTopic(val label: String) {
     FOCUS("Focus"),
     CALENDAR("Next on your calendar"),
     UPDATE("New version"),
-    WEATHER("Weather with the greeting"),
     NOTES("Latest note"),
     SETUP("Setup tips"),
 }

@@ -163,7 +163,7 @@ private enum class SettingsPage(@StringRes val section: Int, @StringRes val titl
     WEATHER(R.string.sec_extras, R.string.pg_weather, R.string.pg_weather_sum, Icons.Outlined.LocationOn),
     GOLD(R.string.sec_extras, R.string.pg_gold, R.string.pg_gold_sum, Icons.Outlined.Star),
     SELFHOSTED(R.string.sec_extras, R.string.pg_selfhosted, R.string.pg_selfhosted_sum, Icons.Outlined.Home),
-    TOOLS(R.string.sec_extras, R.string.pg_tools, R.string.pg_tools_sum, Icons.Outlined.Build),
+    TOOLS(R.string.sec_productivity, R.string.pg_tools, R.string.pg_tools_sum, Icons.Outlined.Build),
     PRIVACY(R.string.sec_system, R.string.pg_privacy, R.string.pg_privacy_sum, Icons.Outlined.Lock),
     BACKUP(R.string.sec_system, R.string.pg_backup, R.string.pg_backup_sum, Icons.Outlined.Send),
     FOOTPRINT(R.string.sec_system, R.string.pg_footprint, R.string.pg_footprint_sum, Icons.Outlined.Settings),

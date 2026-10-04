@@ -5,6 +5,12 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
 import android.provider.Settings
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -170,7 +176,7 @@ private fun statusMessages(vm: LauncherViewModel, s: LauncherSettings, now: Long
         }
     }
 
-    // Always there: a greeting, with the weather when it's on.
+    // Always there: a greeting. The weather stays in the headline, so it isn't repeated here.
     val hour = Instant.ofEpochMilli(now).atZone(ZoneId.systemDefault()).hour
     val hello = when (hour) {
         in 5..11 -> "good morning"
@@ -178,38 +184,61 @@ private fun statusMessages(vm: LauncherViewModel, s: LauncherSettings, now: Long
         in 17..20 -> "good evening"
         else -> "good night"
     }
-    val w = vm.weather
-    val weather = if (on(StatusTopic.WEATHER) && s.weatherOn && w != null) {
-        val t = if (s.fahrenheit) w.tempC * 9 / 5 + 32 else w.tempC
-        " · ${t.roundToInt()}° ${weatherKind(w.code).label.lowercase()}"
-    } else ""
-    out += StatusMsg(hello + weather, 0)
+    out += StatusMsg(hello, 0)
 
     return out.sortedByDescending { it.rank }
 }
 
-/** Green-screen lines: the most pressing at the bottom with a blinking cursor, two quieter ones above it. */
+/**
+ * A small terminal window: every message takes its turn, typed out on the bottom line while the older ones
+ * scroll up. The most pressing ones stay a little longer. Tap a line to act on it.
+ */
 @Composable
 private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modifier) {
     val accent = Accent
-    val top = msgs.first()
-    val rest = msgs.drop(1).take(2).reversed()
-    // The newest line types itself out when it changes.
-    var typed by remember(top.text) { mutableIntStateOf(if (motion) 0 else top.text.length) }
-    LaunchedEffect(top.text) {
-        while (typed < top.text.length) { delay(28); typed++ }
+    val n = msgs.size
+    var step by remember { mutableIntStateOf(0) }
+    var typed by remember { mutableIntStateOf(0) }
+    val cur = msgs[step % n]
+    LaunchedEffect(step, cur.text, n) {
+        typed = if (motion) 0 else cur.text.length
+        while (typed < cur.text.length) { delay(28); typed++ }
+        if (n > 1) { delay(if (cur.rank >= 80) 5_000 else 3_200); step++ }
     }
     val blink = rememberInfiniteTransition(label = "cursor")
     val cursor by blink.animateFloat(1f, 0f, infiniteRepeatable(tween(530), RepeatMode.Reverse), label = "cursor")
-    Column(modifier.fillMaxWidth().heightIn(min = 84.dp), verticalArrangement = androidx.compose.foundation.layout.Arrangement.Bottom) {
-        rest.forEach { m ->
-            TermLine("> ${m.text}", accent.copy(alpha = 0.45f), m.onTap)
+    val shape = RoundedCornerShape(10.dp)
+    Column(modifier.fillMaxWidth().clip(shape).background(accent.copy(alpha = 0.05f))
+        .border(1.dp, accent.copy(alpha = 0.35f), shape).padding(horizontal = 14.dp, vertical = 10.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            repeat(3) { Box(Modifier.padding(end = 5.dp).size(6.dp).clip(CircleShape).background(accent.copy(alpha = 0.45f))) }
+            Text("stillpoint", color = accent.copy(alpha = 0.55f), fontSize = 11.sp, fontFamily = FontFamily.Monospace,
+                modifier = Modifier.padding(start = 4.dp).weight(1f))
+            if (n > 1) Text("${step % n + 1}/$n", color = accent.copy(alpha = 0.55f), fontSize = 11.sp, fontFamily = FontFamily.Monospace)
         }
-        Row(verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.then(top.onTap?.let { Modifier.clickable(onClick = it) } ?: Modifier)) {
-            Text("> " + top.text.take(typed), color = accent, fontSize = 15.sp, fontFamily = FontFamily.Monospace,
-                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-            Box(Modifier.padding(start = 3.dp).size(8.dp, 17.dp).alpha(if (motion) cursor else 1f).background(accent))
+        AnimatedContent(
+            targetState = step,
+            transitionSpec = {
+                (slideInVertically(tween(260)) { it / 3 } + fadeIn(tween(260))) togetherWith
+                    (slideOutVertically(tween(260)) { -it / 3 } + fadeOut(tween(200)))
+            },
+            label = "feed",
+        ) { st ->
+            Column(Modifier.padding(top = 8.dp)) {
+                // Two older lines above, kept even when empty so the window never changes height.
+                for (k in 2 downTo 1) {
+                    val m = if (st - k >= 0 && n > k) msgs[(st - k) % n] else null
+                    TermLine(if (m == null) " " else "> ${m.text}", accent.copy(alpha = 0.45f), m?.onTap)
+                }
+                val m = msgs[st % n]
+                val text = if (st == step) m.text.take(typed) else m.text
+                Row(verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.then(m.onTap?.let { Modifier.clickable(onClick = it) } ?: Modifier)) {
+                    Text("> $text", color = accent, fontSize = 15.sp, fontFamily = FontFamily.Monospace,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                    Box(Modifier.padding(start = 3.dp).size(8.dp, 17.dp).alpha(if (motion) cursor else 1f).background(accent))
+                }
+            }
         }
     }
 }

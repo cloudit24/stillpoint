@@ -3,6 +3,11 @@
 Every version of Stillpoint Launcher, newest first. Each links to its APK.
 The newest is always at **[Download the latest APK](https://github.com/cloudit24/stillpoint/releases/latest/download/Stillpoint-Launcher.apk)**.
 
+## v0.44.0 · not yet released
+- Terminal display: a small framed window that types each message in turn while older lines scroll up; the pressing ones stay longer.
+- The greeting no longer repeats the weather already shown in the headline.
+- Settings, Productivity: Tools sits next to Calendar.
+
 ## v0.43.1 · 4 Oct 2026
 - The terminal display is bigger and never cuts a line in half. Retro LCD shows the main message large with the next two under it.
 
