@@ -313,18 +313,18 @@ fun SettingsScreen(vm: LauncherViewModel) {
 
                 SettingsPage.APPEARANCE -> {
                     Group(stringResource(R.string.s_theme)) {
-                        // Whole looks: Stillpoint, or Neon Alley with its cat and drone.
+                        // Whole looks: Stillpoint, or Neon Alley and Cyberpunk with their cat and drone.
                         Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             AppTheme.entries.forEach { t ->
                                 val on = s.theme == t
-                                val neonCard = t == AppTheme.NEON
+                                val look = lookFor(t)
                                 val shape = RoundedCornerShape(12.dp)
                                 Column(Modifier.weight(1f).clip(shape).clickable { vm.updateSettings { it.copy(theme = t) } },
                                     horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Box(Modifier.fillMaxWidth().height(56.dp).clip(shape).background(if (neonCard) NeonBack else Color.Black)
-                                        .border(if (on) 2.dp else 1.dp, if (on) Ink else if (neonCard) NeonOrange.copy(alpha = 0.5f) else Muted.copy(alpha = 0.4f), shape),
+                                    Box(Modifier.fillMaxWidth().height(56.dp).clip(shape).background(look.back)
+                                        .border(if (on) 2.dp else 1.dp, if (on) Ink else if (look.neon) look.line.copy(alpha = 0.5f) else Muted.copy(alpha = 0.4f), shape),
                                         contentAlignment = Alignment.Center) {
-                                        Text("4:12", color = if (neonCard) NeonClock else Ink, fontSize = 22.sp, fontWeight = FontWeight.Light)
+                                        Text("4:12", color = look.clock, fontSize = 22.sp, fontWeight = FontWeight.Light)
                                     }
                                     Text(t.label, fontSize = 12.sp, color = if (on) Ink else Muted, modifier = Modifier.padding(top = 4.dp))
                                 }
@@ -334,8 +334,11 @@ fun SettingsScreen(vm: LauncherViewModel) {
                             verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text(stringResource(R.string.s_accent_colour), fontSize = 16.sp)
-                                Text(if (s.theme == AppTheme.NEON) "Neon orange in Neon Alley; yours returns with Stillpoint"
-                                    else ACCENTS.firstOrNull { it.argb == s.accent }?.name ?: "Custom", color = Muted, fontSize = 13.sp)
+                                Text(when (s.theme) {
+                                    AppTheme.NEON -> "Neon orange in Neon Alley; yours returns with Stillpoint"
+                                    AppTheme.CYBER -> "Magenta neon in Cyberpunk; yours returns with Stillpoint"
+                                    AppTheme.STILLPOINT -> ACCENTS.firstOrNull { it.argb == s.accent }?.name ?: "Custom"
+                                }, color = Muted, fontSize = 13.sp)
                             }
                             Box(Modifier.size(28.dp).clip(CircleShape).background(Color(s.accent)))
                         }
@@ -355,9 +358,9 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         ActionRow(stringResource(R.string.s_icon_colours), s.iconTint.label) { dialog = SettingsDialog.ICON_TINT }
                         ActionRow(stringResource(R.string.s_font), s.font.label) { dialog = SettingsDialog.FONT }
                     }
-                    if (s.theme == AppTheme.NEON) {
-                        Group("Neon Alley") {
-                            ToggleRow("Alley cat", s.themeCat) { on -> vm.updateSettings { it.copy(themeCat = on) } }
+                    if (s.theme != AppTheme.STILLPOINT) {
+                        Group(s.theme.label) {
+                            ToggleRow(if (s.theme == AppTheme.CYBER) "Street cat" else "Alley cat", s.themeCat) { on -> vm.updateSettings { it.copy(themeCat = on) } }
                             if (s.themeCat) {
                                 ToggleRow("Roams along the display", s.catRoam) { on -> vm.updateSettings { it.copy(catRoam = on) } }
                                 ToggleRow("Reacts to messages, calls and prayer", s.catReact) { on -> vm.updateSettings { it.copy(catReact = on) } }

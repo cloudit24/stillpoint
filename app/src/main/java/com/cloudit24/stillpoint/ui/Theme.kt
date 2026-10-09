@@ -1,6 +1,7 @@
 package com.cloudit24.stillpoint.ui
 
 import com.cloudit24.stillpoint.data.AccentStyle
+import com.cloudit24.stillpoint.data.AppTheme
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.ShaderBrush
@@ -43,8 +44,34 @@ val NeonOrange = Color(0xFFFF9A3C)
 val NeonTeal = Color(0xFF4FD1C5)
 val NeonClock = Color(0xFFFFB36B)
 val NeonBack = Color(0xFF12100E)
+// Cyberpunk: hot magenta and electric cyan on a midnight blue-black city, the clock in acid yellow.
+val CyberMagenta = Color(0xFFFF2BD6)
+val CyberCyan = Color(0xFF00E5FF)
+val CyberClock = Color(0xFFF2EE5A)
+val CyberBack = Color(0xFF0A0A14)
 val SpecialPink = Color(0xFFFF6FAE)
-val LocalNeon = staticCompositionLocalOf { false }
+
+/**
+ * The colours a whole look is drawn in. [neon] is true for the themed looks (Neon Alley, Cyberpunk): their own
+ * tint replaces the user's accent, the clock takes [clock], and the cat and drone are drawn in [line] on [back]
+ * with [glow] for eyes and lights.
+ */
+data class Look(val theme: AppTheme, val back: Color, val line: Color, val glow: Color, val clock: Color,
+                val surface: Color, val surfaceHigh: Color) {
+    val neon: Boolean get() = theme != AppTheme.STILLPOINT
+}
+
+val StillpointLook = Look(AppTheme.STILLPOINT, Color.Black, Slate, Slate, Ink, Color(0xFF161615), Color(0xFF1E1E1C))
+val NeonLook = Look(AppTheme.NEON, NeonBack, NeonOrange, NeonTeal, NeonClock, Color(0xFF1D1915), Color(0xFF26211B))
+val CyberLook = Look(AppTheme.CYBER, CyberBack, CyberMagenta, CyberCyan, CyberClock, Color(0xFF14132A), Color(0xFF1D1C3A))
+
+fun lookFor(t: AppTheme): Look = when (t) {
+    AppTheme.STILLPOINT -> StillpointLook
+    AppTheme.NEON -> NeonLook
+    AppTheme.CYBER -> CyberLook
+}
+
+val LocalLook = staticCompositionLocalOf { StillpointLook }
 val LocalAccentStyle = staticCompositionLocalOf { AccentStyle.SOLID }
 
 /** The accent as a fill for tiles and squares, in the chosen style. */
@@ -107,24 +134,25 @@ private fun Typography.withFont(ff: FontFamily): Typography {
 
 @Composable
 fun StillpointTheme(accent: Color = Slate, accentStyle: AccentStyle = AccentStyle.SOLID, font: AppFont = AppFont.SYSTEM,
-                    neon: Boolean = false, content: @Composable () -> Unit) {
-    val back = if (neon) NeonBack else Color.Black
-    val tint = if (neon) NeonOrange else accent
+                    theme: AppTheme = AppTheme.STILLPOINT, content: @Composable () -> Unit) {
+    val look = lookFor(theme)
+    val back = look.back
+    val tint = if (look.neon) look.line else accent
     val typography = remember(font) { Typography().withFont(fontFamilyFor(font)) }
     MaterialTheme(
         typography = typography,
         colorScheme = darkColorScheme(
             background = back,
-            surface = if (neon) Color(0xFF1D1915) else Color(0xFF161615),
-            surfaceContainer = if (neon) Color(0xFF1D1915) else Color(0xFF161615),
-            surfaceContainerHigh = if (neon) Color(0xFF26211B) else Color(0xFF1E1E1C),
+            surface = look.surface,
+            surfaceContainer = look.surface,
+            surfaceContainerHigh = look.surfaceHigh,
             primary = tint,
             onPrimary = Color.White,
             onBackground = Ink,
             onSurface = Ink,
         ),
     ) {
-        CompositionLocalProvider(LocalAccent provides tint, LocalAccentStyle provides accentStyle, LocalNeon provides neon) {
+        CompositionLocalProvider(LocalAccent provides tint, LocalAccentStyle provides accentStyle, LocalLook provides look) {
             Surface(Modifier.fillMaxSize(), color = back, contentColor = Ink) { content() }
         }
     }

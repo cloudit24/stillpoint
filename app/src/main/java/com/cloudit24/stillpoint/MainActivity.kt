@@ -82,7 +82,7 @@ class MainActivity : ComponentActivity() {
         )
         setContent {
             StillpointTheme(accent = androidx.compose.ui.graphics.Color(vm.settings.accent), accentStyle = vm.settings.accentStyle, font = vm.settings.font,
-                neon = vm.settings.theme == com.cloudit24.stillpoint.data.AppTheme.NEON) { LauncherRoot(vm, ::addWidget) }
+                theme = vm.settings.theme) { LauncherRoot(vm, ::addWidget) }
         }
         if (savedInstanceState == null) handleIntent(intent)
     }

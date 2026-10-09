@@ -79,7 +79,8 @@ private val LcdBack = Color(0xFF1C1A10)
 fun StatusLine(vm: LauncherViewModel, s: LauncherSettings, now: Long, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val msgs = statusMessages(vm, s, now, context)
-    val neon = s.theme == AppTheme.NEON
+    // The themed looks (Neon Alley, Cyberpunk) bring the cat and the drone, drawn in their own neon.
+    val neon = s.theme != AppTheme.STILLPOINT
     when (s.statusStyle) {
         StatusStyle.TERMINAL -> TerminalStyle(msgs, s.edgeMotion, modifier, cat = neon && s.themeCat, drone = neon && s.themeDrone,
             mood = if (neon && (s.themeCat || s.themeDrone)) catMood(vm, s, now, msgs) else null)
@@ -224,7 +225,8 @@ private fun statusMessages(vm: LauncherViewModel, s: LauncherSettings, now: Long
 private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modifier, cat: Boolean = false, drone: Boolean = false,
                           mood: CatMood? = null) {
     val accent = Accent
-    val neon = LocalNeon.current
+    val look = LocalLook.current
+    val neon = look.neon
     val n = msgs.size
     var step by remember { mutableIntStateOf(0) }
     var typed by remember { mutableIntStateOf(0) }
@@ -241,7 +243,7 @@ private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modi
     Column(Modifier.fillMaxWidth().clip(shape).background(accent.copy(alpha = 0.05f))
         .border(1.dp, accent.copy(alpha = 0.35f), shape).padding(horizontal = 14.dp, vertical = 10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            val dots = if (neon) listOf(NeonOrange, NeonTeal, Muted) else List(3) { accent.copy(alpha = 0.45f) }
+            val dots = if (neon) listOf(look.line, look.glow, Muted) else List(3) { accent.copy(alpha = 0.45f) }
             dots.forEach { c -> Box(Modifier.padding(end = 5.dp).size(6.dp).clip(CircleShape).background(c)) }
             Text("stillpoint", color = accent.copy(alpha = 0.55f), fontSize = 11.sp, fontFamily = FontFamily.Monospace,
                 modifier = Modifier.padding(start = 4.dp).weight(1f))
@@ -369,7 +371,8 @@ private fun AlleyCat(m: CatMood, motion: Boolean, width: androidx.compose.ui.uni
     val life = rememberInfiniteTransition(label = "cat")
     val t by life.animateFloat(0f, 1f, infiniteRepeatable(tween(2_200), RepeatMode.Reverse), label = "cat")
     val breath = if (motion) t else 0.5f
-    val eye = when { m.special -> SpecialPink; m.unread > 0 && m.color != null -> m.color; else -> NeonTeal }
+    val look = LocalLook.current
+    val eye = when { m.special -> SpecialPink; m.unread > 0 && m.color != null -> m.color; else -> look.glow }
     val sit = pose == CatPose.SIT
     val w = if (sit) 36.dp else 50.dp
     val h = if (sit) 40.dp else 29.dp
@@ -380,12 +383,12 @@ private fun AlleyCat(m: CatMood, motion: Boolean, width: androidx.compose.ui.uni
             petted++
         }) {
         when (pose) {
-            CatPose.SIT -> catSit(size.width / 40f, eye, if (m.unread > 1 || m.special) breath else 0.5f)
-            CatPose.SLEEP -> catSleep(size.width / 58f, breath, curl = if (m.lowBattery) 0.86f else 1f, motion)
+            CatPose.SIT -> catSit(look, size.width / 40f, eye, if (m.unread > 1 || m.special) breath else 0.5f)
+            CatPose.SLEEP -> catSleep(look, size.width / 58f, breath, curl = if (m.lowBattery) 0.86f else 1f, motion)
             CatPose.WALK -> {
                 val step = kotlin.math.sin(pos.value * width.toPx() / 5.dp.toPx())
-                if (right) catWalk(size.width / 58f, eye, step)
-                else scale(-1f, 1f) { catWalk(size.width / 58f, eye, step) }
+                if (right) catWalk(look, size.width / 58f, eye, step)
+                else scale(-1f, 1f) { catWalk(look, size.width / 58f, eye, step) }
             }
         }
     }
@@ -412,7 +415,7 @@ private fun catLine(u: Float) = androidx.compose.ui.graphics.drawscope.Stroke(wi
     cap = androidx.compose.ui.graphics.StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round)
 
 /** Sitting up, facing you. [swish] moves the tail. */
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.catSit(u: Float, eye: Color, swish: Float) {
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.catSit(look: Look, u: Float, eye: Color, swish: Float) {
     val body = androidx.compose.ui.graphics.Path().apply {
         moveTo(10 * u, 42 * u); cubicTo(8 * u, 30 * u, 10 * u, 22 * u, 14 * u, 18 * u)
         lineTo(12 * u, 8 * u); lineTo(18 * u, 14 * u); lineTo(24 * u, 14 * u); lineTo(30 * u, 8 * u)
@@ -421,13 +424,13 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.catSit(u: Float, ey
     val tail = androidx.compose.ui.graphics.Path().apply {
         moveTo(32 * u, 40 * u); cubicTo(38 * u, 38 * u, (36 + 4 * swish) * u, 30 * u, (31 + 6 * swish) * u, 27 * u)
     }
-    drawPath(body, NeonBack); drawPath(body, NeonOrange, style = catLine(u)); drawPath(tail, NeonOrange, style = catLine(u))
+    drawPath(body, look.back); drawPath(body, look.line, style = catLine(u)); drawPath(tail, look.line, style = catLine(u))
     drawCircle(eye, 1.9f * u, androidx.compose.ui.geometry.Offset(17 * u, 21 * u))
     drawCircle(eye, 1.9f * u, androidx.compose.ui.geometry.Offset(25 * u, 21 * u))
 }
 
 /** Curled up asleep, breathing; tighter when the battery is low. */
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.catSleep(u: Float, breath: Float, curl: Float, motion: Boolean) {
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.catSleep(look: Look, u: Float, breath: Float, curl: Float, motion: Boolean) {
     scale(curl, curl * (1f + 0.05f * breath), pivot = androidx.compose.ui.geometry.Offset(size.width / 2, size.height)) {
         val body = androidx.compose.ui.graphics.Path().apply {
             moveTo(6 * u, 30 * u); cubicTo(6 * u, 16 * u, 20 * u, 12 * u, 32 * u, 14 * u)
@@ -439,7 +442,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.catSleep(u: Float, 
             moveTo(42 * u, 22 * u); cubicTo(42.7f * u, 23 * u, 45.3f * u, 23 * u, 46 * u, 22 * u)
             moveTo(47 * u, 22 * u); cubicTo(47.7f * u, 23 * u, 50.3f * u, 23 * u, 51 * u, 22 * u)
         }
-        drawPath(body, NeonBack); drawPath(body, NeonOrange, style = catLine(u)); drawPath(extra, NeonOrange, style = catLine(u))
+        drawPath(body, look.back); drawPath(body, look.line, style = catLine(u)); drawPath(extra, look.line, style = catLine(u))
     }
     if (motion) {
         val z = androidx.compose.ui.graphics.Path().apply {
@@ -450,7 +453,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.catSleep(u: Float, 
 }
 
 /** Walking, seen from the side and facing right. [step] swings the legs. */
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.catWalk(u: Float, eye: Color, step: Float) {
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.catWalk(look: Look, u: Float, eye: Color, step: Float) {
     val line = catLine(u)
     val legs = androidx.compose.ui.graphics.Path().apply {
         for ((hip, sign) in listOf(16f to 1f, 19f to -1f, 36f to -1f, 39f to 1f)) {
@@ -469,11 +472,11 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.catWalk(u: Float, e
         moveTo(42 * u, 10 * u); lineTo(43 * u, 3 * u); lineTo(46.5f * u, 7.5f * u)
         moveTo(47.5f * u, 7.5f * u); lineTo(51 * u, 3 * u); lineTo(51.5f * u, 10.5f * u)
     }
-    drawPath(legs, NeonOrange, style = line)
-    drawPath(body, NeonBack); drawPath(body, NeonOrange, style = line); drawPath(tail, NeonOrange, style = line)
+    drawPath(legs, look.line, style = line)
+    drawPath(body, look.back); drawPath(body, look.line, style = line); drawPath(tail, look.line, style = line)
     val head = androidx.compose.ui.geometry.Offset(47 * u, 13 * u)
-    drawCircle(NeonBack, 6 * u, head); drawCircle(NeonOrange, 6 * u, head, style = line)
-    drawPath(ears, NeonOrange, style = line)
+    drawCircle(look.back, 6 * u, head); drawCircle(look.line, 6 * u, head, style = line)
+    drawPath(ears, look.line, style = line)
     drawCircle(eye, 1.3f * u, androidx.compose.ui.geometry.Offset(49 * u, 12 * u))
 }
 
@@ -500,7 +503,8 @@ private fun Drone(m: CatMood, motion: Boolean, typing: Boolean, onTap: () -> Uni
     }
     var talk by remember { mutableIntStateOf(0) }
     LaunchedEffect(typing, motion) { while (typing && motion) { delay(90); talk++ } }
-    val light = when { m.special -> SpecialPink; flash != null -> flash!!; else -> NeonTeal }
+    val look = LocalLook.current
+    val light = when { m.special -> SpecialPink; flash != null -> flash!!; else -> look.glow }
     val dy = (if (motion) y else 0f) + hop.value
     androidx.compose.foundation.Canvas(modifier.offset(x = (-16).dp, y = (-19 + dy).dp)
         .clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null, onClick = onTap)
@@ -510,7 +514,7 @@ private fun Drone(m: CatMood, motion: Boolean, typing: Boolean, onTap: () -> Uni
         val tl = androidx.compose.ui.geometry.Offset(3 * u, 4 * u)
         val sz = androidx.compose.ui.geometry.Size(20 * u, 12 * u)
         val r = androidx.compose.ui.geometry.CornerRadius(6 * u)
-        drawRoundRect(NeonBack, tl, sz, r)
+        drawRoundRect(look.back, tl, sz, r)
         drawRoundRect(light, tl, sz, r, style = line)
         val eyeR = if (typing && talk % 2 == 1) 1.6f else 2.5f
         drawCircle(light, eyeR * u, androidx.compose.ui.geometry.Offset(13 * u, 10 * u))

@@ -291,8 +291,11 @@ enum class EdgeStyle(val label: String, val detail: String) {
 /** How the accent fills tiles and squares: flat, or one of three soft gradients. */
 enum class AccentStyle(val label: String) { SOLID("Solid"), SOFT("Soft"), DUO("Duo"), GLOW("Glow") }
 
-/** Whole looks. Neon Alley: warm neon on a dark street, a cat napping on the terminal display and a little drone. */
-enum class AppTheme(val label: String) { STILLPOINT("Stillpoint"), NEON("Neon Alley") }
+/**
+ * Whole looks. Neon Alley: warm neon on a dark street. Cyberpunk: magenta and cyan neon on a midnight city.
+ * Both have a cat napping on the terminal display and a little drone, drawn in the theme's own neon.
+ */
+enum class AppTheme(val label: String) { STILLPOINT("Stillpoint"), NEON("Neon Alley"), CYBER("Cyberpunk") }
 
 enum class IconTint(val label: String) {
     ORIGINAL("Original colours"),

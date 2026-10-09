@@ -8,6 +8,7 @@ The newest is always at **[Download the latest APK](https://github.com/cloudit24
 - The drone's eye flickers as each message types, it hops and lights up in the app's colour when something arrives, and a tap skips to the next message.
 - Special person (Settings, Notifications): choose one person whose messages feel different. A heart line in the terminal display and a soft pink glow around the screen until you read it, in any theme. In Neon Alley the cat runs to greet them with little floating hearts.
 - Settings, Appearance: a Neon Alley group for the cat, its roaming and reactions, and the drone.
+- Cyberpunk theme (Settings, Appearance, Theme): hot magenta and electric cyan neon on a midnight blue city, the clock in acid yellow. The cat and the drone come along, drawn in magenta with cyan eyes and lights, with the same roaming, reactions and switches as in Neon Alley. Your own accent colour comes back when you return to Stillpoint.
 
 ## v0.46.0 · 4 Oct 2026
 - Neon Alley theme (Settings, Appearance, Theme): warm orange neon and teal on a dark street. A line-drawn cat naps on the terminal display and wakes when something matters (tap it for a purr), and a little drone perches on the corner. Switch the cat or the drone off if you like. Your own accent colour comes back when you return to Stillpoint.
