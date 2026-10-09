@@ -53,8 +53,8 @@ val SpecialPink = Color(0xFFFF6FAE)
 
 /**
  * The colours a whole look is drawn in. [neon] is true for the themed looks (Neon Alley, Cyberpunk): their own
- * tint replaces the user's accent, the clock takes [clock], and the cat and drone are drawn in [line] on [back]
- * with [glow] for eyes and lights.
+ * [line] tint replaces the user's accent, the clock takes [clock], and the terminal window's dots take [line]
+ * and [glow].
  */
 data class Look(val theme: AppTheme, val back: Color, val line: Color, val glow: Color, val clock: Color,
                 val surface: Color, val surfaceHigh: Color) {

@@ -34,7 +34,7 @@ Stillpoint Launcher is a calm, minimal home screen. Black background, text first
 <li>App list with pivot tabs, alphabet bar, favorites and folders</li>
 <li>Widget page, plus Stillpoint widgets for any launcher</li>
 <li>Neon Alley theme: warm neon colours, a cat napping on the terminal display and a little drone</li>
-<li>Cyberpunk theme: magenta and cyan neon on a midnight city, with the same cat and drone</li>
+<li>Cyberpunk theme: magenta and cyan neon on a midnight city</li>
 <li>Data usage per app, hide apps, work profile support</li>
 </ul>
 

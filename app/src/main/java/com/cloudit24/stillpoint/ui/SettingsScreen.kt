@@ -313,7 +313,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
 
                 SettingsPage.APPEARANCE -> {
                     Group(stringResource(R.string.s_theme)) {
-                        // Whole looks: Stillpoint, or Neon Alley and Cyberpunk with their cat and drone.
+                        // Whole looks: Stillpoint, Neon Alley with its cat and drone, or Cyberpunk.
                         Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             AppTheme.entries.forEach { t ->
                                 val on = s.theme == t
@@ -358,9 +358,9 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         ActionRow(stringResource(R.string.s_icon_colours), s.iconTint.label) { dialog = SettingsDialog.ICON_TINT }
                         ActionRow(stringResource(R.string.s_font), s.font.label) { dialog = SettingsDialog.FONT }
                     }
-                    if (s.theme != AppTheme.STILLPOINT) {
-                        Group(s.theme.label) {
-                            ToggleRow(if (s.theme == AppTheme.CYBER) "Street cat" else "Alley cat", s.themeCat) { on -> vm.updateSettings { it.copy(themeCat = on) } }
+                    if (s.theme == AppTheme.NEON) {
+                        Group("Neon Alley") {
+                            ToggleRow("Alley cat", s.themeCat) { on -> vm.updateSettings { it.copy(themeCat = on) } }
                             if (s.themeCat) {
                                 ToggleRow("Roams along the display", s.catRoam) { on -> vm.updateSettings { it.copy(catRoam = on) } }
                                 ToggleRow("Reacts to messages, calls and prayer", s.catReact) { on -> vm.updateSettings { it.copy(catReact = on) } }

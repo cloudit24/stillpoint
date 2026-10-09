@@ -292,8 +292,8 @@ enum class EdgeStyle(val label: String, val detail: String) {
 enum class AccentStyle(val label: String) { SOLID("Solid"), SOFT("Soft"), DUO("Duo"), GLOW("Glow") }
 
 /**
- * Whole looks. Neon Alley: warm neon on a dark street. Cyberpunk: magenta and cyan neon on a midnight city.
- * Both have a cat napping on the terminal display and a little drone, drawn in the theme's own neon.
+ * Whole looks. Neon Alley: warm neon on a dark street, a cat napping on the terminal display and a little drone.
+ * Cyberpunk: magenta and cyan neon on a midnight city, colours only.
  */
 enum class AppTheme(val label: String) { STILLPOINT("Stillpoint"), NEON("Neon Alley"), CYBER("Cyberpunk") }
 

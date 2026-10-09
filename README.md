@@ -74,7 +74,7 @@ Every older version is listed in the **[changelog](CHANGELOG.md)** and on the **
 **Your look**
 - Accent colours, grey or accent-tinted icons, five fonts, and Stillpoint widgets for any launcher.
 - Neon Alley theme: warm orange and teal neon, a little cat that naps on the terminal display, and a drone companion.
-- Cyberpunk theme: magenta and cyan neon on a midnight city, with the same cat and drone in its own colours.
+- Cyberpunk theme: magenta and cyan neon on a midnight city.
 
 ## Private by design
 
