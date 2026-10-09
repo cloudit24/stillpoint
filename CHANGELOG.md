@@ -3,12 +3,14 @@
 Every version of Stillpoint Launcher, newest first. Each links to its APK.
 The newest is always at **[Download the latest APK](https://github.com/cloudit24/stillpoint/releases/latest/download/Stillpoint-Launcher.apk)**.
 
-## v0.47.0 · not yet released
+## v0.47.0 · 9 Oct 2026
 - Neon Alley comes alive. The cat naps (breathing, with a little z), wanders along the terminal display now and then, and walks to whatever matters: the drone when a message comes in, with its eyes in that app's colour; the middle for a missed call; under the clock when prayer is near. Its tail swishes while several messages wait, it curls tighter when the battery is low, and it sleeps at night and in Sleep focus. Tap it for a purr.
 - The drone's eye flickers as each message types, it hops and lights up in the app's colour when something arrives, and a tap skips to the next message.
 - Special person (Settings, Notifications): choose one person whose messages feel different. A heart line in the terminal display and a soft pink glow around the screen until you read it, in any theme. In Neon Alley the cat runs to greet them with little floating hearts.
 - Settings, Appearance: a Neon Alley group for the cat, its roaming and reactions, and the drone.
 - Cyberpunk theme (Settings, Appearance, Theme): hot magenta and electric cyan neon on a midnight blue city, the clock in acid yellow. Colours only, no cat or drone. Your own accent colour comes back when you return to Stillpoint.
+
+[stillpoint-v0.47.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.47.0/stillpoint-v0.47.0.apk)
 
 ## v0.46.0 · 4 Oct 2026
 - Neon Alley theme (Settings, Appearance, Theme): warm orange neon and teal on a dark street. A line-drawn cat naps on the terminal display and wakes when something matters (tap it for a purr), and a little drone perches on the corner. Switch the cat or the drone off if you like. Your own accent colour comes back when you return to Stillpoint.
