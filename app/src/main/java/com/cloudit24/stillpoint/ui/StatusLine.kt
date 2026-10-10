@@ -40,6 +40,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -229,8 +231,10 @@ private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modi
     val neon = look.neon
     val n = msgs.size
     var step by remember { mutableIntStateOf(0) }
-    var typed by remember { mutableIntStateOf(0) }
+    val typedState = remember { mutableIntStateOf(0) }
+    var typed by typedState
     val cur = msgs[step % n]
+    val typing by remember(cur.text) { androidx.compose.runtime.derivedStateOf { typedState.intValue < cur.text.length } }
     LaunchedEffect(step, cur.text, n) {
         typed = if (motion) 0 else cur.text.length
         while (typed < cur.text.length) { delay(28); typed++ }
@@ -269,13 +273,14 @@ private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modi
                     modifier = Modifier.then(m.onTap?.let { Modifier.clickable(onClick = it) } ?: Modifier)) {
                     Text("> $text", color = accent, fontSize = 15.sp, fontFamily = FontFamily.Monospace,
                         maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                    Box(Modifier.padding(start = 3.dp).size(8.dp, 17.dp).alpha(if (motion) cursor else 1f).background(accent))
+                    Box(Modifier.padding(start = 3.dp).size(8.dp, 17.dp)
+                        .graphicsLayer { alpha = if (motion) cursor else 1f }.background(accent))
                 }
             }
         }
     }
     // The cat wakes for anything that matters; otherwise it naps on the window's edge.
-    if (mood != null) CatStage(mood, motion, cat, drone, typing = typed < cur.text.length,
+    if (mood != null) CatStage(mood, motion, cat, drone, typing = typing,
         onDroneTap = { if (n > 1) step++ }, Modifier.matchParentSize())
     }
 }
@@ -369,18 +374,20 @@ private fun AlleyCat(m: CatMood, motion: Boolean, width: androidx.compose.ui.uni
     }
 
     val life = rememberInfiniteTransition(label = "cat")
-    val t by life.animateFloat(0f, 1f, infiniteRepeatable(tween(2_200), RepeatMode.Reverse), label = "cat")
-    val breath = if (motion) t else 0.5f
+    val tState = life.animateFloat(0f, 1f, infiniteRepeatable(tween(2_200), RepeatMode.Reverse), label = "cat")
     val eye = when { m.special -> SpecialPink; m.unread > 0 && m.color != null -> m.color; else -> NeonTeal }
     val sit = pose == CatPose.SIT
     val w = if (sit) 36.dp else 50.dp
     val h = if (sit) 40.dp else 29.dp
-    val x = 10.dp + (width - 20.dp - w) * pos.value
-    androidx.compose.foundation.Canvas(Modifier.offset(x = x, y = -(h - 1.5.dp) + hop.value.dp).size(w, h)
+    val x = { 10.dp + (width - 20.dp - w) * pos.value }
+    androidx.compose.foundation.Canvas(Modifier.offset {
+            IntOffset(x().roundToPx(), (-(h - 1.5.dp) + hop.value.dp).roundToPx())
+        }.size(w, h)
         .clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) {
             haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
             petted++
         }) {
+        val breath = if (motion) tState.value else 0.5f
         when (pose) {
             CatPose.SIT -> catSit(size.width / 40f, eye, if (m.unread > 1 || m.special) breath else 0.5f)
             CatPose.SLEEP -> catSleep(size.width / 58f, breath, curl = if (m.lowBattery) 0.86f else 1f, motion)
@@ -394,8 +401,10 @@ private fun AlleyCat(m: CatMood, motion: Boolean, width: androidx.compose.ui.uni
     // For your special person: little hearts float up while the message waits.
     if (m.special && motion) {
         val hearts = rememberInfiniteTransition(label = "heart")
-        val r by hearts.animateFloat(0f, 1f, infiniteRepeatable(tween(2_600)), label = "heart")
-        androidx.compose.foundation.Canvas(Modifier.offset(x = x + w / 2 - 7.dp, y = -(h + 8.dp) - (r * 18).dp).size(14.dp).alpha(1f - r)) {
+        val rState = hearts.animateFloat(0f, 1f, infiniteRepeatable(tween(2_600)), label = "heart")
+        androidx.compose.foundation.Canvas(Modifier.offset {
+                IntOffset((x() + w / 2 - 7.dp).roundToPx(), (-(h + 8.dp) - (rState.value * 18).dp).roundToPx())
+            }.size(14.dp).graphicsLayer { alpha = 1f - rState.value }) {
             val u = size.width / 16f
             val heart = androidx.compose.ui.graphics.Path().apply {
                 moveTo(8 * u, 14 * u)
@@ -487,7 +496,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.catWalk(u: Float, e
 @Composable
 private fun Drone(m: CatMood, motion: Boolean, typing: Boolean, onTap: () -> Unit, modifier: Modifier) {
     val bob = rememberInfiniteTransition(label = "drone")
-    val y by bob.animateFloat(0f, -3f, infiniteRepeatable(tween(if (m.special) 700 else 1_400), RepeatMode.Reverse), label = "drone")
+    val yState = bob.animateFloat(0f, -3f, infiniteRepeatable(tween(if (m.special) 700 else 1_400), RepeatMode.Reverse), label = "drone")
     val hop = remember { androidx.compose.animation.core.Animatable(0f) }
     var flash by remember { androidx.compose.runtime.mutableStateOf<Color?>(null) }
     var lastUnread by remember { mutableIntStateOf(m.unread) }
@@ -503,8 +512,9 @@ private fun Drone(m: CatMood, motion: Boolean, typing: Boolean, onTap: () -> Uni
     var talk by remember { mutableIntStateOf(0) }
     LaunchedEffect(typing, motion) { while (typing && motion) { delay(90); talk++ } }
     val light = when { m.special -> SpecialPink; flash != null -> flash!!; else -> NeonTeal }
-    val dy = (if (motion) y else 0f) + hop.value
-    androidx.compose.foundation.Canvas(modifier.offset(x = (-16).dp, y = (-19 + dy).dp)
+    androidx.compose.foundation.Canvas(modifier.offset {
+            IntOffset((-16).dp.roundToPx(), (-19 + (if (motion) yState.value else 0f) + hop.value).dp.roundToPx())
+        }
         .clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null, onClick = onTap)
         .padding(6.dp).size(26.dp, 20.dp)) {
         val u = size.width / 26f

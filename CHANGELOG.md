@@ -3,6 +3,9 @@
 Every version of Stillpoint Launcher, newest first. Each links to its APK.
 The newest is always at **[Download the latest APK](https://github.com/cloudit24/stillpoint/releases/latest/download/Stillpoint-Launcher.apk)**.
 
+## v0.47.1 · not yet released
+- Smoother home: the terminal display's cursor, typing, cat and drone now redraw only their own pixels instead of rebuilding the whole display up to 60 times a second. Less work for the phone, less battery, steadier scrolling.
+
 ## v0.47.0 · 9 Oct 2026
 - Neon Alley comes alive. The cat naps (breathing, with a little z), wanders along the terminal display now and then, and walks to whatever matters: the drone when a message comes in, with its eyes in that app's colour; the middle for a missed call; under the clock when prayer is near. Its tail swishes while several messages wait, it curls tighter when the battery is low, and it sleeps at night and in Sleep focus. Tap it for a purr.
 - The drone's eye flickers as each message types, it hops and lights up in the app's colour when something arrives, and a tap skips to the next message.
