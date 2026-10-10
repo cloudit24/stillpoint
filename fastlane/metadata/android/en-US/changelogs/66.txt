@@ -1,0 +1,1 @@
+Smoother home: the terminal display, cat and drone now redraw only their own pixels. Less work for the phone, less battery.
