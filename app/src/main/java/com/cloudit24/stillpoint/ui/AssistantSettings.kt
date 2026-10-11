@@ -66,6 +66,8 @@ fun AssistantSettings(vm: LauncherViewModel) {
     }
 
     Group(stringResource(R.string.a_model)) {
+        val (suggest, why) = remember { Models.advice(ctx) }
+        Note(why)
         Models.CHOICES.forEach { c ->
             val f = Models.file(ctx, c)
             val chosen = s.assistantModel == f.absolutePath
@@ -74,10 +76,11 @@ fun AssistantSettings(vm: LauncherViewModel) {
                 f.exists() -> stringResource(R.string.a_downloaded)
                 else -> downloadState(ctx, prefs, c, tick) ?: c.size
             }
-            ActionRow((if (chosen) "● " else "") + c.label, detail) {
+            ActionRow((if (chosen) "● " else "") + c.label + (if (c == suggest) " · suggested" else ""), detail) {
                 if (f.exists()) vm.updateSettings { it.copy(assistantModel = f.absolutePath, assistantOn = true) }
                 else startDownload(ctx, prefs, c)
             }
+            if (f.exists()) TestRow(vm, f.absolutePath)
         }
         ActionRow(stringResource(R.string.a_pick), copying.ifEmpty { stringResource(R.string.a_pick_sum) }) {
             if (copying.isEmpty()) pick.launch(arrayOf("*/*"))
@@ -88,6 +91,7 @@ fun AssistantSettings(vm: LauncherViewModel) {
             ActionRow((if (chosen) "● " else "") + f.name, "%.1f GB".format(f.length() / 1e9)) {
                 vm.updateSettings { it.copy(assistantModel = f.absolutePath, assistantOn = true) }
             }
+            TestRow(vm, f.absolutePath)
         }
         val used = Models.dir(ctx).listFiles()?.sumOf { it.length() } ?: 0L
         if (used > 0) ActionRow(stringResource(R.string.a_delete_models), "%.1f GB".format(used / 1e9)) {
@@ -96,6 +100,16 @@ fun AssistantSettings(vm: LauncherViewModel) {
             vm.updateSettings { it.copy(assistantModel = "") }
         }
         Note(stringResource(R.string.a_model_note))
+    }
+}
+
+/** "Test on this phone": runs the model for a few seconds and shows the speed. */
+@Composable
+private fun TestRow(vm: LauncherViewModel, path: String) {
+    val a = vm.assistant
+    val r = a.bench[path]
+    ActionRow("    " + stringResource(R.string.a_test), r ?: if (a.busy) stringResource(R.string.a_testing) else stringResource(R.string.a_test_sum)) {
+        if (!a.busy) a.test(path)
     }
 }
 

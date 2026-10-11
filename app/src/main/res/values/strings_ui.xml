@@ -385,6 +385,9 @@
     <string name="a_keep">Keep the model loaded after a question</string>
     <string name="a_model">Model</string>
     <string name="a_in_use">In use</string>
+    <string name="a_test">Test on this phone</string>
+    <string name="a_test_sum">Loads it and times a short answer</string>
+    <string name="a_testing">Testing…</string>
     <string name="a_downloaded">Downloaded · tap to use</string>
     <string name="a_downloading">Downloading · %1$d%%</string>
     <string name="a_waiting_wifi">Waiting for Wi-Fi</string>
