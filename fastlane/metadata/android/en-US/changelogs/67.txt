@@ -1,0 +1,1 @@
+Battery fix: the home ring, Shelf card and Senior home now show the same figure as the status bar, and say full instead of charging at 100%.
