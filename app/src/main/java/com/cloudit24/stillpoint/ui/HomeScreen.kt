@@ -174,6 +174,7 @@ fun HomeScreen(vm: LauncherViewModel) {
     // Your special person: one soft pink breath around the screen until it's read.
     val litColors = if (special) listOf(SpecialPink) else lit.sortedByDescending { it.important }.map { vm.notifyColor(it.pkg) }.distinct()
     val litImportant = special || lit.any { it.important }
+    val glow = LocalLook.current.neon
     val edgeMoving = s.edgeMotion && ((edge != null && (edge.ending || edge.starting || edge.started)) || litColors.isNotEmpty())
     LaunchedEffect(edgeMoving) {
         if (edgeMoving) {
@@ -197,7 +198,8 @@ fun HomeScreen(vm: LauncherViewModel) {
                 }
             }
             .drawBehind {
-                drawRect(Brush.radialGradient(
+                // Stillpoint is pure black (AMOLED pixels off); only the coloured themes get the corner glow.
+                if (glow) drawRect(Brush.radialGradient(
                     listOf(accent.copy(alpha = 0.24f), accent.copy(alpha = 0.06f), Color.Transparent),
                     center = Offset(size.width * 0.1f, 0f),
                     radius = size.width * 1.1f,

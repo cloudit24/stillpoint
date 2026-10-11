@@ -61,7 +61,8 @@ data class Look(val theme: AppTheme, val back: Color, val line: Color, val glow:
     val neon: Boolean get() = theme != AppTheme.STILLPOINT
 }
 
-val StillpointLook = Look(AppTheme.STILLPOINT, Color.Black, Slate, Slate, Ink, Color(0xFF161615), Color(0xFF1E1E1C))
+// Surfaces sit just above black so cards still read as cards on an AMOLED screen.
+val StillpointLook = Look(AppTheme.STILLPOINT, Color.Black, Slate, Slate, Ink, Color(0xFF0D0D0C), Color(0xFF151514))
 val NeonLook = Look(AppTheme.NEON, NeonBack, NeonOrange, NeonTeal, NeonClock, Color(0xFF1D1915), Color(0xFF26211B))
 val CyberLook = Look(AppTheme.CYBER, CyberBack, CyberMagenta, CyberCyan, CyberClock, Color(0xFF14132A), Color(0xFF1D1C3A))
 
