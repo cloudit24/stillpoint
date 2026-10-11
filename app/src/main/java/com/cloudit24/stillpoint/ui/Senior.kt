@@ -71,9 +71,7 @@ fun SeniorHome(vm: LauncherViewModel) {
     val context = LocalContext.current
     val s = vm.settings
     val now by rememberTicker(15_000)
-    val battery = remember(now) {
-        context.getSystemService(BatteryManager::class.java)?.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) ?: -1
-    }
+    val battery = remember(now) { com.cloudit24.stillpoint.data.batteryNow(context).percent }
     val next = remember(now / 60_000, s.city, s.prayerOn) {
         s.city?.takeIf { s.prayerOn }?.let { c -> PrayerTimes.next(now, c.lat, c.lon, s.prayerMethod, s.asrHanafi) }
     }

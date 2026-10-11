@@ -590,10 +590,8 @@ private fun DayInfo(now: Long, modifier: Modifier) {
     }
 }
 
-private fun battery(context: Context): Pair<Int, Boolean> {
-    val bm = context.getSystemService(BatteryManager::class.java) ?: return -1 to false
-    return bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) to bm.isCharging
-}
+private fun battery(context: Context): Pair<Int, Boolean> =
+    com.cloudit24.stillpoint.data.batteryNow(context).let { it.percent to it.charging }
 
 /** A day line: done part, ticks at 6, 12 and 18, an optional block (an event), and "now". */
 private fun DrawScope.barTrack(accent: Color, now: Float, block: ClosedFloatingPointRange<Float>?) {

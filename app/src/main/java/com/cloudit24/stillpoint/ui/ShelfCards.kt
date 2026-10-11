@@ -159,18 +159,15 @@ private fun MonthCard(s: LauncherSettings) {
     if (line.isNotEmpty()) Text("Today: $line", color = Muted, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp, bottom = 4.dp))
 }
 
-private class DeviceNow(val battery: Int, val charging: Boolean, val tempC: Float, val storeFree: Long, val storeTotal: Long,
+private class DeviceNow(val battery: Int, val charging: Boolean, val full: Boolean, val tempC: Float, val storeFree: Long, val storeTotal: Long,
                         val ramFree: Long, val ramTotal: Long)
 
 private fun deviceNow(context: Context): DeviceNow {
-    val sticky = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-    val bm = context.getSystemService(BatteryManager::class.java)
+    val b = com.cloudit24.stillpoint.data.batteryNow(context)
     val stat = runCatching { StatFs(Environment.getDataDirectory().path) }.getOrNull()
     val mem = ActivityManager.MemoryInfo().also { context.getSystemService(ActivityManager::class.java)?.getMemoryInfo(it) }
     return DeviceNow(
-        battery = bm?.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) ?: -1,
-        charging = bm?.isCharging == true,
-        tempC = (sticky?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0) / 10f,
+        battery = b.percent, charging = b.charging, full = b.full, tempC = b.tempC,
         storeFree = stat?.availableBytes ?: 0, storeTotal = stat?.totalBytes ?: 0,
         ramFree = mem.availMem, ramTotal = mem.totalMem,
     )
@@ -186,8 +183,8 @@ private fun BatteryCard() {
     val tick by rememberTicker(30_000)
     val d = remember(tick) { deviceNow(context) }
     CardTitle(stringResource(R.string.s_battery_and_storage))
-    Meter("Battery", "${d.battery}%" + (if (d.charging) " · charging" else "") + (if (d.tempC > 0) " · ${d.tempC.toInt()}°C" else ""),
-        d.battery / 100f)
+    Meter("Battery", (if (d.battery >= 0) "${d.battery}%" else "?") + (if (d.charging) " · charging" else if (d.full) " · full" else "")
+        + (if (d.tempC > 0) " · ${d.tempC.toInt()}°C" else ""), d.battery.coerceAtLeast(0) / 100f)
     if (d.storeTotal > 0) Meter("Storage", "${gb(d.storeFree)} free of ${gb(d.storeTotal)}", 1f - d.storeFree / d.storeTotal.toFloat())
     if (d.ramTotal > 0) Meter("Memory", "${gb(d.ramFree)} free of ${gb(d.ramTotal)}", 1f - d.ramFree / d.ramTotal.toFloat())
 }

@@ -137,16 +137,9 @@ private fun statusMessages(vm: LauncherViewModel, s: LauncherSettings, now: Long
 
     // Battery running low.
     if (on(StatusTopic.BATTERY)) {
-        val b = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-        val level = b?.let { i ->
-            val l = i.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
-            val sc = i.getIntExtra(BatteryManager.EXTRA_SCALE, 100)
-            if (l < 0) -1 else (l * 100f / sc).roundToInt()
-        } ?: -1
-        val charging = (b?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1).let {
-            it == BatteryManager.BATTERY_STATUS_CHARGING || it == BatteryManager.BATTERY_STATUS_FULL
-        }
-        if (level in 0..20 && !charging) out += StatusMsg("battery $level% · charge soon", if (level <= 10) 95 else 85)
+        val b = com.cloudit24.stillpoint.data.batteryNow(context)
+        val level = b.percent
+        if (level in 0..20 && !b.charging && !b.full) out += StatusMsg("battery $level% · charge soon", if (level <= 10) 95 else 85)
     }
 
     // Focus.

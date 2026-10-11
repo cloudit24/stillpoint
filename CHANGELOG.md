@@ -3,6 +3,9 @@
 Every version of Stillpoint Launcher, newest first. Each links to its APK.
 The newest is always at **[Download the latest APK](https://github.com/cloudit24/stillpoint/releases/latest/download/Stillpoint-Launcher.apk)**.
 
+## v0.47.2 · not yet released
+- Battery: the home ring, the Shelf card and Senior home now read the same battery figure the status bar shows. Before, they used a shortcut that some phones report late or wrongly, so the percentage could lag or say "charging" while the battery was already full. The Shelf card says "full" in that case.
+
 ## v0.47.1 · 11 Oct 2026
 - Smoother home: the terminal display's cursor, typing, cat and drone now redraw only their own pixels instead of rebuilding the whole display up to 60 times a second. Less work for the phone, less battery, steadier scrolling.
 
