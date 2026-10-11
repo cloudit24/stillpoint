@@ -8,6 +8,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.runtime.CompositionLocalProvider
 import com.cloudit24.stillpoint.ui.SeniorHome
 import com.cloudit24.stillpoint.ui.AssistantSheet
+import com.cloudit24.stillpoint.ui.CarScreen
 import com.cloudit24.stillpoint.ui.SeniorApps
 import com.cloudit24.stillpoint.ui.ToolsScreen
 import com.cloudit24.stillpoint.update.UpdateNotice
@@ -26,6 +27,7 @@ import android.appwidget.AppWidgetProviderInfo
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -95,9 +97,26 @@ class MainActivity : ComponentActivity() {
         intent?.getStringExtra(Guard.EXTRA_PKG)?.let { vm.guard(it, intent.getBooleanExtra(Guard.EXTRA_BLOCK, false)) }
     }
 
+    /** The car's Bluetooth connecting or dropping opens or closes car mode. */
+    private val bluetooth = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val device: android.bluetooth.BluetoothDevice? = if (Build.VERSION.SDK_INT >= 33)
+                intent.getParcelableExtra(android.bluetooth.BluetoothDevice.EXTRA_DEVICE, android.bluetooth.BluetoothDevice::class.java)
+            else @Suppress("DEPRECATION") intent.getParcelableExtra(android.bluetooth.BluetoothDevice.EXTRA_DEVICE)
+            vm.carBluetooth(device?.address, intent.action == android.bluetooth.BluetoothDevice.ACTION_ACL_CONNECTED)
+        }
+    }
+
     override fun onStart() {
         super.onStart()
         runCatching { vm.widgetHost.startListening() }
+        runCatching {
+            val f = android.content.IntentFilter().apply {
+                addAction(android.bluetooth.BluetoothDevice.ACTION_ACL_CONNECTED)
+                addAction(android.bluetooth.BluetoothDevice.ACTION_ACL_DISCONNECTED)
+            }
+            androidx.core.content.ContextCompat.registerReceiver(this, bluetooth, f, androidx.core.content.ContextCompat.RECEIVER_EXPORTED)
+        }
     }
 
     override fun onResume() {
@@ -110,6 +129,7 @@ class MainActivity : ComponentActivity() {
     override fun onStop() {
         super.onStop()
         runCatching { vm.widgetHost.stopListening() }
+        runCatching { unregisterReceiver(bluetooth) }
         if (vm.screen == Screen.DRAWER) vm.screen = Screen.HOME
     }
 
@@ -189,6 +209,7 @@ private fun LauncherRoot(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderI
             Screen.DATA -> DataUsageScreen(vm)
             Screen.PRAYER -> PrayerScreen(vm)
             Screen.TOOLS -> ToolsScreen(vm)
+            Screen.CAR -> CarScreen(vm)
         }
         }
     }

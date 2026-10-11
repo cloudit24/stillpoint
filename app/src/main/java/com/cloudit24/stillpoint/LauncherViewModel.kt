@@ -72,7 +72,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-enum class Screen { HOME, DRAWER, FOCUS, SETTINGS, WIDGETS, DATA, PRAYER, TOOLS }
+enum class Screen { HOME, DRAWER, FOCUS, SETTINGS, WIDGETS, DATA, PRAYER, TOOLS, CAR }
 
 class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     private val appsRepo = AppRepository(app)
@@ -136,9 +136,19 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     var agenda by mutableStateOf<List<AgendaItem>>(emptyList())
         private set
     var settings by mutableStateOf(prefs.loadSettings())
+        private set
     val assistant = com.cloudit24.stillpoint.llm.Assistant(viewModelScope)
     var assistOpen by mutableStateOf(false)
-        private set
+    /** The car's Bluetooth is connected right now. */
+    var carConnected by mutableStateOf(false)
+
+    /** A Bluetooth device came or went; the car's opens or closes car mode. */
+    fun carBluetooth(addr: String?, connected: Boolean) {
+        val s = settings
+        if (!s.carOn || s.carBluetoothAddr.isEmpty() || addr != s.carBluetoothAddr) return
+        carConnected = connected
+        if (connected) screen = Screen.CAR else if (screen == Screen.CAR) screen = Screen.HOME
+    }
     var hasUsageAccess by mutableStateOf(false)
         private set
     /** Incremented on every resume so permission-dependent UI re-reads system state. */

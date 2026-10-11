@@ -161,6 +161,17 @@ data class LauncherSettings(
     val assistantOn: Boolean = false,
     val assistantModel: String = "",
     val assistantKeepMin: Int = 10,
+    /** Car mode: a driving screen with the GPS speed, one notification, a few apps and the assistant by voice. */
+    val carOn: Boolean = false,
+    val carBluetoothName: String = "",
+    val carBluetoothAddr: String = "",
+    val carMph: Boolean = false,
+    val carLimit: Int = 0,
+    val carOsmLimit: Boolean = false,
+    val carApps: List<String> = emptyList(),
+    val carImportantOnly: Boolean = true,
+    val carVoice: Boolean = true,
+    val carKeepOn: Boolean = true,
     /** Senior mode: big text, six tiles (app keys, "" for empty) and one person to call. */
     val seniorMode: Boolean = false,
     val seniorApps: List<String> = emptyList(),
@@ -229,6 +240,8 @@ data class LauncherSettings(
     val calendarSync: SyncConfig = SyncConfig(),
     // The terminal display above the apps: its look, and the topics switched off.
     val statusStyle: StatusStyle = StatusStyle.TERMINAL,
+    /** The terminal display takes the whole space under the headline, instead of the cards and the strip. */
+    val statusFull: Boolean = true,
     val statusOff: Set<StatusTopic> = emptySet(),
     // Live data: all off by default. Nothing goes online unless one of these is on.
     val weatherOn: Boolean = false,

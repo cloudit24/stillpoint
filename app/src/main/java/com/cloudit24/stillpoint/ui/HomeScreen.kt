@@ -69,6 +69,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import com.cloudit24.stillpoint.data.StatusStyle
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -263,6 +264,14 @@ fun HomeScreen(vm: LauncherViewModel) {
         HeroHeader(vm, s, now)
         val infoScroll = rememberScrollState()
         // Scrolls only when it has to, so swipe gestures keep working when everything fits.
+        val fullTerminal = s.statusFull && s.statusStyle == StatusStyle.TERMINAL
+        if (fullTerminal) {
+            // The terminal display takes the whole zone: as many lines as fit, no cards, no strip.
+            androidx.compose.foundation.layout.BoxWithConstraints(Modifier.weight(1f).padding(top = 22.dp, bottom = 14.dp)) {
+                val older = ((maxHeight - 64.dp) / 29.dp).toInt().coerceIn(2, 9)
+                StatusLine(vm, s, now, Modifier.fillMaxSize(), older = older)
+            }
+        } else {
         Column(Modifier.weight(1f).padding(top = 26.dp).fadingEdges(infoScroll)
             .verticalScroll(infoScroll, enabled = infoScroll.maxValue > 0)) {
         HeroInfo(vm, s, now)
@@ -275,6 +284,7 @@ fun HomeScreen(vm: LauncherViewModel) {
 
         // The terminal display: Stillpoint talks to you here, right above the apps.
         StatusLine(vm, s, now, Modifier.padding(bottom = 14.dp))
+        }
         // A set space for the apps (about a third of the screen); more apps scroll inside it.
         val listScale = 1f
         val maxListHeight = (LocalConfiguration.current.screenHeightDp * 0.34f).dp

@@ -39,6 +39,16 @@ class Prefs(context: Context) {
             assistantOn = sp.getBoolean("assistant_on", false),
             assistantModel = sp.getString("assistant_model", "") ?: "",
             assistantKeepMin = sp.getInt("assistant_keep", d.assistantKeepMin),
+            carOn = sp.getBoolean("car_on", false),
+            carBluetoothName = sp.getString("car_bt_name", "") ?: "",
+            carBluetoothAddr = sp.getString("car_bt_addr", "") ?: "",
+            carMph = sp.getBoolean("car_mph", false),
+            carLimit = sp.getInt("car_limit", 0),
+            carOsmLimit = sp.getBoolean("car_osm", false),
+            carApps = (sp.getString("car_apps", "") ?: "").split("\n").filter { it.isNotBlank() },
+            carImportantOnly = sp.getBoolean("car_important", true),
+            carVoice = sp.getBoolean("car_voice", true),
+            carKeepOn = sp.getBoolean("car_keep_on", true),
             clockStyle = ClockStyle.HEADLINE,
             showStats = sp.getBoolean(K_SHOW_STATS, d.showStats),
             showLocalIp = sp.getBoolean(K_LOCAL_IP, d.showLocalIp),
@@ -108,6 +118,7 @@ class Prefs(context: Context) {
             calendarSource = runCatching { CalendarSource.valueOf(sp.getString(K_CAL_SRC, null)!!) }.getOrDefault(d.calendarSource),
             calendarSync = loadSync(SyncFeature.CALENDAR),
             statusStyle = runCatching { StatusStyle.valueOf(sp.getString("status_style", null)!!) }.getOrDefault(d.statusStyle),
+            statusFull = sp.getBoolean("status_full", d.statusFull),
             statusOff = (sp.getStringSet("status_off", null) ?: emptySet())
                 .mapNotNull { n -> runCatching { StatusTopic.valueOf(n) }.getOrNull() }.toSet(),
             weatherOn = sp.getBoolean(K_WEATHER_ON, d.weatherOn),
@@ -174,6 +185,16 @@ class Prefs(context: Context) {
             .putBoolean("assistant_on", s.assistantOn)
             .putString("assistant_model", s.assistantModel)
             .putInt("assistant_keep", s.assistantKeepMin)
+            .putBoolean("car_on", s.carOn)
+            .putString("car_bt_name", s.carBluetoothName)
+            .putString("car_bt_addr", s.carBluetoothAddr)
+            .putBoolean("car_mph", s.carMph)
+            .putInt("car_limit", s.carLimit)
+            .putBoolean("car_osm", s.carOsmLimit)
+            .putString("car_apps", s.carApps.joinToString("\n"))
+            .putBoolean("car_important", s.carImportantOnly)
+            .putBoolean("car_voice", s.carVoice)
+            .putBoolean("car_keep_on", s.carKeepOn)
             .putString(K_CLOCK, s.clockStyle.name)
             .putBoolean(K_SHOW_STATS, s.showStats)
             .putBoolean(K_LOCAL_IP, s.showLocalIp)
@@ -225,6 +246,7 @@ class Prefs(context: Context) {
             .putBoolean("tools_on", s.toolsOn)
             .putString(K_CAL_SRC, s.calendarSource.name)
             .putString("status_style", s.statusStyle.name)
+            .putBoolean("status_full", s.statusFull)
             .putStringSet("status_off", s.statusOff.map { it.name }.toSet())
             .apply {
                 SyncFeature.entries.forEach { f ->

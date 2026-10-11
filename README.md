@@ -74,6 +74,9 @@ Every older version is listed in the **[changelog](CHANGELOG.md)** and on the **
 - An assistant that runs on the phone (llama.cpp, a 1–2 GB model you download once): long-press home or tap
   the terminal display. It answers from what Stillpoint knows and can turn "silence at Maghrib" into a rule.
   Offline, no account, nothing sent anywhere.
+- Car mode: the GPS speed big on pure black with the fix's accuracy, one notification at a time, up to four
+  apps, and the assistant by voice (Android's own speech recognition and speaking). Opens by itself on your
+  car's Bluetooth. Optional speed-limit badge, by hand or from OpenStreetMap.
 - Calendar from the phone or a calendar link. Project Hub is coming as a separate app.
 
 **Your look**

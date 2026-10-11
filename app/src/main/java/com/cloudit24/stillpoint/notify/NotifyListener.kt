@@ -18,7 +18,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 /** One unread notification, as the launcher needs it: which app, when, and whether it matters to you. */
-data class NotifyItem(val key: String, val pkg: String, val postTime: Long, val important: Boolean, val special: Boolean = false)
+data class NotifyItem(val key: String, val pkg: String, val postTime: Long, val important: Boolean, val special: Boolean = false,
+                      val title: String = "", val text: String = "")
 
 /**
  * The notifications waiting right now, shared with the home screen (edge light, signal dot, dots on apps).
@@ -92,7 +93,13 @@ class NotifyListener : NotificationListenerService() {
         val s = Prefs(this).loadSettings()
         val list = runCatching { activeNotifications }.getOrNull().orEmpty()
             .filter(::shown)
-            .map { NotifyItem(it.key, it.packageName, it.postTime, NotifyHub.isImportant(s, it), NotifyHub.isSpecial(s, it)) }
+            .map {
+                // Car mode reads one notification aloud, so only then are its words kept (in memory, never stored).
+                val ex = if (s.carOn) it.notification.extras else null
+                NotifyItem(it.key, it.packageName, it.postTime, NotifyHub.isImportant(s, it), NotifyHub.isSpecial(s, it),
+                    title = ex?.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty(),
+                    text = ex?.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty())
+            }
         NotifyHub.publish(this, list)
     }
 

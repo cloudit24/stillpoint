@@ -24,6 +24,12 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- Wi-Fi details in Tools. Granted automatically, no prompt. -->
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <!-- Car mode: the speed from GPS, the mic for the assistant, and your car's Bluetooth to open it by itself. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
 
     <!-- Scoped package visibility: only launchable apps. No QUERY_ALL_PACKAGES. -->
     <queries>

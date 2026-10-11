@@ -78,13 +78,13 @@ private val LcdBack = Color(0xFF1C1A10)
  * apps below never move. Everything comes from the phone.
  */
 @Composable
-fun StatusLine(vm: LauncherViewModel, s: LauncherSettings, now: Long, modifier: Modifier = Modifier) {
+fun StatusLine(vm: LauncherViewModel, s: LauncherSettings, now: Long, modifier: Modifier = Modifier, older: Int = 2) {
     val context = LocalContext.current
     val msgs = statusMessages(vm, s, now, context)
     // Only Neon Alley brings the cat and the drone; Cyberpunk is colours alone.
     val neon = s.theme == AppTheme.NEON
     when (s.statusStyle) {
-        StatusStyle.TERMINAL -> TerminalStyle(msgs, s.edgeMotion, modifier, cat = neon && s.themeCat, drone = neon && s.themeDrone,
+        StatusStyle.TERMINAL -> TerminalStyle(msgs, s.edgeMotion, modifier, older, cat = neon && s.themeCat, drone = neon && s.themeDrone,
             mood = if (neon && (s.themeCat || s.themeDrone)) catMood(vm, s, now, msgs) else null,
             onAsk = if (s.assistantOn) ({ vm.assistOpen = true }) else null)
         StatusStyle.LCD -> LcdStyle(msgs, modifier)
@@ -182,6 +182,8 @@ private fun statusMessages(vm: LauncherViewModel, s: LauncherSettings, now: Long
     }
 
     // A new version.
+    if (s.carOn && vm.carConnected && vm.screen != com.cloudit24.stillpoint.Screen.CAR)
+        out += StatusMsg("car connected · tap for car mode", 78) { vm.screen = com.cloudit24.stillpoint.Screen.CAR }
     // A line a rule or Tasker asked for ("Laundry done"). Tap to clear it.
     com.cloudit24.stillpoint.data.Prefs(context).autoLine()?.let { line ->
         out += StatusMsg(line.lowercase(), 72) { com.cloudit24.stillpoint.data.Prefs(context).clearAutoLine() }
@@ -227,7 +229,7 @@ private fun statusMessages(vm: LauncherViewModel, s: LauncherSettings, now: Long
  * scroll up. The most pressing ones stay a little longer. Tap a line to act on it.
  */
 @Composable
-private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modifier, cat: Boolean = false, drone: Boolean = false,
+private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modifier, older: Int = 2, cat: Boolean = false, drone: Boolean = false,
                           mood: CatMood? = null, onAsk: (() -> Unit)? = null) {
     val accent = Accent
     val look = LocalLook.current
@@ -265,8 +267,8 @@ private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modi
             label = "feed",
         ) { st ->
             Column(Modifier.padding(top = 8.dp)) {
-                // Two older lines above, kept even when empty so the window never changes height.
-                for (k in 2 downTo 1) {
+                // Older lines above, kept even when empty so the window never changes height.
+                for (k in older downTo 1) {
                     val m = if (st - k >= 0 && n > k) msgs[(st - k) % n] else null
                     TermLine(if (m == null) " " else "> ${m.text}", accent.copy(alpha = 0.45f), m?.onTap)
                 }

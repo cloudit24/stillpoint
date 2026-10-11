@@ -34,7 +34,6 @@ Java_com_cloudit24_stillpoint_llm_LlmNative_load(JNIEnv * env, jclass, jstring j
 
     auto mp = llama_model_default_params();
     mp.n_gpu_layers = 0;
-    mp.use_mmap = true;
     const std::string path = jstr(env, jpath);
     llama_model * model = llama_model_load_from_file(path.c_str(), mp);
     if (!model) return 0;
