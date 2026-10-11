@@ -63,14 +63,24 @@ class Voice(private val context: Context) {
         runCatching { r.startListening(intent) }.onFailure { error = "Couldn't start listening."; listening = false }
     }
 
-    fun speak(text: String) {
-        if (text.isBlank()) return
+    private var onDone: (() -> Unit)? = null
+
+    /** Says [text]; [then] runs when it has finished (on the main thread). */
+    fun speak(text: String, then: (() -> Unit)? = null) {
+        if (text.isBlank()) { then?.invoke(); return }
+        onDone = then
         if (tts == null) {
             pending = text
             tts = TextToSpeech(context) { status ->
                 ttsReady = status == TextToSpeech.SUCCESS
                 if (ttsReady) {
                     tts?.language = Locale.getDefault()
+                    tts?.setOnUtteranceProgressListener(object : android.speech.tts.UtteranceProgressListener() {
+                        override fun onStart(id: String?) {}
+                        override fun onError(id: String?) { finish() }
+                        override fun onDone(id: String?) { finish() }
+                        private fun finish() { android.os.Handler(android.os.Looper.getMainLooper()).post { onDone?.invoke(); onDone = null } }
+                    })
                     pending?.let { say(it) }
                     pending = null
                 }

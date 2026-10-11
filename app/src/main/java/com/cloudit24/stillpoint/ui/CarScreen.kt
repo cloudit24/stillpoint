@@ -128,19 +128,20 @@ fun CarScreen(vm: LauncherViewModel) {
     val voice = remember { Voice(context) }
     DisposableEffect(Unit) { onDispose { voice.release() } }
     val a = vm.assistant
-    var spoken by remember { mutableIntStateOf(a.turns.size) }
-    LaunchedEffect(a.turns.size, a.busy) {
-        if (!a.busy && a.turns.size > spoken) {
-            val last = a.turns.last()
-            if (last.role == "assistant" && s.carVoice) voice.speak(last.text)
-            spoken = a.turns.size
-        }
-    }
     var hasMic by remember { mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) }
     val askMic = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { hasMic = it; if (it) voice.listen { q -> a.ask(q, s, statusFacts(vm, s, System.currentTimeMillis(), context)) } }
     fun talk() {
         if (!hasMic) { askMic.launch(Manifest.permission.RECORD_AUDIO); return }
         voice.listen { q -> a.ask(q, s, statusFacts(vm, s, System.currentTimeMillis(), context)) }
+    }
+    var spoken by remember { mutableIntStateOf(a.turns.size) }
+    LaunchedEffect(a.turns.size, a.busy) {
+        if (!a.busy && a.turns.size > spoken) {
+            val last = a.turns.last()
+            // Hands-free: after the answer is spoken, listen again for a follow-up.
+            if (last.role == "assistant" && s.carVoice) voice.speak(last.text) { if (vm.screen == Screen.CAR) talk() }
+            spoken = a.turns.size
+        }
     }
 
     val latest = vm.litNotifications().filter { !s.carImportantOnly || it.important || it.special }.maxByOrNull { it.postTime }

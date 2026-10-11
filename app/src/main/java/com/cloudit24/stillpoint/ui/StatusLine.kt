@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -43,6 +44,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
@@ -78,15 +80,24 @@ private val LcdBack = Color(0xFF1C1A10)
  * apps below never move. Everything comes from the phone.
  */
 @Composable
-fun StatusLine(vm: LauncherViewModel, s: LauncherSettings, now: Long, modifier: Modifier = Modifier, older: Int = 2) {
+fun StatusLine(vm: LauncherViewModel, s: LauncherSettings, now: Long, modifier: Modifier = Modifier, older: Int = 2, fill: Boolean = false) {
     val context = LocalContext.current
     val msgs = statusMessages(vm, s, now, context)
+    // The footer: battery as the status bar sees it, and the focus or the next prayer. Read once a minute.
+    val footer = remember(now / 60_000, s.focusEndsAt, s.focusProfileId) {
+        val b = com.cloudit24.stillpoint.data.batteryNow(context)
+        val mid = vm.activeFocus(now)?.let { "${it.name} FOCUS ${minutesWord(vm.focusUntil(now) - now)}".uppercase() }
+            ?: s.city?.takeIf { s.prayerOn }?.let { c ->
+                PrayerTimes.next(now, c.lat, c.lon, s.prayerMethod, s.asrHanafi)?.let { (p, at) -> "${p.label} IN ${minutesWord(at - now)}".uppercase() }
+            } ?: ""
+        TermFooter(b.percent, b.charging || b.full, mid)
+    }
     // Only Neon Alley brings the cat and the drone; Cyberpunk is colours alone.
     val neon = s.theme == AppTheme.NEON
     when (s.statusStyle) {
         StatusStyle.TERMINAL -> TerminalStyle(msgs, s.edgeMotion, modifier, older, cat = neon && s.themeCat, drone = neon && s.themeDrone,
             mood = if (neon && (s.themeCat || s.themeDrone)) catMood(vm, s, now, msgs) else null,
-            onAsk = if (s.assistantOn) ({ vm.assistOpen = true }) else null)
+            onAsk = if (s.assistantOn) ({ vm.assistOpen = true }) else null, footer = footer, fill = fill)
         StatusStyle.LCD -> LcdStyle(msgs, modifier)
         StatusStyle.QUIET -> QuietStyle(msgs, modifier)
     }
@@ -224,16 +235,24 @@ private fun statusMessages(vm: LauncherViewModel, s: LauncherSettings, now: Long
     return out.sortedByDescending { it.rank }
 }
 
+/** The footer: battery, and one useful thing (the focus, or the next prayer). Never what the status bar already shows. */
+private class TermFooter(val battery: Int, val charging: Boolean, val mid: String)
+
 /**
- * A small terminal window: every message takes its turn, typed out on the bottom line while the older ones
- * scroll up. The most pressing ones stay a little longer. Tap a line to act on it.
+ * A CRT terminal: amber phosphor on curved dark glass, faint scanlines, a soft glow on the letters. Every message
+ * takes its turn, typed out on the bottom line while the older ones scroll up. The most pressing ones stay a
+ * little longer. Tap a line to act on it. Cyberpunk keeps its own phosphor colour.
  */
 @Composable
 private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modifier, older: Int = 2, cat: Boolean = false, drone: Boolean = false,
-                          mood: CatMood? = null, onAsk: (() -> Unit)? = null) {
-    val accent = Accent
+                          mood: CatMood? = null, onAsk: (() -> Unit)? = null, footer: TermFooter? = null, fill: Boolean = false) {
     val look = LocalLook.current
-    val neon = look.neon
+    val cyber = look.theme == AppTheme.CYBER
+    val ph = if (cyber) look.line else Color(0xFFFFB84D)            // the phosphor
+    val phBright = if (cyber) look.glow else Color(0xFFFF9F1C)
+    val phHi = if (cyber) Color.White else Color(0xFFFFF3D6)         // the live line
+    val phDim = ph.copy(alpha = 0.5f)
+    val tube = if (cyber) listOf(look.surfaceHigh, look.surface, Color.Black) else listOf(Color(0xFF1A1206), Color(0xFF0A0703), Color.Black)
     val n = msgs.size
     var step by remember { mutableIntStateOf(0) }
     val typedState = remember { mutableIntStateOf(0) }
@@ -247,16 +266,26 @@ private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modi
     }
     val blink = rememberInfiniteTransition(label = "cursor")
     val cursor by blink.animateFloat(1f, 0f, infiniteRepeatable(tween(530), RepeatMode.Reverse), label = "cursor")
-    val shape = RoundedCornerShape(10.dp)
+    val lowBlink by blink.animateFloat(1f, 0.2f, infiniteRepeatable(tween(650), RepeatMode.Reverse), label = "low")
+    val glow = androidx.compose.ui.text.TextStyle(shadow = androidx.compose.ui.graphics.Shadow(ph.copy(alpha = 0.55f), blurRadius = 7f))
+    val shape = RoundedCornerShape(18.dp)
+    // Scanlines: one repeating gradient, drawn once over the content. No per-frame cost.
+    val scan = remember {
+        androidx.compose.ui.graphics.Brush.verticalGradient(
+            0f to Color.Transparent, 0.66f to Color.Transparent, 0.67f to Color.Black.copy(alpha = 0.26f), 1f to Color.Black.copy(alpha = 0.26f),
+            startY = 0f, endY = 3f, tileMode = androidx.compose.ui.graphics.TileMode.Repeated,
+        )
+    }
     Box(modifier.fillMaxWidth()) {
-    Column(Modifier.fillMaxWidth().clip(shape).background(accent.copy(alpha = 0.05f))
-        .border(1.dp, accent.copy(alpha = 0.35f), shape).padding(horizontal = 14.dp, vertical = 10.dp)) {
+    Column(Modifier.then(if (fill) Modifier.fillMaxSize() else Modifier.fillMaxWidth()).clip(shape)
+        .background(androidx.compose.ui.graphics.Brush.radialGradient(tube))
+        .border(1.dp, ph.copy(alpha = 0.22f), shape)
+        .drawWithContent { drawContent(); drawRect(scan) }
+        .padding(horizontal = 16.dp, vertical = 12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            val dots = if (neon) listOf(look.line, look.glow, Muted) else List(3) { accent.copy(alpha = 0.45f) }
-            dots.forEach { c -> Box(Modifier.padding(end = 5.dp).size(6.dp).clip(CircleShape).background(c)) }
-            Text(if (onAsk != null) "stillpoint · ask" else "stillpoint", color = accent.copy(alpha = 0.55f), fontSize = 11.sp, fontFamily = FontFamily.Monospace,
-                modifier = Modifier.padding(start = 4.dp).weight(1f).then(onAsk?.let { Modifier.clickable(onClick = it) } ?: Modifier))
-            if (n > 1) Text("${step % n + 1}/$n", color = accent.copy(alpha = 0.55f), fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+            Text("SYS://STILLPOINT", color = phBright, fontSize = 11.sp, letterSpacing = 2.sp, fontFamily = FontFamily.Monospace, style = glow,
+                modifier = Modifier.weight(1f))
+            if (n > 1) Text("${step % n + 1}/$n", color = phDim, fontSize = 11.sp, letterSpacing = 1.sp, fontFamily = FontFamily.Monospace)
         }
         AnimatedContent(
             targetState = step,
@@ -266,21 +295,35 @@ private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modi
             },
             label = "feed",
         ) { st ->
-            Column(Modifier.padding(top = 8.dp)) {
+            Column(Modifier.padding(top = 10.dp)) {
                 // Older lines above, kept even when empty so the window never changes height.
                 for (k in older downTo 1) {
                     val m = if (st - k >= 0 && n > k) msgs[(st - k) % n] else null
-                    TermLine(if (m == null) " " else "> ${m.text}", accent.copy(alpha = 0.45f), m?.onTap)
+                    TermLine(if (m == null) " " else "> ${m.text}", phDim, m?.onTap)
                 }
                 val m = msgs[st % n]
                 val text = if (st == step) m.text.take(typed) else m.text
                 Row(verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.then(m.onTap?.let { Modifier.clickable(onClick = it) } ?: Modifier)) {
-                    Text("> $text", color = accent, fontSize = 15.sp, fontFamily = FontFamily.Monospace,
+                    Text("> $text", color = phHi, fontSize = 15.sp, fontFamily = FontFamily.Monospace, style = glow,
                         maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                     Box(Modifier.padding(start = 3.dp).size(8.dp, 17.dp)
-                        .graphicsLayer { alpha = if (motion) cursor else 1f }.background(accent))
+                        .graphicsLayer { alpha = if (motion) cursor else 1f }.background(phBright))
                 }
+            }
+        }
+        if (footer != null) {
+            if (fill) androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
+            val low = footer.battery in 0..20 && !footer.charging
+            Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                val blocks = if (footer.battery < 0) 0 else ((footer.battery + 5) / 10).coerceIn(0, 10)
+                Text("PWR " + "\u25AE".repeat(blocks) + "\u25AF".repeat(10 - blocks) + (if (footer.battery >= 0) " ${footer.battery}" else "") + (if (footer.charging) "\u26A1" else ""),
+                    color = if (low) Color(0xFFFF6B3D) else phDim, fontSize = 10.sp, letterSpacing = 1.sp, fontFamily = FontFamily.Monospace,
+                    modifier = Modifier.graphicsLayer { alpha = if (low && motion) lowBlink else 1f })
+                Text(footer.mid, color = phDim, fontSize = 10.sp, letterSpacing = 1.5.sp, fontFamily = FontFamily.Monospace,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.weight(1f).padding(horizontal = 8.dp))
+                Text(if (onAsk != null) "ASK_" else "READY_", color = if (onAsk != null) phBright else phDim, fontSize = 10.sp, letterSpacing = 1.5.sp,
+                    fontFamily = FontFamily.Monospace, modifier = Modifier.then(onAsk?.let { Modifier.clickable(onClick = it) } ?: Modifier))
             }
         }
     }
