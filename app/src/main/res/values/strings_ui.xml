@@ -372,7 +372,7 @@
     <string name="a_model_note">Downloads come from Hugging Face over Wi-Fi only and land in Stillpoint\'s own folder. The 3B model needs about 2.5 GB of free memory while it answers.</string>
     <string name="a_hello">Ask about prayer, your day, or say what you want automated.</string>
     <string name="a_you">You</string>
-    <string name="a_ask_hint">Ask, or say "silence at Maghrib"</string>
+    <string name="a_ask_hint">Ask, or say \"silence at Maghrib\"</string>
     <string name="a_send">Send</string>
     <string name="a_stop">Stop</string>
     <string name="a_clear">clear</string>
@@ -381,7 +381,7 @@
     <string name="pg_automation_sum">Rules, and Tasker</string>
     <string name="s_rules">Rules</string>
     <string name="s_rules_empty">No rules yet. A rule is one sentence: when something happens in Stillpoint, do something.</string>
-    <string name="s_rules_note">Tap a rule to change it. "On Friday", "At night" and "Battery under 20%" put a theme or display setting back when they end.</string>
+    <string name="s_rules_note">Tap a rule to change it. \"On Friday\", \"At night\" and \"Battery under 20%\" put a theme or display setting back when they end.</string>
     <string name="s_add_a_rule">Add a rule</string>
     <string name="s_new_rule">New rule</string>
     <string name="s_rule">Rule</string>
@@ -392,12 +392,12 @@
     <string name="s_minutes">Minutes</string>
     <string name="s_line_hint">What to show, e.g. time for a walk</string>
     <string name="s_allow_dnd">Allow Do Not Disturb</string>
-    <string name="s_allow_dnd_sum">"Phone on silent" needs this once, in Android's settings.</string>
+    <string name="s_allow_dnd_sum">\"Phone on silent\" needs this once, in Android\'s settings.</string>
     <string name="s_tasker">Tasker</string>
     <string name="s_send_events_to_tasker">Send events to Tasker</string>
     <string name="s_accept_commands_from_tasker">Accept commands from Tasker</string>
     <string name="s_copy_event_names">Copy event names</string>
-    <string name="s_copy_event_names_sum">The event and command names, for Tasker's Intent Received and Send Intent</string>
+    <string name="s_copy_event_names_sum">The event and command names, for Tasker\'s Intent Received and Send Intent</string>
     <string name="s_tasker_note">Prayer, iqama, focus, special person, Friday, night and battery go out as events. Tasker can start a focus, switch theme, show a line, or silence the phone. Nothing leaves the phone.</string>
     <string name="s_focus_profiles_note">Pick a profile to start. Its apps, and the ones you always allow, stay open.</string>
 </resources>
