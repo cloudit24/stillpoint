@@ -136,6 +136,8 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     var agenda by mutableStateOf<List<AgendaItem>>(emptyList())
         private set
     var settings by mutableStateOf(prefs.loadSettings())
+    val assistant = com.cloudit24.stillpoint.llm.Assistant(viewModelScope)
+    var assistOpen by mutableStateOf(false)
         private set
     var hasUsageAccess by mutableStateOf(false)
         private set

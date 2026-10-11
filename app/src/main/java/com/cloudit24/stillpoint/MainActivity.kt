@@ -7,6 +7,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.runtime.CompositionLocalProvider
 import com.cloudit24.stillpoint.ui.SeniorHome
+import com.cloudit24.stillpoint.ui.AssistantSheet
 import com.cloudit24.stillpoint.ui.SeniorApps
 import com.cloudit24.stillpoint.ui.ToolsScreen
 import com.cloudit24.stillpoint.update.UpdateNotice
@@ -90,6 +91,7 @@ class MainActivity : ComponentActivity() {
     /** From the "new version is ready" notification: straight to Settings. */
     private fun handleIntent(intent: Intent?) {
         if (intent?.getBooleanExtra(UpdateNotice.EXTRA_OPEN_SETTINGS, false) == true) vm.screen = Screen.SETTINGS
+        if (intent?.getBooleanExtra(AssistActivity.EXTRA_ASSIST, false) == true && vm.settings.assistantOn) { vm.screen = Screen.HOME; vm.assistOpen = true }
         intent?.getStringExtra(Guard.EXTRA_PKG)?.let { vm.guard(it, intent.getBooleanExtra(Guard.EXTRA_BLOCK, false)) }
     }
 
@@ -195,6 +197,8 @@ private fun LauncherRoot(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderI
     // A new version is announced in the terminal display on home, not in a popup.
 
     vm.pausing?.let { PauseScreen(vm, it) }
+
+    if (vm.assistOpen) AssistantSheet(vm)
 
     vm.blockedMessage?.let { msg ->
         AlertDialog(

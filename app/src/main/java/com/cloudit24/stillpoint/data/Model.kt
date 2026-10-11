@@ -157,6 +157,10 @@ data class LauncherSettings(
     val rules: List<Rule> = emptyList(),
     val taskerOut: Boolean = false,
     val taskerIn: Boolean = false,
+    /** The on-device assistant: off until a model is chosen; [assistantModel] is the GGUF file's path. */
+    val assistantOn: Boolean = false,
+    val assistantModel: String = "",
+    val assistantKeepMin: Int = 10,
     /** Senior mode: big text, six tiles (app keys, "" for empty) and one person to call. */
     val seniorMode: Boolean = false,
     val seniorApps: List<String> = emptyList(),

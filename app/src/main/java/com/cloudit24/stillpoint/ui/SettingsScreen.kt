@@ -163,6 +163,7 @@ private enum class SettingsPage(@StringRes val section: Int, @StringRes val titl
     CALENDAR(R.string.sec_productivity, R.string.pg_calendar, R.string.pg_calendar_sum, Icons.Outlined.DateRange),
     WELLBEING(R.string.sec_productivity, R.string.pg_wellbeing, R.string.pg_wellbeing_sum, Icons.Outlined.FavoriteBorder),
     AUTOMATION(R.string.sec_productivity, R.string.pg_automation, R.string.pg_automation_sum, Icons.Outlined.PlayArrow),
+    ASSISTANT(R.string.sec_productivity, R.string.pg_assistant, R.string.pg_assistant_sum, Icons.Outlined.Search),
     PRAYER(R.string.sec_extras, R.string.pg_prayer, R.string.pg_prayer_sum, Icons.Outlined.Place),
     WEATHER(R.string.sec_extras, R.string.pg_weather, R.string.pg_weather_sum, Icons.Outlined.LocationOn),
     GOLD(R.string.sec_extras, R.string.pg_gold, R.string.pg_gold_sum, Icons.Outlined.Star),
@@ -888,6 +889,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
 
                 SettingsPage.WELLBEING -> WellbeingSettings(vm)
                 SettingsPage.AUTOMATION -> AutomationSettings(vm)
+                SettingsPage.ASSISTANT -> AssistantSettings(vm)
 
                 SettingsPage.PRIVACY -> {
                     Group(stringResource(R.string.s_permissions)) {

@@ -85,7 +85,8 @@ fun StatusLine(vm: LauncherViewModel, s: LauncherSettings, now: Long, modifier: 
     val neon = s.theme == AppTheme.NEON
     when (s.statusStyle) {
         StatusStyle.TERMINAL -> TerminalStyle(msgs, s.edgeMotion, modifier, cat = neon && s.themeCat, drone = neon && s.themeDrone,
-            mood = if (neon && (s.themeCat || s.themeDrone)) catMood(vm, s, now, msgs) else null)
+            mood = if (neon && (s.themeCat || s.themeDrone)) catMood(vm, s, now, msgs) else null,
+            onAsk = if (s.assistantOn) ({ vm.assistOpen = true }) else null)
         StatusStyle.LCD -> LcdStyle(msgs, modifier)
         StatusStyle.QUIET -> QuietStyle(msgs, modifier)
     }
@@ -95,6 +96,11 @@ private fun minutesWord(ms: Long): String {
     val m = ((ms + 59_999) / 60_000).coerceAtLeast(1)
     return if (m < 60) "$m min" else "${m / 60}h ${m % 60}m"
 }
+
+/** The same things the terminal display says, as plain lines, for the assistant's facts. */
+internal fun statusFacts(vm: LauncherViewModel, s: LauncherSettings, now: Long, context: Context): List<String> =
+    listOf("Now: " + java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.FULL, java.text.DateFormat.SHORT).format(java.util.Date(now))) +
+        statusMessages(vm, s, now, context).map { it.text }
 
 private fun statusMessages(vm: LauncherViewModel, s: LauncherSettings, now: Long, context: Context): List<StatusMsg> {
     val on = { t: StatusTopic -> t !in s.statusOff }
@@ -222,7 +228,7 @@ private fun statusMessages(vm: LauncherViewModel, s: LauncherSettings, now: Long
  */
 @Composable
 private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modifier, cat: Boolean = false, drone: Boolean = false,
-                          mood: CatMood? = null) {
+                          mood: CatMood? = null, onAsk: (() -> Unit)? = null) {
     val accent = Accent
     val look = LocalLook.current
     val neon = look.neon
@@ -246,8 +252,8 @@ private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modi
         Row(verticalAlignment = Alignment.CenterVertically) {
             val dots = if (neon) listOf(look.line, look.glow, Muted) else List(3) { accent.copy(alpha = 0.45f) }
             dots.forEach { c -> Box(Modifier.padding(end = 5.dp).size(6.dp).clip(CircleShape).background(c)) }
-            Text("stillpoint", color = accent.copy(alpha = 0.55f), fontSize = 11.sp, fontFamily = FontFamily.Monospace,
-                modifier = Modifier.padding(start = 4.dp).weight(1f))
+            Text(if (onAsk != null) "stillpoint · ask" else "stillpoint", color = accent.copy(alpha = 0.55f), fontSize = 11.sp, fontFamily = FontFamily.Monospace,
+                modifier = Modifier.padding(start = 4.dp).weight(1f).then(onAsk?.let { Modifier.clickable(onClick = it) } ?: Modifier))
             if (n > 1) Text("${step % n + 1}/$n", color = accent.copy(alpha = 0.55f), fontSize = 11.sp, fontFamily = FontFamily.Monospace)
         }
         AnimatedContent(

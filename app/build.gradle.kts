@@ -19,7 +19,11 @@ android {
         // Bump both for every release. The GitHub tag must be "v" + versionName.
         versionCode = 68
         versionName = "0.48.0"
+        // The assistant's llama.cpp build: arm64 only (every phone of the last six years); CPU, no GPU code.
+        ndk { abiFilters += "arm64-v8a" }
+        externalNativeBuild { cmake { arguments += listOf("-DANDROID_STL=c++_static") } }
     }
+    externalNativeBuild { cmake { path = file("src/main/cpp/CMakeLists.txt"); version = "3.22.1" } }
 
     // github: in-app updates from GitHub Releases.
     // fdroid: no self-update code; F-Droid delivers updates.

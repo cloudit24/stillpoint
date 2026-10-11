@@ -36,6 +36,9 @@ class Prefs(context: Context) {
             rules = readRules(sp.getString("auto_rules", null)),
             taskerOut = sp.getBoolean("tasker_out", false),
             taskerIn = sp.getBoolean("tasker_in", false),
+            assistantOn = sp.getBoolean("assistant_on", false),
+            assistantModel = sp.getString("assistant_model", "") ?: "",
+            assistantKeepMin = sp.getInt("assistant_keep", d.assistantKeepMin),
             clockStyle = ClockStyle.HEADLINE,
             showStats = sp.getBoolean(K_SHOW_STATS, d.showStats),
             showLocalIp = sp.getBoolean(K_LOCAL_IP, d.showLocalIp),
@@ -168,6 +171,9 @@ class Prefs(context: Context) {
             .putString("auto_rules", JSONArray().also { a -> s.rules.forEach { a.put(it.toJson()) } }.toString())
             .putBoolean("tasker_out", s.taskerOut)
             .putBoolean("tasker_in", s.taskerIn)
+            .putBoolean("assistant_on", s.assistantOn)
+            .putString("assistant_model", s.assistantModel)
+            .putInt("assistant_keep", s.assistantKeepMin)
             .putString(K_CLOCK, s.clockStyle.name)
             .putBoolean(K_SHOW_STATS, s.showStats)
             .putBoolean(K_LOCAL_IP, s.showLocalIp)
@@ -538,6 +544,10 @@ class Prefs(context: Context) {
     private fun readRules(raw: String?): List<Rule> = raw?.let {
         runCatching { val a = JSONArray(it); (0 until a.length()).mapNotNull { i -> Rule.fromJson(a.getJSONObject(i)) } }.getOrNull()
     } ?: emptyList()
+
+    /** The system download running for a model, if any. */
+    fun downloadId(model: String): Long = sp.getLong("dl_$model", 0L)
+    fun setDownloadId(model: String, id: Long) = sp.edit().putLong("dl_$model", id).apply()
 
     /** What the automation engine remembers between ticks: which conditions hold, and settings to put back. */
     fun autoState(): JSONObject = runCatching { JSONObject(sp.getString("auto_state", "{}")!!) }.getOrDefault(JSONObject())

@@ -71,6 +71,9 @@ Every older version is listed in the **[changelog](CHANGELOG.md)** and on the **
 - Optional stronger guard: the same pause and focus for apps opened from notifications.
 - Automation: rules in plain sentences ("At iqama, start Prayer focus", "On Friday, theme to Neon Alley"),
   and a Tasker bridge both ways. See [docs/TASKER.md](docs/TASKER.md).
+- An assistant that runs on the phone (llama.cpp, a 1–2 GB model you download once): long-press home or tap
+  the terminal display. It answers from what Stillpoint knows and can turn "silence at Maghrib" into a rule.
+  Offline, no account, nothing sent anywhere.
 - Calendar from the phone or a calendar link. Project Hub is coming as a separate app.
 
 **Your look**
