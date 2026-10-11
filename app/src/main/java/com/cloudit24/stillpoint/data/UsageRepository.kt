@@ -44,33 +44,34 @@ class UsageRepository(private val context: Context) {
         val start = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
         val end = System.currentTimeMillis()
 
-        val events = runCatching { usm.queryEvents(start, end) }.getOrNull() ?: return emptyMap()
+        // One app is in front at a time, like Digital Wellbeing counts it: a resume of another app, a pause,
+        // the screen going off or the lock screen all end the current app's spell. Events start a few hours
+        // before midnight so an app open across midnight is counted from midnight, not guessed.
+        val events = runCatching { usm.queryEvents(start - 6 * 3_600_000L, end) }.getOrNull() ?: return emptyMap()
         val event = UsageEvents.Event()
-        val resumedAt = HashMap<String, Long>()   // key: package/activity
-        val seen = HashSet<String>()
         val totals = HashMap<String, Long>()
-
+        var current: String? = null
+        var since = 0L
+        fun close(at: Long) {
+            val pkg = current ?: return
+            val ms = minOf(at, end) - maxOf(since, start)
+            if (ms > 0) totals[pkg] = (totals[pkg] ?: 0L) + ms
+            current = null
+        }
         while (events.hasNextEvent()) {
             events.getNextEvent(event)
-            val pkg = event.packageName ?: continue
-            val key = "$pkg/${event.className}"
             when (event.eventType) {
-                UsageEvents.Event.MOVE_TO_FOREGROUND -> {
-                    resumedAt[key] = event.timeStamp
-                    seen += key
+                UsageEvents.Event.MOVE_TO_FOREGROUND -> {           // ACTIVITY_RESUMED
+                    val pkg = event.packageName ?: continue
+                    if (pkg != current) { close(event.timeStamp); current = pkg; since = event.timeStamp }
                 }
-                UsageEvents.Event.MOVE_TO_BACKGROUND -> {
-                    val from = resumedAt.remove(key) ?: if (key !in seen) start else null
-                    seen += key
-                    if (from != null) totals[pkg] = (totals[pkg] ?: 0L) + (event.timeStamp - from)
+                UsageEvents.Event.MOVE_TO_BACKGROUND -> {           // ACTIVITY_PAUSED
+                    if (event.packageName == current) close(event.timeStamp)
                 }
+                16, 17, 26 -> close(event.timeStamp)                // SCREEN_NON_INTERACTIVE, KEYGUARD_SHOWN, DEVICE_SHUTDOWN
             }
         }
-        // Still in foreground (normally none while the launcher is visible).
-        resumedAt.forEach { (key, from) ->
-            val pkg = key.substringBefore('/')
-            totals[pkg] = (totals[pkg] ?: 0L) + (end - from)
-        }
+        close(end) // still in front
         totals.remove(context.packageName)
         return totals.filterValues { it > 0 }
     }
