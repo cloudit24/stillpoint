@@ -1,0 +1,92 @@
+package com.cloudit24.stillpoint.llm
+
+import android.content.Context
+import android.content.Intent
+import android.os.Bundle
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
+import android.speech.tts.TextToSpeech
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import java.util.Locale
+
+/**
+ * Ears and mouth for the assistant, from Android itself: speech recognition (on the phone where the phone
+ * can) and text-to-speech. Nothing of ours leaves the phone; what Android's recogniser does is Android's.
+ */
+class Voice(private val context: Context) {
+    var listening by mutableStateOf(false)
+    var heard by mutableStateOf("")       // partial text while you speak
+    var error by mutableStateOf("")
+
+    private var recognizer: SpeechRecognizer? = null
+    private var tts: TextToSpeech? = null
+    private var ttsReady = false
+    private var pending: String? = null
+
+    fun listen(onResult: (String) -> Unit) {
+        if (!SpeechRecognizer.isRecognitionAvailable(context)) { error = "No speech recognition on this phone."; return }
+        stopSpeaking()
+        val r = recognizer ?: SpeechRecognizer.createSpeechRecognizer(context).also { recognizer = it }
+        r.setRecognitionListener(object : RecognitionListener {
+            override fun onReadyForSpeech(params: Bundle?) { listening = true; heard = ""; error = "" }
+            override fun onBeginningOfSpeech() {}
+            override fun onRmsChanged(rmsdB: Float) {}
+            override fun onBufferReceived(buffer: ByteArray?) {}
+            override fun onEndOfSpeech() { listening = false }
+            override fun onError(code: Int) {
+                listening = false
+                error = when (code) {
+                    SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "Didn't catch that."
+                    SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Microphone permission is needed."
+                    else -> "Couldn't listen (error $code)."
+                }
+            }
+            override fun onResults(results: Bundle?) {
+                listening = false
+                val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()
+                heard = text
+                if (text.isNotBlank()) onResult(text)
+            }
+            override fun onPartialResults(partialResults: Bundle?) {
+                heard = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()
+            }
+            override fun onEvent(eventType: Int, params: Bundle?) {}
+        })
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+            .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+            .putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
+            .putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
+        runCatching { r.startListening(intent) }.onFailure { error = "Couldn't start listening."; listening = false }
+    }
+
+    fun speak(text: String) {
+        if (text.isBlank()) return
+        if (tts == null) {
+            pending = text
+            tts = TextToSpeech(context) { status ->
+                ttsReady = status == TextToSpeech.SUCCESS
+                if (ttsReady) {
+                    tts?.language = Locale.getDefault()
+                    pending?.let { say(it) }
+                    pending = null
+                }
+            }
+            return
+        }
+        if (ttsReady) say(text) else pending = text
+    }
+
+    private fun say(text: String) { tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "stillpoint") }
+
+    fun stopSpeaking() { tts?.stop() }
+
+    fun release() {
+        runCatching { recognizer?.destroy() }; recognizer = null
+        runCatching { tts?.shutdown() }; tts = null; ttsReady = false
+        listening = false
+    }
+}
