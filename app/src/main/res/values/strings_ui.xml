@@ -349,5 +349,27 @@
     <string name="s_terminal_note">Above your apps, Stillpoint tells you what matters now, most pressing first. Tap a line to act on it. With nothing to say, it greets you.</string>
     <string name="pg_wellbeing">Wellbeing</string>
     <string name="pg_wellbeing_sum">Pause, limits, screen time</string>
+    <string name="pg_automation">Automation</string>
+    <string name="pg_automation_sum">Rules, and Tasker</string>
+    <string name="s_rules">Rules</string>
+    <string name="s_rules_empty">No rules yet. A rule is one sentence: when something happens in Stillpoint, do something.</string>
+    <string name="s_rules_note">Tap a rule to change it. "On Friday", "At night" and "Battery under 20%" put a theme or display setting back when they end.</string>
+    <string name="s_add_a_rule">Add a rule</string>
+    <string name="s_new_rule">New rule</string>
+    <string name="s_rule">Rule</string>
+    <string name="s_when">When</string>
+    <string name="s_then">Then</string>
+    <string name="s_which_focus">Which focus</string>
+    <string name="s_any_focus">Any focus</string>
+    <string name="s_minutes">Minutes</string>
+    <string name="s_line_hint">What to show, e.g. time for a walk</string>
+    <string name="s_allow_dnd">Allow Do Not Disturb</string>
+    <string name="s_allow_dnd_sum">"Phone on silent" needs this once, in Android's settings.</string>
+    <string name="s_tasker">Tasker</string>
+    <string name="s_send_events_to_tasker">Send events to Tasker</string>
+    <string name="s_accept_commands_from_tasker">Accept commands from Tasker</string>
+    <string name="s_copy_event_names">Copy event names</string>
+    <string name="s_copy_event_names_sum">The event and command names, for Tasker's Intent Received and Send Intent</string>
+    <string name="s_tasker_note">Prayer, iqama, focus, special person, Friday, night and battery go out as events. Tasker can start a focus, switch theme, show a line, or silence the phone. Nothing leaves the phone.</string>
     <string name="s_focus_profiles_note">Pick a profile to start. Its apps, and the ones you always allow, stay open.</string>
 </resources>

@@ -34,7 +34,12 @@ object NotifyHub {
         return enabled.split(":").any { it == me }
     }
 
+    private var specials = 0
+
     internal fun publish(context: Context, list: List<NotifyItem>) {
+        val n = list.count { it.special }
+        if (n > specials) runCatching { com.cloudit24.stillpoint.data.Automation.fire(context, com.cloudit24.stillpoint.data.Trigger.SPECIAL) }
+        specials = n
         _items.value = list
         Prefs(context).addNotifySeen(list.map { it.pkg }.toSet())
     }

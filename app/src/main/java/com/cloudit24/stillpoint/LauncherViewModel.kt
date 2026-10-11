@@ -10,6 +10,8 @@ import com.cloudit24.stillpoint.data.SelfHosted
 import com.cloudit24.stillpoint.data.ShelfPage
 import com.cloudit24.stillpoint.data.BuiltIn
 import kotlinx.coroutines.Job
+import com.cloudit24.stillpoint.data.Automation
+import com.cloudit24.stillpoint.data.Rule
 import kotlinx.coroutines.delay
 import com.cloudit24.stillpoint.notify.NotifyHub
 import com.cloudit24.stillpoint.notify.NotifyItem
@@ -488,7 +490,16 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         viewModelScope.launch { NotifyHub.items.collect { notifyItems = it } }
+        // A rule (prayer alarm, Tasker) may change the settings behind our back; pick that up.
+        viewModelScope.launch { Automation.changed.collect { if (it > 0) settings = prefs.loadSettings() } }
+        viewModelScope.launch { while (true) { runCatching { Automation.tick(getApplication()) }; delay(60_000) } }
     }
+
+    fun saveRule(r: Rule) = updateSettings { s ->
+        s.copy(rules = if (s.rules.any { it.id == r.id }) s.rules.map { if (it.id == r.id) r else it } else s.rules + r)
+    }
+
+    fun deleteRule(id: Long) = updateSettings { s -> s.copy(rules = s.rules.filter { it.id != id }) }
 
     fun litNotifications(): List<NotifyItem> = notifyItems.filter { it.pkg !in settings.notifyOff }
 
@@ -844,8 +855,9 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
 
     // ---- Focus ----
 
-    fun startFocus(p: FocusProfile) = updateSettings {
-        it.copy(focusProfileId = p.id, focusEndsAt = System.currentTimeMillis() + p.minutes * 60_000L, focusSkipUntil = 0L)
+    fun startFocus(p: FocusProfile) {
+        updateSettings { it.copy(focusProfileId = p.id, focusEndsAt = System.currentTimeMillis() + p.minutes * 60_000L, focusSkipUntil = 0L) }
+        runCatching { Automation.tick(getApplication()) }
     }
 
     /** Ends a focus started by hand, or skips a scheduled one until its window closes. */
@@ -853,6 +865,7 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         val now = System.currentTimeMillis()
         val until = focusUntil(now)
         updateSettings { if (it.focusEndsAt > now) it.copy(focusEndsAt = 0L) else it.copy(focusSkipUntil = until) }
+        runCatching { Automation.tick(getApplication()) }
     }
 
     fun saveProfile(p: FocusProfile) = updateSettings { s ->

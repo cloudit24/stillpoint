@@ -3,6 +3,10 @@
 Every version of Stillpoint Launcher, newest first. Each links to its APK.
 The newest is always at **[Download the latest APK](https://github.com/cloudit24/stillpoint/releases/latest/download/Stillpoint-Launcher.apk)**.
 
+## v0.48.0 · not yet released
+- Automation (Settings, Productivity): rules in plain sentences. When: prayer time, iqama, before a prayer, a focus starting or ending, your special person messaging, Friday, night, battery under 20%. Then: start or end a focus, phone on silent for a while, switch theme, edge light off, calm the display (cat, drone, edge motion off), show a line in the terminal display, or tell Tasker. Friday, night and battery rules put the theme or display back when they end.
+- Tasker bridge, off by default: Stillpoint sends its events (prayer, iqama, focus, special person, Friday, night, battery), and Tasker can start or end a focus, switch theme, show a line, silence the phone or calm the display. Settings, Automation, Copy event names has the details; so does docs/TASKER.md.
+
 ## v0.47.2 · 11 Oct 2026
 - Battery: the home ring, the Shelf card and Senior home now read the same battery figure the status bar shows. Before, they used a shortcut that some phones report late or wrongly, so the percentage could lag or say "charging" while the battery was already full. The Shelf card says "full" in that case.
 

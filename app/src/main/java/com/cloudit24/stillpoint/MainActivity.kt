@@ -102,6 +102,7 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         vm.refresh()
         runCatching { Refresh.all(this) }
+        runCatching { com.cloudit24.stillpoint.data.Automation.tick(this) }
     }
 
     override fun onStop() {

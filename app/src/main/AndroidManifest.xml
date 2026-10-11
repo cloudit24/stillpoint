@@ -104,6 +104,15 @@
                 android:resource="@xml/widget_gold_info" />
         </receiver>
 
+        <!-- Tasker's Send Intent lands here; ignored unless "Accept commands from Tasker" is on. -->
+        <receiver
+            android:name=".data.AutomationReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.cloudit24.stillpoint.COMMAND" />
+            </intent-filter>
+        </receiver>
+
         <!-- Redraws widgets and the lock screen info at prayer times, midnight, after reboot and updates. -->
         <receiver
             android:name=".widget.RefreshReceiver"

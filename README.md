@@ -69,6 +69,8 @@ Every older version is listed in the **[changelog](CHANGELOG.md)** and on the **
 - A few seconds' pause before apps that are hard to put down, daily limits per app, a screen-time goal,
   and a calm home without icons, times or dots.
 - Optional stronger guard: the same pause and focus for apps opened from notifications.
+- Automation: rules in plain sentences ("At iqama, start Prayer focus", "On Friday, theme to Neon Alley"),
+  and a Tasker bridge both ways. See [docs/TASKER.md](docs/TASKER.md).
 - Calendar from the phone or a calendar link. Project Hub is coming as a separate app.
 
 **Your look**

@@ -165,7 +165,17 @@ object PrayerAlerts {
         setAlarm(context, at, pending(context, 5, intent))
     }
 
-    /** v0.41.0 could turn on Do Not Disturb at the iqama; this undoes one still pending after updating. */
+    /** Do Not Disturb (priority only) for [minutes], if you've allowed Stillpoint to change it. An alarm undoes it. */
+    fun silence(context: Context, minutes: Int) {
+        val nm = context.getSystemService(NotificationManager::class.java) ?: return
+        if (!nm.isNotificationPolicyAccessGranted) return
+        runCatching { nm.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_PRIORITY) }
+        context.getSharedPreferences("stillpoint", Context.MODE_PRIVATE).edit().putBoolean(K_SILENCED, true).apply()
+        setAlarm(context, System.currentTimeMillis() + minutes.coerceIn(1, 180) * 60_000L,
+            pending(context, 9, Intent(context, PrayerAlertReceiver::class.java).setAction(ACTION_UNSILENCE)))
+    }
+
+    /** Undoes a silence set by a rule, or one v0.41.0 left pending at the iqama. */
     private fun unsilence(context: Context) {
         val sp = context.getSharedPreferences("stillpoint", Context.MODE_PRIVATE)
         if (!sp.getBoolean(K_SILENCED, false)) return
@@ -194,6 +204,11 @@ object PrayerAlerts {
         val now = System.currentTimeMillis()
         if (now - at > 20 * 60_000L) return // The phone was off; too late to be useful.
         val s = Prefs(context).loadSettings()
+        com.cloudit24.stillpoint.data.Automation.fire(context, when (kind) {
+            Kind.BEFORE -> com.cloudit24.stillpoint.data.Trigger.PRAYER_NEAR
+            Kind.ADHAN -> com.cloudit24.stillpoint.data.Trigger.PRAYER_TIME
+            Kind.IQAMA -> com.cloudit24.stillpoint.data.Trigger.IQAMA
+        }, if (prayer == Prayer.DHUHR && jumuahOn(s, prayerAt) != null) "Jumu'ah" else prayer.label)
         when (kind) {
             Kind.BEFORE -> if (s.remindBefore <= 0) return
             Kind.ADHAN -> if (!s.adhanAlert) return

@@ -33,6 +33,9 @@ class Prefs(context: Context) {
             catReact = sp.getBoolean("cat_react", d.catReact),
             specialPerson = sp.getString("special_person", d.specialPerson) ?: "",
             specialGlow = sp.getBoolean("special_glow", d.specialGlow),
+            rules = readRules(sp.getString("auto_rules", null)),
+            taskerOut = sp.getBoolean("tasker_out", false),
+            taskerIn = sp.getBoolean("tasker_in", false),
             clockStyle = ClockStyle.HEADLINE,
             showStats = sp.getBoolean(K_SHOW_STATS, d.showStats),
             showLocalIp = sp.getBoolean(K_LOCAL_IP, d.showLocalIp),
@@ -162,6 +165,9 @@ class Prefs(context: Context) {
             .putBoolean("cat_react", s.catReact)
             .putString("special_person", s.specialPerson)
             .putBoolean("special_glow", s.specialGlow)
+            .putString("auto_rules", JSONArray().also { a -> s.rules.forEach { a.put(it.toJson()) } }.toString())
+            .putBoolean("tasker_out", s.taskerOut)
+            .putBoolean("tasker_in", s.taskerIn)
             .putString(K_CLOCK, s.clockStyle.name)
             .putBoolean(K_SHOW_STATS, s.showStats)
             .putBoolean(K_LOCAL_IP, s.showLocalIp)
@@ -528,6 +534,19 @@ class Prefs(context: Context) {
                 FavFolder(o.getLong("id"), o.getString("name"), readStringList(o.getJSONArray("apps").toString()))
             }
         }.getOrDefault(emptyList())
+
+    private fun readRules(raw: String?): List<Rule> = raw?.let {
+        runCatching { val a = JSONArray(it); (0 until a.length()).mapNotNull { i -> Rule.fromJson(a.getJSONObject(i)) } }.getOrNull()
+    } ?: emptyList()
+
+    /** What the automation engine remembers between ticks: which conditions hold, and settings to put back. */
+    fun autoState(): JSONObject = runCatching { JSONObject(sp.getString("auto_state", "{}")!!) }.getOrDefault(JSONObject())
+    fun saveAutoState(o: JSONObject) = sp.edit().putString("auto_state", o.toString()).apply()
+
+    /** A line a rule or Tasker asked the terminal display to show, until it expires or is tapped. */
+    fun autoLine(): String? = sp.getString("auto_line", null)?.takeIf { it.isNotBlank() && sp.getLong("auto_line_until", 0L) > System.currentTimeMillis() }
+    fun setAutoLine(text: String, until: Long) = sp.edit().putString("auto_line", text).putLong("auto_line_until", until).apply()
+    fun clearAutoLine() = sp.edit().remove("auto_line").remove("auto_line_until").apply()
 
     private fun readProfiles(raw: String?): List<FocusProfile>? = raw?.let {
         runCatching {

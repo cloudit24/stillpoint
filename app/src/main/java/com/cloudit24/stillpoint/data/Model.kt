@@ -153,6 +153,10 @@ data class LauncherSettings(
     /** One person whose messages feel different: a heart, a pink glow, and the cat runs to greet them. */
     val specialPerson: String = "",
     val specialGlow: Boolean = true,
+    /** Automation: rules in plain sentences, and the Tasker bridge (both directions off by default). */
+    val rules: List<Rule> = emptyList(),
+    val taskerOut: Boolean = false,
+    val taskerIn: Boolean = false,
     /** Senior mode: big text, six tiles (app keys, "" for empty) and one person to call. */
     val seniorMode: Boolean = false,
     val seniorApps: List<String> = emptyList(),

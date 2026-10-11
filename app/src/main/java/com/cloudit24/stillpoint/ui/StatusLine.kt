@@ -176,6 +176,10 @@ private fun statusMessages(vm: LauncherViewModel, s: LauncherSettings, now: Long
     }
 
     // A new version.
+    // A line a rule or Tasker asked for ("Laundry done"). Tap to clear it.
+    com.cloudit24.stillpoint.data.Prefs(context).autoLine()?.let { line ->
+        out += StatusMsg(line.lowercase(), 72) { com.cloudit24.stillpoint.data.Prefs(context).clearAutoLine() }
+    }
     if (on(StatusTopic.UPDATE)) {
         (vm.updatePopup ?: UpdateNotice.cached()?.version)?.let { v ->
             out += StatusMsg("update $v ready · tap to install", 55) { vm.screen = Screen.SETTINGS }
