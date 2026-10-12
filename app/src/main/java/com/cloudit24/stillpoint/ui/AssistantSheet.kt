@@ -71,7 +71,7 @@ fun AssistantSheet(vm: LauncherViewModel) {
         val q = text.trim()
         if (q.isEmpty()) return
         text = ""
-        a.ask(q, s, facts)
+        a.ask(q, s, facts, vm.assistantApps())
     }
 
     LaunchedEffect(a.turns.size, a.draft.length) { if (a.turns.isNotEmpty()) list.animateScrollToItem(a.turns.size) }
@@ -98,6 +98,7 @@ fun AssistantSheet(vm: LauncherViewModel) {
                 a.suggestions.forEach { c -> Chip(c, neon) {
                     c.rule?.let { vm.saveRule(it) }
                     c.focus?.let { name -> s.focusProfiles.firstOrNull { it.name == name }?.let { vm.startFocus(it) } }
+                    c.open?.let { name -> vm.apps.firstOrNull { it.label == name }?.let { vm.launchNow(it); vm.assistOpen = false } }
                     a.suggestions = a.suggestions - c
                 } }
             }

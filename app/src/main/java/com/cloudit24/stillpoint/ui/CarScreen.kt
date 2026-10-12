@@ -129,10 +129,14 @@ fun CarScreen(vm: LauncherViewModel) {
     DisposableEffect(Unit) { onDispose { voice.release() } }
     val a = vm.assistant
     var hasMic by remember { mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) }
-    val askMic = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { hasMic = it; if (it) voice.listen { q -> a.ask(q, s, statusFacts(vm, s, System.currentTimeMillis(), context)) } }
+    val askMic = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { hasMic = it; if (it) voice.listen { q -> a.ask(q, s, statusFacts(vm, s, System.currentTimeMillis(), context), vm.assistantApps()) } }
     fun talk() {
         if (!hasMic) { askMic.launch(Manifest.permission.RECORD_AUDIO); return }
-        voice.listen { q -> a.ask(q, s, statusFacts(vm, s, System.currentTimeMillis(), context)) }
+        voice.listen { q -> a.ask(q, s, statusFacts(vm, s, System.currentTimeMillis(), context), vm.assistantApps()) }
+    }
+    // In the car, "open maps" opens it; no chip to tap.
+    LaunchedEffect(a.suggestions) {
+        a.suggestions.firstOrNull { it.open != null }?.let { c -> vm.apps.firstOrNull { it.label == c.open }?.let { vm.launchNow(it) }; a.suggestions = a.suggestions - c }
     }
     var spoken by remember { mutableIntStateOf(a.turns.size) }
     LaunchedEffect(a.turns.size, a.busy) {

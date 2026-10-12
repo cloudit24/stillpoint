@@ -54,6 +54,8 @@ object Models {
     val CHOICES = listOf(
         ModelChoice("qwen3b", "Qwen 2.5 3B", "2.1 GB · the default for a strong phone",
             "https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF/resolve/main/qwen2.5-3b-instruct-q4_k_m.gguf", "qwen2.5-3b-instruct-q4_k_m.gguf"),
+        ModelChoice("hermes3b", "Hermes 3 · Llama 3.2 3B", "2.0 GB · Nous Research; more personality, good at following a soul",
+            "https://huggingface.co/NousResearch/Hermes-3-Llama-3.2-3B-GGUF/resolve/main/Hermes-3-Llama-3.2-3B.Q4_K_M.gguf", "Hermes-3-Llama-3.2-3B.Q4_K_M.gguf"),
         ModelChoice("qwen1b", "Qwen 2.5 1.5B", "1.1 GB · faster, a little simpler",
             "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf", "qwen2.5-1.5b-instruct-q4_k_m.gguf"),
     )
@@ -65,14 +67,16 @@ object Models {
 class Turn(val role: String, val text: String)
 
 /** Something the model suggested doing; shown as a chip under its answer. */
-class Suggested(val label: String, val rule: Rule? = null, val focus: String? = null)
+class Suggested(val label: String, val rule: Rule? = null, val focus: String? = null, val open: String? = null)
 
 /**
  * The on-device assistant. Loads the model on the first question, keeps it a few minutes for follow-ups,
  * then lets it go so home stays light. Facts come from Stillpoint; the model only puts them in words.
  */
-class Assistant(private val scope: CoroutineScope) {
-    var turns by mutableStateOf(listOf<Turn>())
+class Assistant(private val scope: CoroutineScope, private val prefs: com.cloudit24.stillpoint.data.Prefs) {
+    var turns by mutableStateOf(prefs.chatHistory().map { (r, t) -> Turn(r, t) })
+    /** Called with a fact worth keeping ("wife's name is Mariam"); the owner stores it in the settings. */
+    var onMemory: ((String) -> Unit)? = null
     var draft by mutableStateOf("")       // the answer as it streams in
     var busy by mutableStateOf(false)
     var status by mutableStateOf("")      // "loading the model", "model file missing", ...
@@ -85,17 +89,29 @@ class Assistant(private val scope: CoroutineScope) {
     private var idle: Job? = null
     @Volatile private var stop = false
 
-    fun ask(question: String, s: LauncherSettings, facts: List<String>) {
+    fun ask(question: String, s: LauncherSettings, facts: List<String>, apps: List<String> = emptyList()) {
         if (busy || question.isBlank()) return
+        // "open whatsapp": no need to wake the model.
+        Regex("^(?:open|launch|start)\\s+(.{2,40})$", RegexOption.IGNORE_CASE).matchEntire(question.trim())?.let { m ->
+            val want = m.groupValues[1].trim().trimEnd('.', '!')
+            val app = apps.firstOrNull { it.equals(want, true) } ?: apps.firstOrNull { it.contains(want, true) || want.contains(it, true) }
+            if (app != null) {
+                turns = turns + Turn("user", question.trim()) + Turn("assistant", "Opening $app.")
+                suggestions = listOf(Suggested("Open $app", open = app))
+                prefs.saveChatHistory(turns.takeLast(12).map { it.role to it.text })
+                return
+            }
+        }
         val path = s.assistantModel
         if (path.isBlank() || !File(path).exists()) { status = "No model yet. Choose one in Settings, Assistant."; return }
         turns = turns + Turn("user", question.trim())
         draft = ""; suggestions = emptyList(); busy = true; stop = false
         scope.launch {
-            val result = withContext(worker) { run(path, s, facts) }
-            val (text, chips) = parse(result, s)
+            val result = withContext(worker) { run(path, s, facts, apps) }
+            val (text, chips) = parse(result, s, apps)
             turns = turns + Turn("assistant", text)
             suggestions = chips
+            prefs.saveChatHistory(turns.takeLast(12).map { it.role to it.text })
             draft = ""; busy = false
             idle?.cancel()
             idle = scope.launch { delay(s.assistantKeepMin * 60_000L); unload() }
@@ -104,7 +120,7 @@ class Assistant(private val scope: CoroutineScope) {
 
     fun cancel() { stop = true }
 
-    fun clear() { turns = emptyList(); suggestions = emptyList(); draft = "" }
+    fun clear() { turns = emptyList(); suggestions = emptyList(); draft = ""; prefs.saveChatHistory(emptyList()) }
 
     fun unload() {
         scope.launch { withContext(worker) { if (handle != 0L) { LlmNative.free(handle); handle = 0L; loadedPath = "" } }; loaded = false }
@@ -156,10 +172,10 @@ class Assistant(private val scope: CoroutineScope) {
         }
     }
 
-    private suspend fun run(path: String, s: LauncherSettings, facts: List<String>): String {
+    private suspend fun run(path: String, s: LauncherSettings, facts: List<String>, apps: List<String>): String {
         if (ensure(path, s) < 0) return ""
         val roles = ArrayList<String>(); val texts = ArrayList<String>()
-        roles += "system"; texts += system(s, facts)
+        roles += "system"; texts += system(s, facts, apps)
         turns.takeLast(8).forEach { roles += it.role; texts += it.text }
         val prompt = LlmNative.prompt(handle, roles.toTypedArray(), texts.toTypedArray())
         val bytes = ByteArrayOutputStream()
@@ -171,14 +187,24 @@ class Assistant(private val scope: CoroutineScope) {
                 return !stop
             }
         })
-        if (code == 1) withContext(Dispatchers.Main) { status = "That's too long for the model; try a shorter question." }
+        if (code == 1) withContext(Dispatchers.Main) { status = "That's too long for the model: raise Context in Advanced, or clear the chat." }
         if (code == 2) withContext(Dispatchers.Main) { status = "The model stumbled. Try again." }
         return String(bytes.toByteArray(), Charsets.UTF_8).trim()
     }
 
-    private fun system(s: LauncherSettings, facts: List<String>): String = buildString {
-        append("You are Stillpoint, a calm assistant inside an Android launcher. Answer briefly, in plain words, in the user's language. ")
+    private fun system(s: LauncherSettings, facts: List<String>, apps: List<String>): String = buildString {
+        val name = s.assistantName.ifBlank { "Stillpoint" }
+        append("You are $name, ")
+        append(s.assistantSoul.ifBlank { "a calm, warm assistant living inside the user's phone launcher. You are brief and plain, never gushing, and you care about the user's peace of mind and their prayers" }.trim().trimEnd('.'))
+        append(". Answer in the user's language. ")
         if (s.assistantNotes.isNotBlank()) append(s.assistantNotes.trim()).append(' ')
+        if (s.assistantMemory.isNotEmpty()) {
+            append("\nWhat you remember about the user:\n")
+            s.assistantMemory.takeLast(40).forEach { append("- ").append(it).append('\n') }
+        }
+        if (apps.isNotEmpty()) append("Apps on the phone: ").append(apps.take(60).joinToString(", ")).append('\n')
+        append("When the user tells you something worth keeping (a name, a preference, a plan, a habit), finish with one extra line: MEMORY: <the fact, short>.\n")
+        append("If the user asks to open an app, finish with: OPEN: <app name exactly as listed>.\n")
         append("Trust these facts over your own guesses; say so if something isn't in them.\n")
         append("Facts now:\n")
         facts.forEach { append("- ").append(it).append('\n') }
@@ -191,11 +217,17 @@ class Assistant(private val scope: CoroutineScope) {
     }
 
     /** Splits the answer from the RULE/FOCUS line and turns that into a chip. */
-    private fun parse(raw: String, s: LauncherSettings): Pair<String, List<Suggested>> {
+    private fun parse(raw: String, s: LauncherSettings, apps: List<String>): Pair<String, List<Suggested>> {
         val chips = ArrayList<Suggested>()
         val lines = raw.lines().filter { line ->
             val t = line.trim()
             when {
+                t.startsWith("MEMORY:") -> { t.removePrefix("MEMORY:").trim().takeIf { it.length in 3..160 }?.let { onMemory?.invoke(it) }; false }
+                t.startsWith("OPEN:") -> {
+                    val want = t.removePrefix("OPEN:").trim().trimEnd('.')
+                    (apps.firstOrNull { it.equals(want, true) } ?: apps.firstOrNull { it.contains(want, true) })?.let { chips += Suggested("Open $it", open = it) }
+                    false
+                }
                 t.startsWith("RULE:") -> { ruleFrom(t.removePrefix("RULE:"), s)?.let { chips += Suggested("Add rule: ${it.sentence(s)}", rule = it) }; false }
                 t.startsWith("FOCUS:") -> {
                     val name = t.removePrefix("FOCUS:").trim()

@@ -167,6 +167,10 @@ data class LauncherSettings(
     val assistantCtx: Int = 4096,
     val assistantMaxTokens: Int = 400,
     val assistantNotes: String = "",
+    /** Who it is (its name and character), and what it has learned about you. All on the phone. */
+    val assistantName: String = "Stillpoint",
+    val assistantSoul: String = "",
+    val assistantMemory: List<String> = emptyList(),
     /** Car mode: a driving screen with the GPS speed, one notification, a few apps and the assistant by voice. */
     val carOn: Boolean = false,
     val carBluetoothName: String = "",

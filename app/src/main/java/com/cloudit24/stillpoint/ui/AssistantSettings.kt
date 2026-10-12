@@ -66,6 +66,29 @@ fun AssistantSettings(vm: LauncherViewModel) {
         }
     }
 
+    if (s.assistantOn) Group(stringResource(R.string.a_soul)) {
+        var name by remember(s.assistantName) { mutableStateOf(s.assistantName) }
+        var soul by remember(s.assistantSoul) { mutableStateOf(s.assistantSoul) }
+        androidx.compose.material3.OutlinedTextField(name, { name = it }, modifier = Modifier.fillMaxWidth(), singleLine = true,
+            label = { Text(stringResource(R.string.a_name)) })
+        androidx.compose.material3.OutlinedTextField(soul, { soul = it }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp), minLines = 3,
+            label = { Text(stringResource(R.string.a_character)) }, placeholder = { Text(stringResource(R.string.a_character_hint)) })
+        if (name != s.assistantName || soul != s.assistantSoul) ActionRow(stringResource(R.string.s_save)) {
+            vm.updateSettings { it.copy(assistantName = name.ifBlank { "Stillpoint" }, assistantSoul = soul) }
+        }
+        Note(stringResource(R.string.a_soul_note))
+    }
+
+    if (s.assistantOn) Group(stringResource(R.string.a_memory)) {
+        if (s.assistantMemory.isEmpty()) Note(stringResource(R.string.a_memory_empty))
+        s.assistantMemory.asReversed().forEach { m ->
+            ActionRow(m, stringResource(R.string.a_tap_to_forget)) { vm.updateSettings { it.copy(assistantMemory = it.assistantMemory - m) } }
+        }
+        if (s.assistantMemory.isNotEmpty()) ActionRow(stringResource(R.string.a_forget_all)) { vm.updateSettings { it.copy(assistantMemory = emptyList()) } }
+        ActionRow(stringResource(R.string.a_clear_chat), stringResource(R.string.a_clear_chat_sum)) { vm.assistant.clear() }
+        Note(stringResource(R.string.a_memory_note))
+    }
+
     if (s.assistantOn) Group(stringResource(R.string.a_advanced)) {
         val cores = Runtime.getRuntime().availableProcessors()
         Stepper(stringResource(R.string.a_threads), if (s.assistantThreads == 0) stringResource(R.string.a_auto) else "${s.assistantThreads}",

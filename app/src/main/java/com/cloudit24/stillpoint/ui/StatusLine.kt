@@ -299,7 +299,7 @@ private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modi
                     (slideOutVertically(tween(260)) { -it / 3 } + fadeOut(tween(200)))
             },
             label = "feed",
-            modifier = if (fill) Modifier.weight(1f, fill = false) else Modifier,
+            modifier = if (fill) Modifier.weight(1f) else Modifier,
         ) { st ->
             Column(Modifier.padding(top = 8.dp)) {
                 val m = msgs[st % n]
@@ -320,7 +320,7 @@ private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modi
                     for (k in older downTo 1) {
                         val o = if (st - k >= 0 && n > k) msgs[(st - k) % n] else null
                         if (labels) Text(o?.let { topicOf(it.rank) } ?: " ", color = ph.base.copy(alpha = 0.35f), fontSize = 9.5.sp, letterSpacing = 2.sp, fontFamily = mono)
-                        TermLine(if (o == null) " " else (if (labels || big) "" else "> ") + o.text, if (big) Muted else ph.dim, o?.onTap)
+                        TermLine(if (o == null) " " else (if (labels || big) "" else "> ") + o.text, if (big) Muted else ph.dim, o?.onTap, if (big) 13.sp else 15.sp)
                     }
                 }
                 if (big) { live(); androidx.compose.foundation.layout.Spacer(Modifier.height(8.dp)); olds() } else { olds(); live() }
@@ -331,7 +331,6 @@ private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modi
     @Composable
     fun androidx.compose.foundation.layout.ColumnScope.Footer(left: @Composable () -> Unit) {
         if (footer == null) return
-        if (fill) androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
         Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.graphicsLayer { alpha = if (low && motion) lowBlink else 1f }) { left() }
             Text(footer.mid, color = ph.dim, fontSize = 10.sp, letterSpacing = 1.5.sp, fontFamily = mono, maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -694,8 +693,8 @@ private fun Drone(m: CatMood, motion: Boolean, typing: Boolean, onTap: () -> Uni
 }
 
 @Composable
-private fun TermLine(text: String, color: Color, onTap: (() -> Unit)?) {
-    Text(text, color = color, fontSize = 15.sp, fontFamily = FontFamily.Monospace, maxLines = 1, overflow = TextOverflow.Ellipsis,
+private fun TermLine(text: String, color: Color, onTap: (() -> Unit)?, size: androidx.compose.ui.unit.TextUnit = 15.sp) {
+    Text(text, color = color, fontSize = size, fontFamily = FontFamily.Monospace, maxLines = 1, overflow = TextOverflow.Ellipsis,
         modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp).then(onTap?.let { Modifier.clickable(onClick = it) } ?: Modifier))
 }
 

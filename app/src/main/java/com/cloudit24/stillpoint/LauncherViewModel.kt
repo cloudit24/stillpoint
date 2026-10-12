@@ -137,7 +137,11 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         private set
     var settings by mutableStateOf(prefs.loadSettings())
         private set
-    val assistant = com.cloudit24.stillpoint.llm.Assistant(viewModelScope)
+    val assistant = com.cloudit24.stillpoint.llm.Assistant(viewModelScope, prefs).also { a ->
+        a.onMemory = { fact -> updateSettings { s -> s.copy(assistantMemory = (s.assistantMemory.filter { !it.equals(fact, true) } + fact).takeLast(60)) } }
+    }
+    /** The app names the assistant may open: everything not hidden, by name. */
+    fun assistantApps(): List<String> = apps.filter { it.key !in settings.hidden }.map { it.label }.distinct()
     var assistOpen by mutableStateOf(false)
     /** The car's Bluetooth is connected right now. */
     var carConnected by mutableStateOf(false)

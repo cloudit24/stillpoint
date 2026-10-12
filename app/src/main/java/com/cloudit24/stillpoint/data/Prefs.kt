@@ -44,6 +44,9 @@ class Prefs(context: Context) {
             assistantCtx = sp.getInt("assistant_ctx", d.assistantCtx),
             assistantMaxTokens = sp.getInt("assistant_max", d.assistantMaxTokens),
             assistantNotes = sp.getString("assistant_notes", "") ?: "",
+            assistantName = sp.getString("assistant_name", d.assistantName) ?: d.assistantName,
+            assistantSoul = sp.getString("assistant_soul", "") ?: "",
+            assistantMemory = (sp.getString("assistant_memory", "") ?: "").split("\n").filter { it.isNotBlank() },
             carOn = sp.getBoolean("car_on", false),
             carBluetoothName = sp.getString("car_bt_name", "") ?: "",
             carBluetoothAddr = sp.getString("car_bt_addr", "") ?: "",
@@ -197,6 +200,9 @@ class Prefs(context: Context) {
             .putInt("assistant_ctx", s.assistantCtx)
             .putInt("assistant_max", s.assistantMaxTokens)
             .putString("assistant_notes", s.assistantNotes)
+            .putString("assistant_name", s.assistantName)
+            .putString("assistant_soul", s.assistantSoul)
+            .putString("assistant_memory", s.assistantMemory.joinToString("\n"))
             .putBoolean("car_on", s.carOn)
             .putString("car_bt_name", s.carBluetoothName)
             .putString("car_bt_addr", s.carBluetoothAddr)
@@ -580,6 +586,14 @@ class Prefs(context: Context) {
     private fun readRules(raw: String?): List<Rule> = raw?.let {
         runCatching { val a = JSONArray(it); (0 until a.length()).mapNotNull { i -> Rule.fromJson(a.getJSONObject(i)) } }.getOrNull()
     } ?: emptyList()
+
+    /** The last few turns of the assistant's conversation, so it picks up where you left off. role -> text. */
+    fun chatHistory(): List<Pair<String, String>> = runCatching {
+        val a = JSONArray(sp.getString("assistant_chat", "[]")!!)
+        (0 until a.length()).map { i -> a.getJSONObject(i).let { it.getString("r") to it.getString("t") } }
+    }.getOrDefault(emptyList())
+    fun saveChatHistory(turns: List<Pair<String, String>>) =
+        sp.edit().putString("assistant_chat", JSONArray().also { a -> turns.forEach { (r, t) -> a.put(JSONObject().put("r", r).put("t", t)) } }.toString()).apply()
 
     /** The system download running for a model, if any. */
     fun downloadId(model: String): Long = sp.getLong("dl_$model", 0L)
