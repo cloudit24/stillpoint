@@ -13,6 +13,7 @@ The newest is always at **[Download the latest APK](https://github.com/cloudit24
 - The terminal display can take the whole space under the headline, showing as many lines as fit, instead of the cards and the network strip. On by default; Settings, Home, Terminal display turns it off and brings the cards back.
 - The terminal display is now a CRT: amber phosphor on curved dark glass, faint scanlines, a soft glow on the letters (Cyberpunk keeps its own colour). No clock or network in it, the status bar has those; the footer has the battery as blocks, blinking under 20%, and the focus or the next prayer. ASK_ opens the assistant.
 - Car mode is hands-free: after the assistant speaks an answer it listens again for a follow-up.
+- Settings, Productivity tiles wrap into rows of four, so their names aren't cut.
 - Settings, Assistant says what this phone can carry (memory, cores) and marks the suggested model; each downloaded model has Test on this phone, which times a short answer: words per second, load time, and whether it's smooth.
 
 ## v0.47.2 · 11 Oct 2026

@@ -294,6 +294,7 @@ private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modi
                     (slideOutVertically(tween(260)) { -it / 3 } + fadeOut(tween(200)))
             },
             label = "feed",
+            modifier = if (fill) Modifier.weight(1f, fill = false) else Modifier,
         ) { st ->
             Column(Modifier.padding(top = 10.dp)) {
                 // Older lines above, kept even when empty so the window never changes height.
@@ -305,7 +306,7 @@ private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modi
                 val text = if (st == step) m.text.take(typed) else m.text
                 Row(verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.then(m.onTap?.let { Modifier.clickable(onClick = it) } ?: Modifier)) {
-                    Text("> $text", color = phHi, fontSize = 15.sp, fontFamily = FontFamily.Monospace, style = glow,
+                    Text("> $text", color = phHi, fontSize = 15.sp, lineHeight = 22.sp, fontFamily = FontFamily.Monospace, style = glow,
                         maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                     Box(Modifier.padding(start = 3.dp).size(8.dp, 17.dp)
                         .graphicsLayer { alpha = if (motion) cursor else 1f }.background(phBright))

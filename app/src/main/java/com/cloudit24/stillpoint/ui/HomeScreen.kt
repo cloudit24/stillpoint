@@ -268,7 +268,9 @@ fun HomeScreen(vm: LauncherViewModel) {
         if (fullTerminal) {
             // The terminal display takes the whole zone: as many lines as fit, no cards, no strip.
             androidx.compose.foundation.layout.BoxWithConstraints(Modifier.weight(1f).padding(top = 22.dp, bottom = 14.dp)) {
-                val older = ((maxHeight - 96.dp) / 29.dp).toInt().coerceIn(2, 9)
+                // Header, footer, padding and the live line take ~130 dp; each older line ~24 sp of text plus 6 dp.
+                val fontScale = androidx.compose.ui.platform.LocalDensity.current.fontScale
+                val older = ((maxHeight - 130.dp) / (18.dp * fontScale + 6.dp)).toInt().coerceIn(2, 9)
                 StatusLine(vm, s, now, Modifier.fillMaxSize(), older = older, fill = true)
             }
         } else {

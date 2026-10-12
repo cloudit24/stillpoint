@@ -1085,6 +1085,11 @@ private fun MenuRow(icon: ImageVector, title: String, summary: String, onClick: 
 /** A row of pages side by side: icon above the name. */
 @Composable
 private fun TileRow(pages: List<SettingsPage>, onClick: (SettingsPage) -> Unit) {
+    pages.chunked(4).forEach { row -> TileRowOnce(row, 4, onClick) }
+}
+
+@Composable
+private fun TileRowOnce(pages: List<SettingsPage>, slots: Int, onClick: (SettingsPage) -> Unit) {
     val accent = Accent
     Row(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
         pages.forEach { p ->
@@ -1095,9 +1100,10 @@ private fun TileRow(pages: List<SettingsPage>, onClick: (SettingsPage) -> Unit) 
                 Box(Modifier.size(44.dp).clip(CircleShape).background(accent.copy(alpha = 0.16f)), contentAlignment = Alignment.Center) {
                     Icon(p.icon, contentDescription = null, tint = accent, modifier = Modifier.size(22.dp))
                 }
-                Text(stringResource(p.title), fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
+                Text(stringResource(p.title), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
             }
         }
+        repeat(slots - pages.size) { androidx.compose.foundation.layout.Spacer(Modifier.weight(1f)) }
     }
 }
 
