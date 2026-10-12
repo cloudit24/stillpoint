@@ -21,6 +21,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
@@ -32,7 +33,10 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.lerp
@@ -116,19 +120,44 @@ fun GlassTabs(
     val w by animateDpAsState(cur?.second ?: 0.dp, spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow), label = "pillW")
     val scroll = rememberScrollState()
     val pillTint = lerp(Color.White, LocalAccent.current, 0.55f)
-    Box(modifier.glassPill(GlassLevel.SOFT).then(if (scrollable) Modifier.horizontalScroll(scroll) else Modifier).padding(3.dp)) {
+    // When the tabs are wider than the track, the chosen one is brought into view and the far edge fades.
+    LaunchedEffect(selected, cur, scroll.viewportSize) {
+        val c = cur ?: return@LaunchedEffect
+        val view = scroll.viewportSize
+        if (view <= 0 || scroll.maxValue == 0) return@LaunchedEffect
+        val left = with(density) { c.first.toPx() }
+        val right = with(density) { (c.first + c.second).toPx() }
+        val margin = with(density) { 20.dp.toPx() }
+        val target = when {
+            left - margin < scroll.value -> left - margin
+            right + margin > scroll.value + view -> right + margin - view
+            else -> return@LaunchedEffect
+        }
+        scroll.animateScrollTo(target.toInt().coerceIn(0, scroll.maxValue))
+    }
+    val fade = Modifier.graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }.drawWithContent {
+        drawContent()
+        val edge = 26.dp.toPx()
+        if (scroll.value < scroll.maxValue) drawRect(
+            Brush.horizontalGradient(listOf(Color.Black, Color.Transparent), startX = size.width - edge, endX = size.width),
+            blendMode = BlendMode.DstIn)
+        if (scroll.value > 0) drawRect(
+            Brush.horizontalGradient(listOf(Color.Transparent, Color.Black), startX = 0f, endX = edge),
+            blendMode = BlendMode.DstIn)
+    }
+    Box(modifier.glassPill(GlassLevel.SOFT).then(if (scrollable) fade.horizontalScroll(scroll) else Modifier).padding(3.dp)) {
         if (cur != null) Box(Modifier.matchParentSize().offset(x = x).width(w).glass(RoundedCornerShape(50), GlassLevel.RAISED, pillTint))
         Row(verticalAlignment = Alignment.CenterVertically) {
             labels.forEachIndexed { i, label ->
                 val on = i == selected
                 val color by animateColorAsState(if (on) Color.White else Muted, label = "tabColor")
-                Text(label, color = color, fontSize = 15.sp, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal, maxLines = 1,
+                Text(label, color = color, fontSize = 14.sp, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal, maxLines = 1,
                     modifier = Modifier
                         .onGloballyPositioned { c -> with(density) { pos[i] = c.positionInParent().x.toDp() to c.size.width.toDp() } }
                         .clip(RoundedCornerShape(50))
                         .combinedClickable(interactionSource = remember { MutableInteractionSource() }, indication = null,
                             onClick = { onSelect(i) }, onLongClick = onLongPress?.let { { it(i) } })
-                        .padding(horizontal = 16.dp, vertical = 9.dp))
+                        .padding(horizontal = 13.dp, vertical = 9.dp))
             }
             trailing()
         }

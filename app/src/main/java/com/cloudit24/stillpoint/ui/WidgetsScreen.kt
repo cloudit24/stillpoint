@@ -16,6 +16,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.composed
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.round
@@ -288,7 +289,7 @@ private fun WidgetItem(vm: LauncherViewModel, id: Int, editing: Boolean, areaW: 
     Column(Modifier.width(w).padding(vertical = 6.dp)) {
         if (editing || info == null) {
             Text(label, color = Muted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(start = 4.dp, bottom = 4.dp))
+                modifier = Modifier.padding(start = 4.dp, bottom = 4.dp).graphicsLayer { alpha = if (drag.id == id) 0f else 1f })
         }
         if (info == null || natural == null) {
             Text(stringResource(R.string.s_remove), color = Accent, fontSize = 13.sp, modifier = Modifier.clickable { vm.removeWidget(id) }.padding(6.dp))
@@ -349,7 +350,7 @@ private fun WidgetItem(vm: LauncherViewModel, id: Int, editing: Boolean, areaW: 
                 }
             }
         }
-        if (editing) {
+        if (editing) Column(Modifier.graphicsLayer { alpha = if (drag.id == id) 0f else 1f }) {
             Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("−", fontSize = 20.sp, modifier = Modifier.clip(CircleShape)
                     .clickable { vm.setWidgetSize(id, (heightDp - 20).coerceAtLeast(natural.minHeight), widthSetting) }
@@ -413,7 +414,7 @@ private fun BuiltInItem(vm: LauncherViewModel, id: Int, editing: Boolean, areaW:
                 EditOverlay(id, drag, vm) { confirmRemove = true }
             }
         }
-        if (editing) {
+        if (editing) Column(Modifier.graphicsLayer { alpha = if (drag.id == id) 0f else 1f }) {
             Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 if (kind.canHalf) LookChip(if (isHalf) "Half" else "Full") { vm.setWidgetSize(id, 0, if (isHalf) 0 else 1) }
                 LookChip(listOf("Plain", "Glass", "Glow")[look.style]) { vm.setWidgetLook(id, look.copy(style = (look.style + 1) % 3)) }
@@ -511,48 +512,49 @@ private fun ShelfTabs(vm: LauncherViewModel, modifier: Modifier) {
     }
 }
 
-private class Glide {
-    var anim: Animatable<IntOffset, AnimationVector2D>? = null
-    var released: IntOffset? = null
-}
-
 /**
  * Cards glide to a new place instead of jumping there; the one being dragged follows the finger.
- * Where a card should be is read while it is placed, in the same pass, so it never shows at
- * the new spot for one frame first (that was the flicker).
+ * The slot is read in [onPlaced] and the offset is applied in the same layout pass, so a card never
+ * shows at its new slot for one frame first.
  */
 private fun Modifier.shelfPlacement(moving: Boolean, drag: ShelfDrag): Modifier = composed {
     val scope = rememberCoroutineScope()
-    val g = remember { Glide() }
-    layout { measurable, constraints ->
-        val p = measurable.measure(constraints)
-        layout(p.width, p.height) {
-            val c = coordinates
-            val target = c?.positionInParent()?.round() ?: IntOffset.Zero
-            val a = g.anim ?: Animatable(target, IntOffset.VectorConverter).also { g.anim = it }
-            val from = g.released
+    var slot by remember { mutableStateOf<IntOffset?>(null) }   // where the slot is, inside the shelf
+    var onScreen by remember { mutableStateOf(Offset.Zero) }     // the slot, on screen
+    val anim = remember { Animatable(IntOffset.Zero, IntOffset.VectorConverter) }   // the visual offset from the slot
+    val mem = remember { object { var seen: IntOffset? = null; var held = IntOffset.Zero } }
+    fun glide(from: IntOffset) = scope.launch {
+        anim.snapTo(from)
+        anim.animateTo(IntOffset.Zero, spring(stiffness = Spring.StiffnessMediumLow))
+    }
+    this
+        .onPlaced { slot = it.positionInParent().round(); onScreen = it.positionInRoot() }
+        .offset {
+            val here = slot ?: IntOffset.Zero
+            val seen = mem.seen
+            mem.seen = here
             when {
-                moving && c != null -> {
-                    val off = (drag.finger - drag.grab - c.positionInRoot()).round()
-                    g.released = target + off
-                    p.place(off)
+                moving -> {
+                    // Under the finger. Remember where, for the glide back when it is let go.
+                    mem.held = (drag.finger - drag.grab - onScreen).round()
+                    mem.held
                 }
-                from != null -> {
-                    // Let go: glide from under the finger into its slot.
-                    g.released = null
-                    scope.launch {
-                        a.snapTo(from)
-                        a.animateTo(target, spring(stiffness = Spring.StiffnessMediumLow))
-                    }
-                    p.place(from - target)
+                mem.held != IntOffset.Zero -> {
+                    // Let go: glide from under the finger into the slot.
+                    val from = mem.held
+                    mem.held = IntOffset.Zero
+                    glide(from)
+                    from
                 }
-                else -> {
-                    if (a.targetValue != target) scope.launch { a.animateTo(target, spring(stiffness = Spring.StiffnessMediumLow)) }
-                    p.place(a.value - target)
+                seen != null && seen != here -> {
+                    // The slot moved (another card took this one's place): start where it was and glide over.
+                    val from = anim.value + (seen - here)
+                    glide(from)
+                    from
                 }
+                else -> anim.value
             }
         }
-    }
 }
 
 /** Widgets settle into place when the page opens: a short fade and rise, one after another. Nothing more. */
