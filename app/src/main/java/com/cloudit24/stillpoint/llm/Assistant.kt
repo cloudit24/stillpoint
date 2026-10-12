@@ -26,6 +26,7 @@ object LlmNative {
     external fun free(handle: Long)
     external fun prompt(handle: Long, roles: Array<String>, texts: Array<String>): String
     external fun generate(handle: Long, prompt: String, maxTokens: Int, sink: Sink): Int
+    external fun sampling(handle: Long, temp: Float)
 
     /** Gets each piece of text as raw UTF-8 bytes; return false to stop. */
     interface Sink { fun onToken(bytes: ByteArray): Boolean }
@@ -110,15 +111,19 @@ class Assistant(private val scope: CoroutineScope) {
     }
 
     /** Loads [path] if it isn't the loaded model. Returns the load time in ms, or -1 when it failed. */
-    private suspend fun ensure(path: String): Long {
-        if (handle != 0L && loadedPath == path) return 0L
+    private var loadedKey = ""   // path + threads + context: a change means a reload
+
+    private suspend fun ensure(path: String, s: LauncherSettings): Long {
+        val threads = s.assistantThreads.takeIf { it > 0 } ?: Runtime.getRuntime().availableProcessors().coerceIn(2, 6)
+        val key = "$path|$threads|${s.assistantCtx}"
+        if (handle != 0L && loadedKey == key) { LlmNative.sampling(handle, s.assistantTemp / 10f); return 0L }
         if (handle != 0L) { LlmNative.free(handle); handle = 0L }
         withContext(Dispatchers.Main) { status = "Loading the model…" }
-        val threads = Runtime.getRuntime().availableProcessors().coerceIn(2, 6)
         val t0 = System.currentTimeMillis()
-        handle = runCatching { LlmNative.load(path, threads, 4096) }.getOrDefault(0L)
+        handle = runCatching { LlmNative.load(path, threads, s.assistantCtx) }.getOrDefault(0L)
         if (handle == 0L) { withContext(Dispatchers.Main) { status = "Couldn't load that model file." }; return -1L }
-        loadedPath = path
+        loadedPath = path; loadedKey = key
+        LlmNative.sampling(handle, s.assistantTemp / 10f)
         withContext(Dispatchers.Main) { status = ""; loaded = true }
         return System.currentTimeMillis() - t0
     }
@@ -127,13 +132,13 @@ class Assistant(private val scope: CoroutineScope) {
     var bench by mutableStateOf(mapOf<String, String>())
 
     /** Times the model on this phone: load, then 48 tokens of a fixed question. */
-    fun test(path: String) {
+    fun test(path: String, s: LauncherSettings) {
         if (busy || !File(path).exists()) return
         busy = true; stop = false
         scope.launch {
             val result = withContext(worker) {
                 if (handle != 0L) { LlmNative.free(handle); handle = 0L }   // measure a cold load
-                val loadMs = ensure(path)
+                val loadMs = ensure(path, s)
                 if (loadMs < 0) return@withContext "couldn't load"
                 val prompt = LlmNative.prompt(handle, arrayOf("user"), arrayOf("Count from one to thirty in words."))
                 var tokens = 0
@@ -152,13 +157,13 @@ class Assistant(private val scope: CoroutineScope) {
     }
 
     private suspend fun run(path: String, s: LauncherSettings, facts: List<String>): String {
-        if (ensure(path) < 0) return ""
+        if (ensure(path, s) < 0) return ""
         val roles = ArrayList<String>(); val texts = ArrayList<String>()
         roles += "system"; texts += system(s, facts)
         turns.takeLast(8).forEach { roles += it.role; texts += it.text }
         val prompt = LlmNative.prompt(handle, roles.toTypedArray(), texts.toTypedArray())
         val bytes = ByteArrayOutputStream()
-        val code = LlmNative.generate(handle, prompt, 400, object : LlmNative.Sink {
+        val code = LlmNative.generate(handle, prompt, s.assistantMaxTokens, object : LlmNative.Sink {
             override fun onToken(b: ByteArray): Boolean {
                 bytes.write(b)
                 val soFar = String(bytes.toByteArray(), Charsets.UTF_8)
@@ -173,6 +178,7 @@ class Assistant(private val scope: CoroutineScope) {
 
     private fun system(s: LauncherSettings, facts: List<String>): String = buildString {
         append("You are Stillpoint, a calm assistant inside an Android launcher. Answer briefly, in plain words, in the user's language. ")
+        if (s.assistantNotes.isNotBlank()) append(s.assistantNotes.trim()).append(' ')
         append("Trust these facts over your own guesses; say so if something isn't in them.\n")
         append("Facts now:\n")
         facts.forEach { append("- ").append(it).append('\n') }

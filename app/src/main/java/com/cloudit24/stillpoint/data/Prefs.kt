@@ -39,6 +39,11 @@ class Prefs(context: Context) {
             assistantOn = sp.getBoolean("assistant_on", false),
             assistantModel = sp.getString("assistant_model", "") ?: "",
             assistantKeepMin = sp.getInt("assistant_keep", d.assistantKeepMin),
+            assistantThreads = sp.getInt("assistant_threads", 0),
+            assistantTemp = sp.getInt("assistant_temp", d.assistantTemp),
+            assistantCtx = sp.getInt("assistant_ctx", d.assistantCtx),
+            assistantMaxTokens = sp.getInt("assistant_max", d.assistantMaxTokens),
+            assistantNotes = sp.getString("assistant_notes", "") ?: "",
             carOn = sp.getBoolean("car_on", false),
             carBluetoothName = sp.getString("car_bt_name", "") ?: "",
             carBluetoothAddr = sp.getString("car_bt_addr", "") ?: "",
@@ -187,6 +192,11 @@ class Prefs(context: Context) {
             .putBoolean("assistant_on", s.assistantOn)
             .putString("assistant_model", s.assistantModel)
             .putInt("assistant_keep", s.assistantKeepMin)
+            .putInt("assistant_threads", s.assistantThreads)
+            .putInt("assistant_temp", s.assistantTemp)
+            .putInt("assistant_ctx", s.assistantCtx)
+            .putInt("assistant_max", s.assistantMaxTokens)
+            .putString("assistant_notes", s.assistantNotes)
             .putBoolean("car_on", s.carOn)
             .putString("car_bt_name", s.carBluetoothName)
             .putString("car_bt_addr", s.carBluetoothAddr)

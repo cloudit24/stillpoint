@@ -388,6 +388,15 @@
     <string name="a_model">Model</string>
     <string name="a_in_use">In use</string>
     <string name="a_test">Test on this phone</string>
+    <string name="a_advanced">Advanced</string>
+    <string name="a_threads">Threads</string>
+    <string name="a_auto">auto</string>
+    <string name="a_temp">Temperature</string>
+    <string name="a_ctx">Context (tokens)</string>
+    <string name="a_max">Longest answer (tokens)</string>
+    <string name="a_notes">Extra instructions</string>
+    <string name="a_notes_hint">e.g. Answer in Tamil. Call me Anas.</string>
+    <string name="a_advanced_note">Threads: more is faster until the phone warms up; auto picks a safe number. Temperature: 0 is the same answer every time, 1 is creative. Context: how much the model can hold in mind at once; more memory. Longest answer: a cap, not a target.</string>
     <string name="a_test_sum">Loads it and times a short answer</string>
     <string name="a_testing">Testing…</string>
     <string name="a_downloaded">Downloaded · tap to use</string>

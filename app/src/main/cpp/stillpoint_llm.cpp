@@ -23,6 +23,19 @@ std::string jstr(JNIEnv * env, jstring s) {
 
 void quiet(ggml_log_level, const char *, void *) {}
 
+llama_sampler * sampler(float temp) {
+    auto sp = llama_sampler_chain_default_params();
+    sp.no_perf = true;
+    llama_sampler * smpl = llama_sampler_chain_init(sp);
+    llama_sampler_chain_add(smpl, llama_sampler_init_min_p(0.05f, 1));
+    if (temp <= 0.05f) llama_sampler_chain_add(smpl, llama_sampler_init_greedy());
+    else {
+        llama_sampler_chain_add(smpl, llama_sampler_init_temp(temp));
+        llama_sampler_chain_add(smpl, llama_sampler_init_dist(LLAMA_DEFAULT_SEED));
+    }
+    return smpl;
+}
+
 } // namespace
 
 extern "C" {
@@ -47,14 +60,16 @@ Java_com_cloudit24_stillpoint_llm_LlmNative_load(JNIEnv * env, jclass, jstring j
     llama_context * ctx = llama_init_from_model(model, cp);
     if (!ctx) { llama_model_free(model); return 0; }
 
-    auto sp = llama_sampler_chain_default_params();
-    sp.no_perf = true;
-    llama_sampler * smpl = llama_sampler_chain_init(sp);
-    llama_sampler_chain_add(smpl, llama_sampler_init_min_p(0.05f, 1));
-    llama_sampler_chain_add(smpl, llama_sampler_init_temp(0.6f));
-    llama_sampler_chain_add(smpl, llama_sampler_init_dist(LLAMA_DEFAULT_SEED));
+    return (jlong) new Llm{model, ctx, llama_model_get_vocab(model), sampler(0.6f)};
+}
 
-    return (jlong) new Llm{model, ctx, llama_model_get_vocab(model), smpl};
+/** How the next word is picked: a little randomness ([temp]), never the long tail (min-p). */
+JNIEXPORT void JNICALL
+Java_com_cloudit24_stillpoint_llm_LlmNative_sampling(JNIEnv *, jclass, jlong handle, jfloat temp) {
+    auto * llm = (Llm *) handle;
+    if (!llm) return;
+    llama_sampler_free(llm->smpl);
+    llm->smpl = sampler(temp);
 }
 
 JNIEXPORT void JNICALL
@@ -114,9 +129,10 @@ Java_com_cloudit24_stillpoint_llm_LlmNative_generate(JNIEnv * env, jclass, jlong
     llama_memory_clear(llama_get_memory(llm->ctx), true);
     llama_batch batch = llama_batch_get_one(tokens.data(), n_prompt);
     char piece[512];
+    llama_token tok = 0;   // outlives each step: the next decode reads it through the batch
     for (int i = 0; i < maxTokens; i++) {
         if (llama_decode(llm->ctx, batch) != 0) return 2;
-        llama_token tok = llama_sampler_sample(llm->smpl, llm->ctx, -1);
+        tok = llama_sampler_sample(llm->smpl, llm->ctx, -1);
         if (llama_vocab_is_eog(llm->vocab, tok)) break;
         const int len = llama_token_to_piece(llm->vocab, tok, piece, sizeof(piece), 0, true);
         if (len > 0) {

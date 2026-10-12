@@ -14,6 +14,7 @@ The newest is always at **[Download the latest APK](https://github.com/cloudit24
 - The terminal display has four looks (Settings, Home, Terminal display, Look): CRT (amber phosphor on curved glass, scanlines, a soft glow), HUD (corner brackets, chips, a slow light sweep), Quiet glass (no box, the newest line big, a thin bar for the prayer span) and Data rail (a numbered rail with a topic label per line). And six colours: amber, your accent, electric cyan, acid yellow, Matrix green, magenta. No clock or network in it, the status bar has those; the footer has the battery (blinking under 20%), the focus or the next prayer, and ASK_ for the assistant.
 - Car mode is hands-free: after the assistant speaks an answer it listens again for a follow-up.
 - Settings, Productivity tiles wrap into rows of four, so their names aren't cut.
+- Settings, Assistant, Advanced: threads, temperature, context size, longest answer, and extra instructions in your words ("Answer in Tamil").
 - Settings, Assistant says what this phone can carry (memory, cores) and marks the suggested model; each downloaded model has Test on this phone, which times a short answer: words per second, load time, and whether it's smooth.
 
 ## v0.47.2 · 11 Oct 2026

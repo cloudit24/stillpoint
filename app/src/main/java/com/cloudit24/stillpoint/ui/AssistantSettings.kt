@@ -20,6 +20,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.ui.unit.sp
 import com.cloudit24.stillpoint.LauncherViewModel
 import com.cloudit24.stillpoint.R
@@ -63,6 +64,27 @@ fun AssistantSettings(vm: LauncherViewModel) {
                 onMinus = { vm.updateSettings { it.copy(assistantKeepMin = (it.assistantKeepMin - 5).coerceAtLeast(1)) } },
                 onPlus = { vm.updateSettings { it.copy(assistantKeepMin = (it.assistantKeepMin + 5).coerceAtMost(60)) } })
         }
+    }
+
+    if (s.assistantOn) Group(stringResource(R.string.a_advanced)) {
+        val cores = Runtime.getRuntime().availableProcessors()
+        Stepper(stringResource(R.string.a_threads), if (s.assistantThreads == 0) stringResource(R.string.a_auto) else "${s.assistantThreads}",
+            onMinus = { vm.updateSettings { it.copy(assistantThreads = (it.assistantThreads - 1).coerceAtLeast(0)) } },
+            onPlus = { vm.updateSettings { it.copy(assistantThreads = (if (it.assistantThreads == 0) 2 else it.assistantThreads + 1).coerceAtMost(cores)) } })
+        Stepper(stringResource(R.string.a_temp), "%.1f".format(s.assistantTemp / 10f),
+            onMinus = { vm.updateSettings { it.copy(assistantTemp = (it.assistantTemp - 1).coerceAtLeast(0)) } },
+            onPlus = { vm.updateSettings { it.copy(assistantTemp = (it.assistantTemp + 1).coerceAtMost(12)) } })
+        Stepper(stringResource(R.string.a_ctx), "${s.assistantCtx}",
+            onMinus = { vm.updateSettings { it.copy(assistantCtx = (it.assistantCtx / 2).coerceAtLeast(1024)) } },
+            onPlus = { vm.updateSettings { it.copy(assistantCtx = (it.assistantCtx * 2).coerceAtMost(16384)) } })
+        Stepper(stringResource(R.string.a_max), "${s.assistantMaxTokens}",
+            onMinus = { vm.updateSettings { it.copy(assistantMaxTokens = (it.assistantMaxTokens - 100).coerceAtLeast(100)) } },
+            onPlus = { vm.updateSettings { it.copy(assistantMaxTokens = (it.assistantMaxTokens + 100).coerceAtMost(1500)) } })
+        var notes by remember(s.assistantNotes) { mutableStateOf(s.assistantNotes) }
+        androidx.compose.material3.OutlinedTextField(notes, { notes = it }, modifier = Modifier.fillMaxWidth().padding(top = 6.dp), minLines = 2,
+            label = { Text(stringResource(R.string.a_notes)) }, placeholder = { Text(stringResource(R.string.a_notes_hint)) })
+        if (notes != s.assistantNotes) ActionRow(stringResource(R.string.s_save)) { vm.updateSettings { it.copy(assistantNotes = notes) } }
+        Note(stringResource(R.string.a_advanced_note))
     }
 
     Group(stringResource(R.string.a_model)) {
@@ -109,7 +131,7 @@ private fun TestRow(vm: LauncherViewModel, path: String) {
     val a = vm.assistant
     val r = a.bench[path]
     ActionRow("    " + stringResource(R.string.a_test), r ?: if (a.busy) stringResource(R.string.a_testing) else stringResource(R.string.a_test_sum)) {
-        if (!a.busy) a.test(path)
+        if (!a.busy) a.test(path, vm.settings)
     }
 }
 

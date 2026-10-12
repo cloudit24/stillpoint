@@ -161,6 +161,12 @@ data class LauncherSettings(
     val assistantOn: Boolean = false,
     val assistantModel: String = "",
     val assistantKeepMin: Int = 10,
+    /** Advanced: 0 threads = pick for this phone; temperature in tenths; context in tokens; extra instructions in your words. */
+    val assistantThreads: Int = 0,
+    val assistantTemp: Int = 6,
+    val assistantCtx: Int = 4096,
+    val assistantMaxTokens: Int = 400,
+    val assistantNotes: String = "",
     /** Car mode: a driving screen with the GPS speed, one notification, a few apps and the assistant by voice. */
     val carOn: Boolean = false,
     val carBluetoothName: String = "",
