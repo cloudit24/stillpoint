@@ -208,8 +208,8 @@ data class LauncherSettings(
     val malayalamOn: Boolean = false,
     // Lock screen notification (off by default). Gold is never shown there.
     val lockOn: Boolean = false,
-    val lockPrayer: Boolean = true,
-    val lockHijri: Boolean = true,
+    val lockPrayer: Boolean = false,
+    val lockHijri: Boolean = false,
     val lockTamil: Boolean = false,
     // Prayer alerts, iqama minutes after each adhan, edge light and compass vibration.
     val adhanAlert: Boolean = false,
@@ -241,7 +241,7 @@ data class LauncherSettings(
     val infoPanels: Set<InfoPanel> = setOf(InfoPanel.PRAYER),
     /** Cities for the world clock card, "Label|Zone", up to three. */
     val worldClocks: List<String> = emptyList(),
-    val dialMode: DialMode = DialMode.PRAYER,
+    val dialMode: DialMode = DialMode.DAY,
     val compassHaptics: Boolean = true,
     /** Tools (device, security and text, network): off until turned on in Extras. */
     val toolsOn: Boolean = false,
@@ -371,7 +371,6 @@ fun LauncherSettings.focusUntil(now: Long): Long {
 
 val DEFAULT_PROFILES = listOf(
     FocusProfile(1, "Work", 0, minutes = 120),
-    FocusProfile(2, "Prayer", 1, minutes = 20),
     FocusProfile(3, "Sleep", 2, minutes = 480),
     FocusProfile(4, "Family", 3, minutes = 60),
 )

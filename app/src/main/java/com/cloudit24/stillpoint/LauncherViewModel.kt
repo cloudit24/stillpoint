@@ -884,6 +884,18 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         runCatching { Automation.tick(getApplication()) }
     }
 
+    /**
+     * Prayer times on or off. Stillpoint installs universal: nothing Islamic is on until you turn this on,
+     * and then the prayer ring, the lock-screen line and a Prayer focus profile come with it.
+     */
+    fun setPrayerOn(on: Boolean) = updateSettings { s ->
+        if (!on) s.copy(prayerOn = false)
+        else s.copy(prayerOn = true, lockPrayer = true,
+            dialMode = if (s.dialMode == DialMode.DAY) DialMode.PRAYER else s.dialMode,
+            focusProfiles = if (s.focusProfiles.any { it.kind == 1 }) s.focusProfiles
+                else s.focusProfiles + FocusProfile((s.focusProfiles.maxOfOrNull { it.id } ?: 0L) + 1, "Prayer", 1, minutes = 20))
+    }
+
     fun saveProfile(p: FocusProfile) = updateSettings { s ->
         s.copy(focusProfiles = if (s.focusProfiles.any { it.id == p.id }) s.focusProfiles.map { if (it.id == p.id) p else it } else s.focusProfiles + p)
     }

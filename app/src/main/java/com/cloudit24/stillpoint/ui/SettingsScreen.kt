@@ -536,7 +536,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         }
                         ToggleRow(stringResource(R.string.s_prayer_times), s.prayerOn) { on ->
                             if (on && s.city == null) dialog = SettingsDialog.PRAYER_CITY
-                            else vm.updateSettings { it.copy(prayerOn = on) }
+                            else vm.setPrayerOn(on)
                         }
                         ActionRow(stringResource(R.string.s_city), s.city?.let { "${it.name}, ${it.country}" } ?: "Not set") {
                             dialog = SettingsDialog.PRAYER_CITY
@@ -1025,7 +1025,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
         SettingsDialog.CITY -> CitySearchDialog(vm, onDismiss = { dialog = null }) { vm.setCity(it, enableWeather = false) }
         SettingsDialog.PRAYER_CITY -> CitySearchDialog(vm, onDismiss = { dialog = null }) { c ->
             vm.setCity(c, enableWeather = false)
-            vm.updateSettings { it.copy(prayerOn = true) }
+            vm.setPrayerOn(true)
         }
         SettingsDialog.PRAYER_METHOD -> ChoiceDialog("Calculation method", PrayerMethod.entries, { it.label },
             onDismiss = { dialog = null }) { pm -> vm.updateSettings { it.copy(prayerMethod = pm) } }

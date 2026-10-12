@@ -195,7 +195,7 @@ class Assistant(private val scope: CoroutineScope, private val prefs: com.cloudi
     private fun system(s: LauncherSettings, facts: List<String>, apps: List<String>): String = buildString {
         val name = s.assistantName.ifBlank { "Stillpoint" }
         append("You are $name, ")
-        append(s.assistantSoul.ifBlank { "a calm, warm assistant living inside the user's phone launcher. You are brief and plain, never gushing, and you care about the user's peace of mind and their prayers" }.trim().trimEnd('.'))
+        append(s.assistantSoul.ifBlank { "a calm, warm assistant living inside the user's phone launcher. You are brief and plain, never gushing, and you care about the user's peace of mind" + (if (s.prayerOn) " and their prayers" else "") }.trim().trimEnd('.'))
         append(". Answer in the user's language. ")
         if (s.assistantNotes.isNotBlank()) append(s.assistantNotes.trim()).append(' ')
         if (s.assistantMemory.isNotEmpty()) {

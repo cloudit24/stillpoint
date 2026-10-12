@@ -49,7 +49,7 @@ object LockNotification {
         val city = s.city
         val next = if (s.lockPrayer && city != null) PrayerTimes.next(now, city.lat, city.lon, s.prayerMethod, s.asrHanafi) else null
         val dates = listOfNotNull(
-            if (s.lockHijri) Calendars.hijri(today, s.hijriAdjust) else null,
+            if (s.lockHijri && s.hijriOn) Calendars.hijri(today, s.hijriAdjust) else null,
             if (s.lockTamil) Calendars.tamil(today) else null,
         ).joinToString("  ·  ")
         val title = next?.let { (p, at) -> "${p.label}  ${DateFormat.getTimeFormat(context).format(Date(at))}" }
