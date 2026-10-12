@@ -269,23 +269,10 @@ private val ListBottom = PaddingValues(bottom = 96.dp)
 @Composable
 private fun PivotHeaders(labels: List<String>, pager: PagerState) {
     val scope = rememberCoroutineScope()
-    val scroll = rememberScrollState()
-    val offsets = remember { mutableStateMapOf<Int, Int>() }
-    val inset = with(LocalDensity.current) { 28.dp.roundToPx() }
-    LaunchedEffect(pager.currentPage) {
-        offsets[pager.currentPage]?.let { scroll.animateScrollTo((it - inset).coerceAtLeast(0)) }
-    }
-    Row(Modifier.fillMaxWidth().horizontalScroll(scroll).padding(start = 28.dp, top = 20.dp, bottom = 10.dp, end = 200.dp)) {
-        labels.forEachIndexed { i, label ->
-            val color by animateColorAsState(if (i == pager.currentPage) Ink else Muted.copy(alpha = 0.55f), label = "pivot")
-            Text(
-                label, color = color, fontSize = 40.sp, fontWeight = FontWeight.Light, maxLines = 1,
-                modifier = Modifier
-                    .onGloballyPositioned { offsets[i] = it.positionInParent().x.toInt() }
-                    .clickable { scope.launch { pager.animateScrollToPage(i) } }
-                    .padding(end = 22.dp),
-            )
-        }
+    // Glass tabs across the top; the pill follows the page you swipe to.
+    Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 10.dp)) {
+        GlassTabs(labels.map { it.replaceFirstChar { c -> c.uppercase() } }, pager.currentPage,
+            onSelect = { i -> scope.launch { pager.animateScrollToPage(i) } })
     }
 }
 

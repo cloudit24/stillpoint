@@ -192,12 +192,11 @@ fun WidgetsScreen(vm: LauncherViewModel, onAddWidget: (AppWidgetProviderInfo) ->
     ) {
         Row(Modifier.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             ShelfTabs(vm, Modifier.weight(1f))
-            if (!editing && vm.settings.toolsOn) Text(stringResource(R.string.s_tools), color = Muted, modifier = Modifier.clickable {
+            if (!editing && vm.settings.toolsOn) GlassButton(stringResource(R.string.s_tools), Modifier.padding(start = 8.dp)) {
                 vm.toolsReturn = Screen.WIDGETS
                 vm.screen = Screen.TOOLS
-            }.padding(8.dp))
-            Text(if (editing) "Done" else "Edit", color = Muted,
-                modifier = Modifier.clickable { editing = !editing }.padding(8.dp))
+            }
+            GlassButton(if (editing) "Done" else "Edit", Modifier.padding(start = 8.dp)) { editing = !editing }
         }
 
         // The Shelf: things to keep near but off the home screen. Notes, Stillpoint cards, then widgets.
@@ -481,30 +480,11 @@ private fun BoxScope.EditOverlay(id: Int, drag: ShelfDrag, vm: LauncherViewModel
 @Composable
 private fun ShelfTabs(vm: LauncherViewModel, modifier: Modifier) {
     var renaming by remember { mutableStateOf<Int?>(null) }
-    Row(modifier.horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.Bottom) {
-        vm.shelfPages.forEachIndexed { i, p ->
-            val on = i == vm.shelfIndex
-            // The chosen shelf grows, brightens and gets a short accent line that slides out under it.
-            val size = if (on) 34f else 18f
-            val pop by animateFloatAsState(if (on) 1f else 0.9f, spring(stiffness = Spring.StiffnessMediumLow), label = "tab")
-            val color by animateColorAsState(if (on) Ink else Muted, tween(300), label = "tabColor")
-            val line by animateDpAsState(if (on) 22.dp else 0.dp, spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessLow), label = "tabLine")
-            Column(Modifier.padding(end = 18.dp).combinedClickable(
-                interactionSource = remember { MutableInteractionSource() }, indication = null,
-                onClick = { vm.selectShelf(i) }, onLongClick = { renaming = i })) {
-                Text(p.name, fontSize = size.sp, fontWeight = FontWeight.Light, color = color, maxLines = 1,
-                    modifier = Modifier.graphicsLayer {
-                        scaleX = pop
-                        scaleY = pop
-                        transformOrigin = TransformOrigin(0f, 1f)
-                    })
-                Box(Modifier.padding(top = 2.dp, start = 2.dp).width(line).height(3.dp).clip(RoundedCornerShape(50)).background(Accent))
-            }
-        }
-        if (vm.shelfPages.size < MAX_SHELVES) {
-            Text("+", fontSize = 24.sp, fontWeight = FontWeight.Light, color = Muted,
-                modifier = Modifier.clip(CircleShape).clickable { vm.addShelf() }.padding(horizontal = 8.dp))
-        }
+    // Glass tabs: the chosen shelf sits on a brighter pill that slides along a dim track.
+    GlassTabs(labels = vm.shelfPages.map { it.name }, selected = vm.shelfIndex, onSelect = { vm.selectShelf(it) },
+        modifier = modifier, onLongPress = { renaming = it }) {
+        if (vm.shelfPages.size < MAX_SHELVES) Text("+", color = Muted, fontSize = 18.sp, fontWeight = FontWeight.Light,
+            modifier = Modifier.clip(CircleShape).clickable { vm.addShelf() }.padding(horizontal = 12.dp, vertical = 4.dp))
     }
     renaming?.let { i ->
         val page = vm.shelfPages.getOrNull(i) ?: return@let
