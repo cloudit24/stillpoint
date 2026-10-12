@@ -79,17 +79,17 @@ fun AssistantSheet(vm: LauncherViewModel) {
         Column(Modifier.fillMaxWidth().aurora().imePadding().padding(horizontal = 18.dp).padding(bottom = 18.dp)) {
             LazyColumn(Modifier.fillMaxWidth().heightIn(min = 120.dp, max = 420.dp), state = list) {
                 if (a.turns.isEmpty() && a.draft.isEmpty()) item {
-                    Text(stringResource(R.string.a_hello), color = Muted, fontSize = 14.sp, fontFamily = font, modifier = Modifier.padding(vertical = 10.dp))
+                    Text(stringResource(R.string.a_hello), color = Muted, fontSize = 14.sp, modifier = Modifier.padding(vertical = 10.dp))
                 }
                 items(a.turns) { t ->
                     val me = t.role == "user"
-                    Text(if (me) stringResource(R.string.a_you) else "Stillpoint", color = Muted, fontSize = 12.sp, fontFamily = font,
+                    Text(if (me) stringResource(R.string.a_you) else "Stillpoint", color = Muted, fontSize = 12.sp,
                         modifier = Modifier.padding(top = 8.dp, bottom = 2.dp))
-                    Text((if (neon && !me) "> " else "") + t.text, color = if (me) Muted else ink, fontSize = 15.sp, fontFamily = font, lineHeight = 22.sp)
+                    Text((if (neon && !me) "> " else "") + t.text, color = if (me) Muted else ink, fontSize = 15.sp, lineHeight = 22.sp)
                 }
                 if (a.busy) item {
-                    Text("Stillpoint", color = Muted, fontSize = 12.sp, fontFamily = font, modifier = Modifier.padding(top = 8.dp, bottom = 2.dp))
-                    Text((if (neon) "> " else "") + a.draft.ifEmpty { a.status.ifEmpty { "…" } }, color = ink, fontSize = 15.sp, fontFamily = font, lineHeight = 22.sp)
+                    Text("Stillpoint", color = Muted, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp, bottom = 2.dp))
+                    Text((if (neon) "> " else "") + a.draft.ifEmpty { a.status.ifEmpty { "…" } }, color = ink, fontSize = 15.sp, lineHeight = 22.sp)
                 }
             }
             if (!a.busy && a.status.isNotEmpty()) Text(a.status, color = Muted, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))

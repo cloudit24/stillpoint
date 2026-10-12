@@ -717,14 +717,14 @@ private fun LcdStyle(msgs: List<StatusMsg>, modifier: Modifier) {
     Column(modifier.fillMaxWidth().heightIn(min = 104.dp).clip(shape).background(LcdBack).border(1.dp, Color(0xFF3A3420), shape)
         .padding(horizontal = 14.dp, vertical = 12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(m.text.uppercase(), color = Lcd, fontSize = 18.sp, letterSpacing = 1.sp
+            Text(m.text.uppercase(), color = Lcd, fontSize = 18.sp, letterSpacing = 1.sp,
                 maxLines = 2, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f).then(m.onTap?.let { Modifier.clickable(onClick = it) } ?: Modifier))
-            if (msgs.size > 1) Text("${i + 1}/${msgs.size}", color = LcdDim, fontSize = 13.sp
+            if (msgs.size > 1) Text("${i + 1}/${msgs.size}", color = LcdDim, fontSize = 13.sp,
                 modifier = Modifier.clip(RoundedCornerShape(50)).clickable { index++ }.padding(start = 10.dp, top = 4.dp, bottom = 4.dp))
         }
         (1..2).mapNotNull { k -> msgs.getOrNull((i + k) % msgs.size)?.takeIf { msgs.size > k } }.forEach { n ->
-            Text(n.text.uppercase(), color = LcdDim, fontSize = 13.sp, letterSpacing = 1.sp
+            Text(n.text.uppercase(), color = LcdDim, fontSize = 13.sp, letterSpacing = 1.sp,
                 maxLines = 1, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(top = 6.dp).fillMaxWidth().then(n.onTap?.let { Modifier.clickable(onClick = it) } ?: Modifier))
         }
