@@ -228,7 +228,7 @@ data class LauncherSettings(
     val edgeMotion: Boolean = true,
     val edgeRight: Boolean = true,
     val iconTint: IconTint = IconTint.ORIGINAL,
-    val font: AppFont = AppFont.SYSTEM,
+    val font: AppFont = AppFont.MANROPE,
     // Notification light (needs Notification access).
     val notifyLight: Boolean = true,
     val notifyStyle: NotifyStyle = NotifyStyle.BREATHE,
@@ -253,7 +253,7 @@ data class LauncherSettings(
     /** The terminal display takes the whole space under the headline, instead of the cards and the strip. */
     val statusFull: Boolean = true,
     val termLook: TermLook = TermLook.CRT,
-    val termColor: TermColor = TermColor.AMBER,
+    val termColor: TermColor = TermColor.ACCENT,
     val statusOff: Set<StatusTopic> = emptySet(),
     // Live data: all off by default. Nothing goes online unless one of these is on.
     val weatherOn: Boolean = false,

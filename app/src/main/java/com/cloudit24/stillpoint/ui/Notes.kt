@@ -155,8 +155,8 @@ private fun Sticky(n: Note, picked: Boolean, onOpen: () -> Unit, onPick: () -> U
         }
         if (picked) {
             Box(
-                Modifier.align(Alignment.TopEnd).padding(5.dp).size(28.dp).clip(CircleShape)
-                    .background(Color(0xFF262624)).clickable(onClick = onDelete),
+                Modifier.align(Alignment.TopEnd).padding(5.dp).size(28.dp).glass(CircleShape, GlassLevel.RAISED)
+                    .clickable(onClick = onDelete),
                 contentAlignment = Alignment.Center,
             ) { Text("×", color = Ink, fontSize = 18.sp) }
         }

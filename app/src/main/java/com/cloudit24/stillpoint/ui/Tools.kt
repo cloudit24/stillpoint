@@ -121,7 +121,7 @@ fun ToolsScreen(vm: LauncherViewModel) {
         when (tool) {
             null -> Tool.entries.groupBy { it.section }.forEach { (section, list) ->
                 Text(section, color = Muted, fontSize = 13.sp, modifier = Modifier.padding(start = 4.dp, top = 16.dp, bottom = 6.dp))
-                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Color(0xFF121211))) {
+                Column(Modifier.fillMaxWidth().glass(RoundedCornerShape(20.dp))) {
                     list.forEach { t ->
                         Column(Modifier.fillMaxWidth().clickable { tool = t }.padding(horizontal = 18.dp, vertical = 12.dp)) {
                             Text(t.title, fontSize = 16.sp)
@@ -166,8 +166,8 @@ private fun Field(value: String, onChange: (String) -> Unit, label: String, sing
 
 @Composable
 private fun Pill(label: String, onClick: () -> Unit) {
-    Text(label, color = Accent, fontSize = 14.sp, modifier = Modifier.clip(RoundedCornerShape(50))
-        .background(Color.White.copy(alpha = 0.07f)).clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 8.dp))
+    Text(label, color = Accent, fontSize = 14.sp, modifier = Modifier.glassPill()
+        .clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 8.dp))
 }
 
 /** A label and a value; tap to copy the value. */
@@ -180,13 +180,13 @@ private fun InfoRow(label: String, value: String) {
     }
 }
 
-/** Monospaced output; tap to copy. */
+/** Output on its own pane; tap to copy. */
 @Composable
 private fun Output(text: String) {
     val ctx = LocalContext.current
     if (text.isEmpty()) return
-    Text(text, fontFamily = FontFamily.Monospace, fontSize = 13.sp, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
-        .clip(RoundedCornerShape(14.dp)).background(Color(0xFF121211)).clickable { copy(ctx, text) }.padding(14.dp))
+    Text(text, fontSize = 13.sp, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+        .glass(RoundedCornerShape(14.dp)).clickable { copy(ctx, text) }.padding(14.dp))
 }
 
 @Composable
@@ -509,7 +509,7 @@ private fun DnsTool() {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         listOf("A", "AAAA", "MX", "TXT", "CNAME", "NS").forEach { t ->
             Text(t, color = if (t == type) Color.Black else Accent, fontSize = 13.sp, modifier = Modifier.clip(RoundedCornerShape(50))
-                .background(if (t == type) Accent else Color.White.copy(alpha = 0.07f)).clickable { type = t }
+                .then(if (t == type) Modifier.background(Accent) else Modifier.glassPill()).clickable { type = t }
                 .padding(horizontal = 14.dp, vertical = 6.dp))
         }
     }

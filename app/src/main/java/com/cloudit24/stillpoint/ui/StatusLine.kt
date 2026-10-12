@@ -285,7 +285,6 @@ private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modi
     val cursor by anim.animateFloat(1f, 0f, infiniteRepeatable(tween(530), RepeatMode.Reverse), label = "cursor")
     val lowBlink by anim.animateFloat(1f, 0.2f, infiniteRepeatable(tween(650), RepeatMode.Reverse), label = "low")
     val sweep = anim.animateFloat(-0.2f, 1.2f, infiniteRepeatable(tween(7_000, easing = androidx.compose.animation.core.LinearEasing)), label = "sweep")
-    val mono = FontFamily.Monospace
     val glow = androidx.compose.ui.text.TextStyle(shadow = androidx.compose.ui.graphics.Shadow(ph.base.copy(alpha = 0.55f), blurRadius = 7f))
     val low = footer != null && footer.battery in 0..20 && !footer.charging
 
@@ -305,11 +304,11 @@ private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modi
                 val m = msgs[st % n]
                 val text = if (st == step) m.text.take(typed) else m.text
                 val live: @Composable () -> Unit = {
-                    if (labels) Text(topicOf(m.rank), color = ph.base, fontSize = 9.5.sp, letterSpacing = 2.sp, fontFamily = mono)
+                    if (labels) Text(topicOf(m.rank), color = ph.base, fontSize = 9.5.sp, letterSpacing = 2.sp)
                     Row(verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.then(m.onTap?.let { Modifier.clickable(onClick = it) } ?: Modifier)) {
                         Text((if (labels || big) "" else "> ") + text, color = ph.hi, fontSize = if (big) 19.sp else 15.sp, lineHeight = if (big) 26.sp else 22.sp,
-                            fontFamily = if (big) FontFamily.Default else mono, style = if (glowing) glow else androidx.compose.ui.text.TextStyle.Default,
+                            style = if (glowing) glow else androidx.compose.ui.text.TextStyle.Default,
                             fontWeight = if (big) androidx.compose.ui.text.font.FontWeight.Light else null,
                             maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                         Box(Modifier.padding(start = 3.dp).size(8.dp, 17.dp).graphicsLayer { alpha = if (motion) cursor else 1f }.background(ph.bright))
@@ -319,7 +318,7 @@ private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modi
                     // Older lines, kept even when empty so the window never changes height.
                     for (k in count downTo 1) {
                         val o = if (st - k >= 0 && n > k) msgs[(st - k) % n] else null
-                        if (labels) Text(o?.let { topicOf(it.rank) } ?: " ", color = ph.base.copy(alpha = 0.35f), fontSize = 9.5.sp, letterSpacing = 2.sp, fontFamily = mono)
+                        if (labels) Text(o?.let { topicOf(it.rank) } ?: " ", color = ph.base.copy(alpha = 0.35f), fontSize = 9.5.sp, letterSpacing = 2.sp)
                         TermLine(if (o == null) " " else (if (labels || big) "" else "> ") + o.text, if (big) Muted else ph.dim, o?.onTap, if (big) 13.sp else 15.sp)
                     }
                 }
@@ -333,10 +332,10 @@ private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modi
         if (footer == null) return
         Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.graphicsLayer { alpha = if (low && motion) lowBlink else 1f }) { left() }
-            Text(footer.mid, color = ph.dim, fontSize = 10.sp, letterSpacing = 1.5.sp, fontFamily = mono, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            Text(footer.mid, color = ph.dim, fontSize = 10.sp, letterSpacing = 1.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.weight(1f).padding(horizontal = 8.dp))
             Text(if (onAsk != null) "ASK_" else "READY_", color = if (onAsk != null) ph.bright else ph.dim, fontSize = 10.sp, letterSpacing = 1.5.sp,
-                fontFamily = mono, modifier = Modifier.then(onAsk?.let { Modifier.clickable(onClick = it) } ?: Modifier))
+                modifier = Modifier.then(onAsk?.let { Modifier.clickable(onClick = it) } ?: Modifier))
         }
     }
     val batteryText = { blocks: String -> (if (footer == null) "" else blocks + (if (footer.battery >= 0) " ${footer.battery}" else "") + (if (footer.charging) "\u26A1" else "")) }
@@ -367,13 +366,13 @@ private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modi
             Column(sizeMod.clip(shape).background(androidx.compose.ui.graphics.Brush.radialGradient(tube)).border(1.dp, ph.base.copy(alpha = 0.22f), shape)
                 .drawWithContent { drawContent(); drawRect(scan) }.padding(horizontal = 16.dp, vertical = 12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("SYS://STILLPOINT", color = ph.bright, fontSize = 11.sp, letterSpacing = 2.sp, fontFamily = mono, style = glow, modifier = Modifier.weight(1f))
-                    if (n > 1) Text("${step % n + 1}/$n", color = ph.dim, fontSize = 11.sp, letterSpacing = 1.sp, fontFamily = mono)
+                    Text("SYS://STILLPOINT", color = ph.bright, fontSize = 11.sp, letterSpacing = 2.sp, style = glow, modifier = Modifier.weight(1f))
+                    if (n > 1) Text("${step % n + 1}/$n", color = ph.dim, fontSize = 11.sp, letterSpacing = 1.sp)
                 }
                 Lines(labels = false, big = false, glowing = true, count = fit)
                 Footer {
                     val blocks = if (footer == null || footer.battery < 0) 0 else ((footer.battery + 5) / 10).coerceIn(0, 10)
-                    Text("PWR " + batteryText("\u25AE".repeat(blocks) + "\u25AF".repeat(10 - blocks)), color = if (low) lowColor else ph.dim, fontSize = 10.sp, letterSpacing = 1.sp, fontFamily = mono)
+                    Text("PWR " + batteryText("\u25AE".repeat(blocks) + "\u25AF".repeat(10 - blocks)), color = if (low) lowColor else ph.dim, fontSize = 10.sp, letterSpacing = 1.sp)
                 }
             }
         }
@@ -398,16 +397,16 @@ private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modi
                     }
                 }.padding(horizontal = 14.dp, vertical = 12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp)) {
-                    Text("STILLPOINT", color = ph.base, fontSize = 10.sp, letterSpacing = 1.5.sp, fontFamily = mono, modifier = Modifier.weight(1f))
+                    Text("STILLPOINT", color = ph.base, fontSize = 10.sp, letterSpacing = 1.5.sp, modifier = Modifier.weight(1f))
                     val chip = Modifier.border(1.dp, ph.base.copy(alpha = 0.35f), RoundedCornerShape(4.dp)).padding(horizontal = 5.dp, vertical = 1.dp)
-                    if (footer != null && footer.mid.isNotEmpty()) Text(footer.mid.substringBefore(" IN ").take(8), color = ph.base, fontSize = 9.5.sp, letterSpacing = 1.sp, fontFamily = mono, modifier = chip)
-                    if (footer != null && footer.battery >= 0) Text("${footer.battery}%", color = if (low) lowColor else ph.base, fontSize = 9.5.sp, letterSpacing = 1.sp, fontFamily = mono, modifier = chip)
-                    if (n > 1) Text("${step % n + 1}/$n", color = ph.base, fontSize = 9.5.sp, letterSpacing = 1.sp, fontFamily = mono, modifier = chip)
+                    if (footer != null && footer.mid.isNotEmpty()) Text(footer.mid.substringBefore(" IN ").take(8), color = ph.base, fontSize = 9.5.sp, letterSpacing = 1.sp, modifier = chip)
+                    if (footer != null && footer.battery >= 0) Text("${footer.battery}%", color = if (low) lowColor else ph.base, fontSize = 9.5.sp, letterSpacing = 1.sp, modifier = chip)
+                    if (n > 1) Text("${step % n + 1}/$n", color = ph.base, fontSize = 9.5.sp, letterSpacing = 1.sp, modifier = chip)
                 }
                 Lines(labels = false, big = false, glowing = false, count = fit)
                 Footer {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("BAT " + batteryText(""), color = if (low) lowColor else ph.dim, fontSize = 10.sp, letterSpacing = 1.sp, fontFamily = mono)
+                        Text("BAT " + batteryText(""), color = if (low) lowColor else ph.dim, fontSize = 10.sp, letterSpacing = 1.sp)
                         Box(Modifier.padding(start = 6.dp).size(40.dp, 3.dp).background(Color.White.copy(alpha = 0.08f))) {
                             Box(Modifier.fillMaxWidth(((footer?.battery ?: 0).coerceIn(0, 100)) / 100f).height(3.dp).background(if (low) lowColor else ph.base))
                         }
@@ -425,7 +424,7 @@ private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modi
                         Box(Modifier.fillMaxWidth(p.coerceIn(0f, 1f)).height(2.dp).background(ph.base))
                     }
                 }
-                Footer { Text(batteryText("").trim().let { if (it.isEmpty()) "" else "$it%" }.lowercase(), color = if (low) lowColor else Muted, fontSize = 10.5.sp, letterSpacing = 1.sp, fontFamily = mono) }
+                Footer { Text(batteryText("").trim().let { if (it.isEmpty()) "" else "$it%" }.lowercase(), color = if (low) lowColor else Muted, fontSize = 10.5.sp, letterSpacing = 1.sp) }
             }
         }
         TermLook.RAIL -> {
@@ -434,13 +433,13 @@ private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modi
                 drawLine(ph.base.copy(alpha = 0.3f), androidx.compose.ui.geometry.Offset(x, 0f), androidx.compose.ui.geometry.Offset(x, size.height), 1f)
             }.padding(start = 14.dp, top = 4.dp, bottom = 4.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("LOG", color = ph.base, fontSize = 9.5.sp, letterSpacing = 2.sp, fontFamily = mono, modifier = Modifier.weight(1f))
-                    if (n > 1) Text("${(step % n + 1).toString().padStart(2, '0')}/${n.toString().padStart(2, '0')}", color = ph.dim, fontSize = 9.5.sp, letterSpacing = 1.sp, fontFamily = mono)
+                    Text("LOG", color = ph.base, fontSize = 9.5.sp, letterSpacing = 2.sp, modifier = Modifier.weight(1f))
+                    if (n > 1) Text("${(step % n + 1).toString().padStart(2, '0')}/${n.toString().padStart(2, '0')}", color = ph.dim, fontSize = 9.5.sp, letterSpacing = 1.sp)
                 }
                 Lines(labels = true, big = false, glowing = false, count = fit)
                 Footer {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("PWR " + batteryText(""), color = if (low) lowColor else ph.dim, fontSize = 10.sp, letterSpacing = 1.sp, fontFamily = mono)
+                        Text("PWR " + batteryText(""), color = if (low) lowColor else ph.dim, fontSize = 10.sp, letterSpacing = 1.sp)
                         val lit = if (footer == null || footer.battery < 0) 0 else ((footer.battery + 12) / 25).coerceIn(0, 4)
                         Row(Modifier.padding(start = 6.dp), verticalAlignment = Alignment.Bottom, horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(2.dp)) {
                             for (i in 0 until 4) Box(Modifier.size(3.dp, (4 + i * 2).dp).background(if (i < lit) (if (low) lowColor else ph.base) else ph.base.copy(alpha = 0.3f)))
@@ -704,7 +703,7 @@ private fun Drone(m: CatMood, motion: Boolean, typing: Boolean, onTap: () -> Uni
 
 @Composable
 private fun TermLine(text: String, color: Color, onTap: (() -> Unit)?, size: androidx.compose.ui.unit.TextUnit = 15.sp) {
-    Text(text, color = color, fontSize = size, fontFamily = FontFamily.Monospace, maxLines = 1, overflow = TextOverflow.Ellipsis,
+    Text(text, color = color, fontSize = size, maxLines = 1, overflow = TextOverflow.Ellipsis,
         modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp).then(onTap?.let { Modifier.clickable(onClick = it) } ?: Modifier))
 }
 
@@ -718,14 +717,14 @@ private fun LcdStyle(msgs: List<StatusMsg>, modifier: Modifier) {
     Column(modifier.fillMaxWidth().heightIn(min = 104.dp).clip(shape).background(LcdBack).border(1.dp, Color(0xFF3A3420), shape)
         .padding(horizontal = 14.dp, vertical = 12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(m.text.uppercase(), color = Lcd, fontSize = 18.sp, letterSpacing = 1.sp, fontFamily = FontFamily.Monospace,
+            Text(m.text.uppercase(), color = Lcd, fontSize = 18.sp, letterSpacing = 1.sp
                 maxLines = 2, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f).then(m.onTap?.let { Modifier.clickable(onClick = it) } ?: Modifier))
-            if (msgs.size > 1) Text("${i + 1}/${msgs.size}", color = LcdDim, fontSize = 13.sp, fontFamily = FontFamily.Monospace,
+            if (msgs.size > 1) Text("${i + 1}/${msgs.size}", color = LcdDim, fontSize = 13.sp
                 modifier = Modifier.clip(RoundedCornerShape(50)).clickable { index++ }.padding(start = 10.dp, top = 4.dp, bottom = 4.dp))
         }
         (1..2).mapNotNull { k -> msgs.getOrNull((i + k) % msgs.size)?.takeIf { msgs.size > k } }.forEach { n ->
-            Text(n.text.uppercase(), color = LcdDim, fontSize = 13.sp, letterSpacing = 1.sp, fontFamily = FontFamily.Monospace,
+            Text(n.text.uppercase(), color = LcdDim, fontSize = 13.sp, letterSpacing = 1.sp
                 maxLines = 1, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(top = 6.dp).fillMaxWidth().then(n.onTap?.let { Modifier.clickable(onClick = it) } ?: Modifier))
         }

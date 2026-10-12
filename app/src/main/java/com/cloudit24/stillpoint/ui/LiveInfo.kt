@@ -123,8 +123,8 @@ fun SystemStatsLine(onClick: () -> Unit) {
             }
         }
     }
-    // Monospace so the line doesn't jitter as numbers change every second.
-    Text(text, color = Muted, fontSize = 11.sp, lineHeight = 17.sp, fontFamily = FontFamily.Monospace, textAlign = TextAlign.End,
+    // Digits are tabular in the theme font, so the line doesn't jitter as numbers change every second.
+    Text(text, color = Muted, fontSize = 11.sp, lineHeight = 17.sp, textAlign = TextAlign.End,
         modifier = Modifier.clickable(onClick = onClick))
 }
 
@@ -154,7 +154,7 @@ fun IpLine(vm: LauncherViewModel, s: LauncherSettings) {
         if (s.publicIpOn && (l != null || !s.showLocalIp)) "Public ${vm.publicIp ?: "…"}" else null,
     )
     Text(
-        parts.joinToString("\n"), color = Muted, fontSize = 11.sp, lineHeight = 17.sp, fontFamily = FontFamily.Monospace, textAlign = TextAlign.End,
+        parts.joinToString("\n"), color = Muted, fontSize = 11.sp, lineHeight = 17.sp, textAlign = TextAlign.End,
         modifier = Modifier.clickable {
             val copy = listOfNotNull(l?.address, vm.publicIp).joinToString("\n")
             if (copy.isNotEmpty()) {

@@ -60,7 +60,6 @@ fun AssistantSheet(vm: LauncherViewModel) {
     val look = LocalLook.current
     val neon = look.theme != AppTheme.STILLPOINT
     val ink = if (neon) look.line else Ink
-    val font = if (neon) FontFamily.Monospace else FontFamily.Default
     val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var text by remember { mutableStateOf("") }
     val list = rememberLazyListState()
@@ -77,7 +76,7 @@ fun AssistantSheet(vm: LauncherViewModel) {
     LaunchedEffect(a.turns.size, a.draft.length) { if (a.turns.isNotEmpty()) list.animateScrollToItem(a.turns.size) }
 
     ModalBottomSheet(onDismissRequest = { vm.assistOpen = false }, sheetState = sheet, containerColor = look.surface) {
-        Column(Modifier.fillMaxWidth().imePadding().padding(horizontal = 18.dp).padding(bottom = 18.dp)) {
+        Column(Modifier.fillMaxWidth().aurora().imePadding().padding(horizontal = 18.dp).padding(bottom = 18.dp)) {
             LazyColumn(Modifier.fillMaxWidth().heightIn(min = 120.dp, max = 420.dp), state = list) {
                 if (a.turns.isEmpty() && a.draft.isEmpty()) item {
                     Text(stringResource(R.string.a_hello), color = Muted, fontSize = 14.sp, fontFamily = font, modifier = Modifier.padding(vertical = 10.dp))
@@ -115,8 +114,8 @@ fun AssistantSheet(vm: LauncherViewModel) {
             }
             val model = File(s.assistantModel).name.ifEmpty { stringResource(R.string.a_no_model) }
             Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(stringResource(R.string.a_footer, model), color = Muted, fontSize = 11.sp, fontFamily = font)
-                if (a.turns.isNotEmpty()) Text(stringResource(R.string.a_clear), color = Muted, fontSize = 11.sp, fontFamily = font,
+                Text(stringResource(R.string.a_footer, model), color = Muted, fontSize = 11.sp)
+                if (a.turns.isNotEmpty()) Text(stringResource(R.string.a_clear), color = Muted, fontSize = 11.sp,
                     modifier = Modifier.clickable { a.clear() })
             }
             Spacer(Modifier.height(8.dp))
@@ -129,7 +128,6 @@ private fun Chip(c: Suggested, neon: Boolean, onClick: () -> Unit) {
     val look = LocalLook.current
     val shape = RoundedCornerShape(14.dp)
     Text(c.label, color = if (neon) look.glow else Ink, fontSize = 12.sp,
-        fontFamily = if (neon) FontFamily.Monospace else FontFamily.Default,
-        modifier = Modifier.clip(shape).border(1.dp, look.line.copy(alpha = 0.35f), shape).background(look.line.copy(alpha = 0.06f))
+        modifier = Modifier.glass(shape)
             .clickable(onClick = onClick).padding(horizontal = 11.dp, vertical = 6.dp))
 }

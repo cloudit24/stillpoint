@@ -79,7 +79,7 @@ val LocalAccentStyle = staticCompositionLocalOf { AccentStyle.SOLID }
 val AccentFill: Brush
     @Composable @ReadOnlyComposable get() = accentBrush(LocalAccent.current, LocalAccentStyle.current)
 
-private fun shiftHue(c: Color, deg: Float): Color {
+internal fun shiftHue(c: Color, deg: Float): Color {
     val hsv = FloatArray(3)
     android.graphics.Color.colorToHSV(c.toArgb(), hsv)
     hsv[0] = (hsv[0] + deg + 360f) % 360f
@@ -119,11 +119,12 @@ fun fontFamilyFor(f: AppFont): FontFamily = when (f) {
 }
 
 /**
- * Every text style in the chosen font, with joined letters ("tt", "fi") turned off:
+ * Every text style in the chosen font, with joined letters ("tt", "fi") turned off and every digit the same
+ * width (so a ticking number never jitters):
  * some fonts, like Motorola's, join them and words such as "Battery" look glued.
  */
 private fun Typography.withFont(ff: FontFamily): Typography {
-    fun TextStyle.f() = copy(fontFamily = ff, fontFeatureSettings = "liga 0, clig 0")
+    fun TextStyle.f() = copy(fontFamily = ff, fontFeatureSettings = "liga 0, clig 0, tnum")
     return copy(
         displayLarge = displayLarge.f(), displayMedium = displayMedium.f(), displaySmall = displaySmall.f(),
         headlineLarge = headlineLarge.f(), headlineMedium = headlineMedium.f(), headlineSmall = headlineSmall.f(),

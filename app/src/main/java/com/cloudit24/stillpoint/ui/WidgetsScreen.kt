@@ -469,7 +469,7 @@ private fun BoxScope.EditOverlay(id: Int, drag: ShelfDrag, vm: LauncherViewModel
     )
     Box(
         Modifier.align(Alignment.TopStart).padding(6.dp).size(26.dp).clip(CircleShape)
-            .background(Color(0xE6262624)).border(0.5.dp, Color.White.copy(alpha = 0.2f), CircleShape)
+            .glass(CircleShape, GlassLevel.RAISED)
             .clickable(onClick = onRemove),
         contentAlignment = Alignment.Center,
     ) { Text("−", color = Ink, fontSize = 17.sp) }
@@ -716,6 +716,7 @@ private fun cornerFor(look: WidgetLook): Dp = when (look.corners) {
  * Glass: a frosted tile with a hairline edge around the widget. Glow: soft accent light behind it.
  * Opacity fades the whole widget.
  */
+@Composable
 private fun Modifier.widgetLook(look: WidgetLook, accent: Color): Modifier {
     val shape = RoundedCornerShape(cornerFor(look) + 6.dp)
     val glow = if (look.style != 2) Modifier else Modifier.drawBehind {
@@ -727,14 +728,14 @@ private fun Modifier.widgetLook(look: WidgetLook, accent: Color): Modifier {
         )
     }
     val glass = if (look.style != 1) Modifier
-    else Modifier.clip(shape).background(Color.White.copy(alpha = 0.06f)).border(0.5.dp, Color.White.copy(alpha = 0.14f), shape)
+    else Modifier.glass(shape, GlassLevel.SOFT)
     return this.then(glow).graphicsLayer { alpha = look.alpha / 100f }.then(glass)
 }
 
 @Composable
 private fun LookChip(label: String, onClick: () -> Unit) {
-    Text(label, color = Accent, fontSize = 12.sp, modifier = Modifier.clip(RoundedCornerShape(50))
-        .background(Color.White.copy(alpha = 0.06f)).clickable(onClick = onClick).padding(horizontal = 10.dp, vertical = 4.dp))
+    Text(label, color = Accent, fontSize = 12.sp, modifier = Modifier.glassPill()
+        .clickable(onClick = onClick).padding(horizontal = 10.dp, vertical = 4.dp))
 }
 
 /** Three shelves at most: enough to sort things, few enough that the header always fits. */

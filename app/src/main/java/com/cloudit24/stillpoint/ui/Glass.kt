@@ -21,18 +21,21 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalDensity
@@ -41,26 +44,63 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/**
- * Glass, the way iOS draws it: a translucent fill that is lighter at the top, a hairline that catches the
- * light along the top edge and fades down the sides, and a soft specular bloom in the top-left corner.
- * No real blur (that needs a library and a GPU pass); the layering reads as glass on a dark screen.
+/*
+ * Stillpoint's one surface language. Every pane, card, bar and chip is a sheet of tinted glass:
+ * a translucent fill that is lighter at the top, a hairline that catches the light along the top edge,
+ * a soft specular bloom in the top-left corner, and the user's accent colour in the tint, so the whole app
+ * carries the chosen colour. No real blur (that needs a library and a GPU pass); on a dark screen the layering
+ * reads as glass, and the [aurora] light behind a screen gives the glass something to refract.
  */
-fun Modifier.glass(shape: Shape = RoundedCornerShape(50), tint: Color = Color.White, strength: Float = 1f): Modifier = this
-    .clip(shape)
-    .background(Brush.verticalGradient(listOf(tint.copy(alpha = 0.13f * strength), tint.copy(alpha = 0.05f * strength))))
-    .border(1.dp, Brush.verticalGradient(listOf(tint.copy(alpha = 0.42f * strength), tint.copy(alpha = 0.06f * strength))), shape)
-    .drawWithContent {
-        drawContent()
-        drawRect(
-            Brush.radialGradient(listOf(tint.copy(alpha = 0.16f * strength), Color.Transparent),
-                center = Offset(size.width * 0.22f, 0f), radius = size.width * 0.55f),
-            size = Size(size.width, size.height),
-        )
-    }
+
+/** The default pane corner. Pills use [RoundedCornerShape] 50. */
+val GlassShape = RoundedCornerShape(18.dp)
+
+/** How strong a pane is: SOFT for chips and tracks, PANEL for cards, RAISED for the thing that is selected. */
+enum class GlassLevel(val k: Float) { SOFT(0.7f), PANEL(1f), RAISED(1.7f) }
+
+/** White leaning toward the accent: the colour the glass is made of. */
+val glassTint: Color
+    @Composable @ReadOnlyComposable get() = lerp(Color.White, LocalAccent.current, 0.38f)
+
+@Composable
+fun Modifier.glass(shape: Shape = GlassShape, level: GlassLevel = GlassLevel.PANEL, tint: Color = glassTint): Modifier {
+    val k = level.k
+    return this
+        .clip(shape)
+        .background(Brush.verticalGradient(listOf(tint.copy(alpha = 0.17f * k), tint.copy(alpha = 0.06f * k))))
+        .border(1.dp, Brush.verticalGradient(listOf(tint.copy(alpha = 0.60f * k), tint.copy(alpha = 0.10f * k), tint.copy(alpha = 0.26f * k))), shape)
+        .drawWithContent {
+            drawContent()
+            drawRect(
+                Brush.radialGradient(listOf(tint.copy(alpha = 0.20f * k), Color.Transparent),
+                    center = Offset(size.width * 0.18f, 0f), radius = (size.width * 0.5f).coerceAtLeast(1f)),
+                size = Size(size.width, size.height),
+            )
+        }
+}
+
+/** A round glass pill; the common case. */
+@Composable
+fun Modifier.glassPill(level: GlassLevel = GlassLevel.SOFT): Modifier = glass(RoundedCornerShape(50), level)
 
 /**
- * A glass segmented control: a dim track, and a brighter glass pill that slides under the chosen tab.
+ * Ambient light behind a screen, in the accent and a neighbouring hue: two soft pools in opposite corners.
+ * Most of the screen stays black; the glass panes pick the light up and show their colour.
+ */
+@Composable
+fun Modifier.aurora(): Modifier {
+    val a = LocalAccent.current
+    val b = shiftHue(a, 42f)
+    return drawBehind {
+        drawRect(Brush.radialGradient(listOf(a.copy(alpha = 0.15f), Color.Transparent),
+            center = Offset(size.width * 0.88f, -size.height * 0.04f), radius = size.width * 0.95f))
+        drawRect(Brush.radialGradient(listOf(b.copy(alpha = 0.11f), Color.Transparent),
+            center = Offset(size.width * 0.08f, size.height * 1.02f), radius = size.width * 0.85f))
+    }
+}
+
+/**
+ * A glass segmented control: a dim track, and a brighter accent-tinted pill that slides under the chosen tab.
  * [trailing] goes after the tabs, inside the track (a "+" for a new shelf, say).
  */
 @OptIn(ExperimentalFoundationApi::class)
@@ -75,13 +115,14 @@ fun GlassTabs(
     val x by animateDpAsState(cur?.first ?: 0.dp, spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow), label = "pillX")
     val w by animateDpAsState(cur?.second ?: 0.dp, spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow), label = "pillW")
     val scroll = rememberScrollState()
-    Box(modifier.glass(strength = 0.6f).then(if (scrollable) Modifier.horizontalScroll(scroll) else Modifier).padding(3.dp)) {
-        if (cur != null) Box(Modifier.matchParentSize().offset(x = x).width(w).glass(strength = 1.4f))
+    val pillTint = lerp(Color.White, LocalAccent.current, 0.55f)
+    Box(modifier.glassPill(GlassLevel.SOFT).then(if (scrollable) Modifier.horizontalScroll(scroll) else Modifier).padding(3.dp)) {
+        if (cur != null) Box(Modifier.matchParentSize().offset(x = x).width(w).glass(RoundedCornerShape(50), GlassLevel.RAISED, pillTint))
         Row(verticalAlignment = Alignment.CenterVertically) {
             labels.forEachIndexed { i, label ->
                 val on = i == selected
-                val color by animateColorAsState(if (on) Ink else Muted, label = "tabColor")
-                Text(label, color = color, fontSize = 15.sp, fontWeight = if (on) FontWeight.Medium else FontWeight.Normal, maxLines = 1,
+                val color by animateColorAsState(if (on) Color.White else Muted, label = "tabColor")
+                Text(label, color = color, fontSize = 15.sp, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal, maxLines = 1,
                     modifier = Modifier
                         .onGloballyPositioned { c -> with(density) { pos[i] = c.positionInParent().x.toDp() to c.size.width.toDp() } }
                         .clip(RoundedCornerShape(50))
@@ -98,5 +139,5 @@ fun GlassTabs(
 @Composable
 fun GlassButton(label: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Text(label, color = Ink, fontSize = 14.sp, maxLines = 1,
-        modifier = modifier.glass(strength = 0.8f).clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 9.dp))
+        modifier = modifier.glassPill(GlassLevel.PANEL).clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 9.dp))
 }

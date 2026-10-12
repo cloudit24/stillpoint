@@ -319,8 +319,7 @@ fun HomeScreen(vm: LauncherViewModel) {
             vm.targetLabel(middle)?.let { label ->
                 val isSearch = GestureTarget.actionOf(middle) == HomeAction.SEARCH
                 Row(
-                    Modifier.clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = 0.06f))
-                        .border(0.5.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(50))
+                    Modifier.glassPill()
                         .clickable { runTarget(vm, context, middle) }
                         .padding(horizontal = 18.dp, vertical = 9.dp),
                     verticalAlignment = Alignment.CenterVertically,

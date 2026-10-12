@@ -246,8 +246,7 @@ private fun CountdownDialog(initial: Pair<String, Long>?, onDismiss: () -> Unit,
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(value = title, onValueChange = { title = it }, singleLine = true, label = { Text(stringResource(R.string.s_what_for)) })
                 Text(LocalDate.ofEpochDay(day).format(DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy", Locale.getDefault())),
-                    color = Accent, fontSize = 15.sp, modifier = Modifier.clip(RoundedCornerShape(50))
-                        .background(Color.White.copy(alpha = 0.06f)).clickable {
+                    color = Accent, fontSize = 15.sp, modifier = Modifier.glassPill().clickable {
                             val d = LocalDate.ofEpochDay(day)
                             DatePickerDialog(context, { _, y, m, dd -> day = LocalDate.of(y, m + 1, dd).toEpochDay() },
                                 d.year, d.monthValue - 1, d.dayOfMonth).show()

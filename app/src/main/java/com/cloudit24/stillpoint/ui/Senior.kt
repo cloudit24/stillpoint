@@ -93,7 +93,7 @@ fun SeniorHome(vm: LauncherViewModel) {
                 pair.forEach { i ->
                     val app = vm.seniorApp(i)
                     Column(
-                        Modifier.weight(1f).height(118.dp).clip(RoundedCornerShape(20.dp)).background(TileColor)
+                        Modifier.weight(1f).height(118.dp).glass(RoundedCornerShape(20.dp), GlassLevel.RAISED)
                             .clickable { if (app != null) vm.launch(app) else picking = i }.padding(10.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
@@ -144,7 +144,7 @@ fun SeniorApps(vm: LauncherViewModel) {
         BasicTextField(
             value = query, onValueChange = { query = it }, singleLine = true,
             textStyle = TextStyle(color = Color.White, fontSize = 20.sp), cursorBrush = SolidColor(Accent),
-            modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp).clip(RoundedCornerShape(16.dp)).background(TileColor)
+            modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp).glass(RoundedCornerShape(16.dp))
                 .padding(horizontal = 16.dp, vertical = 14.dp),
             decorationBox = { inner ->
                 Box {

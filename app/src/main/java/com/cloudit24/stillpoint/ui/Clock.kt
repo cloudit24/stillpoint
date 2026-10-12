@@ -61,13 +61,13 @@ fun Clock(style: ClockStyle, now: Long) {
             (hh.padStart(2, ' ') + ":" + mm).forEach { ch ->
                 Box(Modifier.width(if (ch == ':') colonCell else digitCell), contentAlignment = Alignment.Center) {
                     // Unlit segments behind the digit, like an old LCD.
-                    Text(if (ch == ':') ":" else "8", fontSize = 38.sp, fontFamily = FontFamily.Monospace,
+                    Text(if (ch == ':') ":" else "8", fontSize = 38.sp, 
                         color = Amber.copy(alpha = 0.10f), softWrap = false, maxLines = 1)
-                    Text(ch.toString(), fontSize = 38.sp, fontFamily = FontFamily.Monospace, color = Amber,
+                    Text(ch.toString(), fontSize = 38.sp, color = Amber,
                         softWrap = false, maxLines = 1)
                 }
             }
-            amPm?.let { Text(it, fontSize = 14.sp, fontFamily = FontFamily.Monospace, color = Amber, modifier = Modifier.padding(start = 6.dp, bottom = 12.dp)) }
+            amPm?.let { Text(it, fontSize = 14.sp, color = Amber, modifier = Modifier.padding(start = 6.dp, bottom = 12.dp)) }
         }
         ClockStyle.HEADLINE -> Unit
         ClockStyle.ANALOG -> AnalogClock(cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE))

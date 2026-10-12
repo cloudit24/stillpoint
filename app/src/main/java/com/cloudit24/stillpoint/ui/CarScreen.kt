@@ -191,7 +191,7 @@ fun CarScreen(vm: LauncherViewModel) {
             latest?.let { n ->
                 val app = vm.apps.firstOrNull { it.packageName == n.pkg }
                 val shape = RoundedCornerShape(14.dp)
-                Row(Modifier.fillMaxWidth().clip(shape).background(Color(0xFF0D0D0C)).border(1.dp, Color(0xFF1B1B1A), shape)
+                Row(Modifier.fillMaxWidth().glass(shape)
                     .clickable { app?.let { vm.launchNow(it) } }.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(8.dp).clip(CircleShape).background(if (n.special) SpecialPink else vm.notifyColor(n.pkg)))
                     Column(Modifier.weight(1f).padding(start = 10.dp)) {
@@ -207,7 +207,7 @@ fun CarScreen(vm: LauncherViewModel) {
             if (apps.isNotEmpty()) Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 apps.take(4).forEach { app ->
                     val shape = RoundedCornerShape(16.dp)
-                    Box(Modifier.weight(1f).height(64.dp).clip(shape).background(Color(0xFF0D0D0C)).border(1.dp, Color(0xFF1B1B1A), shape)
+                    Box(Modifier.weight(1f).height(64.dp).glass(shape)
                         .clickable { vm.launchNow(app) }, contentAlignment = Alignment.Center) {
                         Text(app.label, color = Ink, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 6.dp))
                     }

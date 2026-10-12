@@ -191,7 +191,6 @@ private val SettingsPage.parent: SettingsPage?
 
 private val SettingsPage?.depth: Int get() = if (this == null) 0 else if (parent == null) 1 else 2
 
-private val CardColor = Color(0xFF121211)
 private val DividerColor = Color(0xFF232321)
 
 @Composable
@@ -271,7 +270,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
         label = "settings",
     ) { current ->
         Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp),
+            Modifier.fillMaxSize().aurora().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp),
         ) {
             if (current == null) {
                 Text(stringResource(R.string.s_settings), fontSize = 34.sp, fontWeight = FontWeight.Light,
@@ -1067,7 +1066,7 @@ internal fun Group(title: String, content: @Composable () -> Unit) {
     Text(title.uppercase(), color = Accent, fontSize = 12.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.8.sp,
         modifier = Modifier.padding(start = 4.dp, top = 20.dp, bottom = 8.dp))
     Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(CardColor).padding(horizontal = 16.dp, vertical = 4.dp),
+        Modifier.fillMaxWidth().glass().padding(horizontal = 16.dp, vertical = 4.dp),
     ) { content() }
 }
 

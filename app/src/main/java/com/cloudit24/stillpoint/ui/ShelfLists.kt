@@ -21,7 +21,7 @@ import com.cloudit24.stillpoint.R
 @Composable
 fun UndoBar(vm: LauncherViewModel, modifier: Modifier = Modifier) {
     val u = vm.undo ?: return
-    Row(modifier.clip(RoundedCornerShape(50)).background(Color(0xFF262624)).padding(start = 16.dp),
+    Row(modifier.glassPill(GlassLevel.RAISED).padding(start = 16.dp),
         verticalAlignment = Alignment.CenterVertically) {
         Text(u.label, color = Ink, fontSize = 14.sp)
         Text(stringResource(R.string.s_undo), color = Accent, fontSize = 14.sp, modifier = Modifier.padding(start = 8.dp).clip(RoundedCornerShape(50))

@@ -92,7 +92,7 @@ fun HaCard(vm: LauncherViewModel) {
             row.forEach { e ->
                 Column(
                     Modifier.weight(1f).clip(RoundedCornerShape(14.dp))
-                        .background(if (e.on) accent.copy(alpha = 0.16f) else Color.White.copy(alpha = 0.05f))
+                        .then(if (e.on) Modifier.background(accent.copy(alpha = 0.16f)) else Modifier.glass(RoundedCornerShape(14.dp), GlassLevel.SOFT))
                         .then(if (e.actionable) Modifier.clickable { vm.haToggle(e) } else Modifier)
                         .padding(horizontal = 12.dp, vertical = 10.dp),
                 ) {

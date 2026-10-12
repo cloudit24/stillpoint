@@ -172,7 +172,7 @@ fun DrawerScreen(vm: LauncherViewModel) {
         )
     }
 
-    Box(Modifier.fillMaxSize()) {
+    Box(Modifier.fillMaxSize().aurora()) {
         if (searching) {
             SearchPanel(
                 query = query,
@@ -227,7 +227,7 @@ fun DrawerScreen(vm: LauncherViewModel) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Row(
-                    Modifier.weight(1f).height(52.dp).clip(RoundedCornerShape(50)).background(Color(0xFF1A1A18))
+                    Modifier.weight(1f).height(52.dp).glassPill(GlassLevel.PANEL)
                         .clickable { searching = true; menuFor = null }.padding(horizontal = 18.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -235,7 +235,7 @@ fun DrawerScreen(vm: LauncherViewModel) {
                     Text(stringResource(R.string.s_search_apps), color = Muted, fontSize = 17.sp, modifier = Modifier.padding(start = 12.dp))
                 }
                 Box(
-                    Modifier.padding(start = 10.dp).size(52.dp).clip(CircleShape).background(Color(0xFF1A1A18))
+                    Modifier.padding(start = 10.dp).size(52.dp).glass(CircleShape, GlassLevel.PANEL)
                         .clickable { vm.screen = Screen.SETTINGS },
                     contentAlignment = Alignment.Center,
                 ) { Icon(Icons.Outlined.Settings, contentDescription = "Settings", tint = Muted) }
@@ -328,7 +328,7 @@ private fun SearchPanel(
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
                 keyboardActions = KeyboardActions(onGo = { onGo() }),
                 modifier = Modifier.weight(1f).focusRequester(focusRequester)
-                    .clip(RoundedCornerShape(50)).background(Color(0xFF1A1A18)).padding(horizontal = 18.dp, vertical = 13.dp),
+                    .glassPill(GlassLevel.PANEL).padding(horizontal = 18.dp, vertical = 13.dp),
                 decorationBox = { inner ->
                     if (query.isEmpty()) Text(stringResource(R.string.s_search_apps), color = Muted, fontSize = 22.sp)
                     inner()
@@ -490,7 +490,7 @@ private fun AlphabetList(apps: List<AppEntry>, row: @Composable (AppEntry) -> Un
                         val has = l in headerIndex
                         Box(
                             Modifier.size(62.dp).clip(RoundedCornerShape(14.dp))
-                                .then(if (has) Modifier.background(fill) else Modifier.background(Color(0xFF1E1E1C)))
+                                .then(if (has) Modifier.background(fill) else Modifier.glass(RoundedCornerShape(14.dp), GlassLevel.SOFT))
                                 .clickable(enabled = has) {
                                     jumpOpen = false
                                     headerIndex[l]?.let { scope.launch { listState.scrollToItem(it) } }
