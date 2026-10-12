@@ -103,11 +103,12 @@ class Assistant(private val scope: CoroutineScope, private val prefs: com.cloudi
             }
         }
         val path = s.assistantModel
-        if (path.isBlank() || !File(path).exists()) { status = "No model yet. Choose one in Settings, Assistant."; return }
+        problemWith(path)?.let { status = it; return }
         turns = turns + Turn("user", question.trim())
         draft = ""; suggestions = emptyList(); busy = true; stop = false
         scope.launch {
-            val result = withContext(worker) { run(path, s, facts, apps) }
+            // Anything that goes wrong (a bad file, the native library missing, out of memory) becomes a line, not a crash.
+            val result = withContext(worker) { runCatching { run(path, s, facts, apps) }.getOrElse { e -> report(e); "" } }
             val (text, chips) = parse(result, s, apps)
             turns = turns + Turn("assistant", text)
             suggestions = chips
@@ -119,6 +120,27 @@ class Assistant(private val scope: CoroutineScope, private val prefs: com.cloudi
     }
 
     fun cancel() { stop = true }
+
+    /** Why [path] can't be used right now, in a line; null when it looks fine. */
+    fun problemWith(path: String): String? {
+        if (path.isBlank() || !File(path).exists()) return "No model yet. Choose one in Settings, Assistant."
+        val name = File(path).name
+        val choice = Models.CHOICES.firstOrNull { it.file == name }
+        if (choice != null && prefs.downloadId(choice.id) != 0L) return "That model is still downloading. Give it a moment."
+        val magic = runCatching { File(path).inputStream().use { val b = ByteArray(4); it.read(b); String(b, Charsets.US_ASCII) } }.getOrDefault("")
+        if (magic != "GGUF") return "That file isn't a GGUF model. Choose another in Settings, Assistant."
+        return null
+    }
+
+    private suspend fun report(e: Throwable) {
+        val why = when (e) {
+            is UnsatisfiedLinkError, is ExceptionInInitializerError -> "the assistant's engine isn't in this build"
+            is OutOfMemoryError -> "the phone ran out of memory for it"
+            else -> e.message?.take(80) ?: e.javaClass.simpleName
+        }
+        withContext(Dispatchers.Main) { status = "The assistant hit a problem: $why." }
+        if (handle != 0L) runCatching { LlmNative.free(handle) }; handle = 0L; loadedKey = ""
+    }
 
     fun clear() { turns = emptyList(); suggestions = emptyList(); draft = ""; prefs.saveChatHistory(emptyList()) }
 
@@ -149,13 +171,13 @@ class Assistant(private val scope: CoroutineScope, private val prefs: com.cloudi
 
     /** Times the model on this phone: load, then 48 tokens of a fixed question. */
     fun test(path: String, s: LauncherSettings) {
-        if (busy || !File(path).exists()) return
+        if (busy || problemWith(path) != null) return
         busy = true; stop = false
         scope.launch {
-            val result = withContext(worker) {
+            val result = withContext(worker) { runCatching {
                 if (handle != 0L) { LlmNative.free(handle); handle = 0L }   // measure a cold load
                 val loadMs = ensure(path, s)
-                if (loadMs < 0) return@withContext "couldn't load"
+                if (loadMs < 0) return@runCatching "couldn't load"
                 val prompt = LlmNative.prompt(handle, arrayOf("user"), arrayOf("Count from one to thirty in words."))
                 var tokens = 0
                 val t0 = System.nanoTime()
@@ -164,7 +186,7 @@ class Assistant(private val scope: CoroutineScope, private val prefs: com.cloudi
                 val tps = if (secs > 0) tokens / secs else 0.0
                 val verdict = when { tps >= 8 -> "smooth"; tps >= 4 -> "usable"; else -> "too slow for this phone" }
                 "%.0f tok/s · loads in %.1f s · %s".format(tps, loadMs / 1000.0, verdict)
-            }
+            }.getOrElse { e -> report(e); "couldn't run" } }
             bench = bench + (path to result)
             busy = false
             idle?.cancel()
