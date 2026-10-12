@@ -44,6 +44,8 @@ import com.cloudit24.stillpoint.data.SYNC_INTERVALS
 import com.cloudit24.stillpoint.data.SyncConfig
 import com.cloudit24.stillpoint.data.SyncFeature
 import com.cloudit24.stillpoint.data.StatusStyle
+import com.cloudit24.stillpoint.data.TermColor
+import com.cloudit24.stillpoint.data.TermLook
 import com.cloudit24.stillpoint.data.StatusTopic
 import com.cloudit24.stillpoint.data.intervalLabel
 import com.cloudit24.stillpoint.sync.Sync
@@ -412,8 +414,14 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         ActionRow(stringResource(R.string.s_style), s.statusStyle.label) {
                             vm.updateSettings { it.copy(statusStyle = StatusStyle.entries[(it.statusStyle.ordinal + 1) % StatusStyle.entries.size]) }
                         }
-                        if (s.statusStyle == StatusStyle.TERMINAL) ToggleRow(stringResource(R.string.s_terminal_fills), s.statusFull) { on ->
-                            vm.updateSettings { it.copy(statusFull = on) }
+                        if (s.statusStyle == StatusStyle.TERMINAL) {
+                            ActionRow(stringResource(R.string.s_look), s.termLook.label + " · " + s.termLook.detail) {
+                                vm.updateSettings { it.copy(termLook = TermLook.entries[(it.termLook.ordinal + 1) % TermLook.entries.size]) }
+                            }
+                            ActionRow(stringResource(R.string.s_colour), s.termColor.label) {
+                                vm.updateSettings { it.copy(termColor = TermColor.entries[(it.termColor.ordinal + 1) % TermColor.entries.size]) }
+                            }
+                            ToggleRow(stringResource(R.string.s_terminal_fills), s.statusFull) { on -> vm.updateSettings { it.copy(statusFull = on) } }
                         }
                         StatusTopic.entries.forEach { t ->
                             ToggleRow(t.label, t !in s.statusOff) { on ->

@@ -242,6 +242,8 @@ data class LauncherSettings(
     val statusStyle: StatusStyle = StatusStyle.TERMINAL,
     /** The terminal display takes the whole space under the headline, instead of the cards and the strip. */
     val statusFull: Boolean = true,
+    val termLook: TermLook = TermLook.CRT,
+    val termColor: TermColor = TermColor.AMBER,
     val statusOff: Set<StatusTopic> = emptySet(),
     // Live data: all off by default. Nothing goes online unless one of these is on.
     val weatherOn: Boolean = false,
@@ -381,6 +383,20 @@ enum class StatusTopic(val label: String) {
 }
 
 /** What the important-info slot under the headline shows. */
+/** How the terminal display is drawn. */
+enum class TermLook(val label: String, val detail: String) {
+    CRT("CRT", "Phosphor on curved glass, scanlines, a soft glow"),
+    HUD("HUD", "Corner brackets, chips in the header, a slow light sweep"),
+    GLASS("Quiet glass", "No box: the newest line big, the rest small, a thin prayer bar"),
+    RAIL("Data rail", "A numbered rail with a topic label on each line"),
+}
+
+/** The terminal display's colour. ACCENT follows your accent; the rest are phosphors. */
+enum class TermColor(val label: String, val argb: Long) {
+    AMBER("Amber", 0xFFFFB84D), ACCENT("Your accent", 0L), CYAN("Electric cyan", 0xFF00E5FF),
+    YELLOW("Acid yellow", 0xFFE8FF3A), GREEN("Matrix green", 0xFF5CFF7A), MAGENTA("Magenta", 0xFFFF2BD6),
+}
+
 enum class InfoPanel(val label: String) {
     PRAYER("Prayer times"),
     AGENDA("Next on your calendar"),

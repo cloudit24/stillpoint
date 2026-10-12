@@ -352,6 +352,8 @@
     <string name="pg_automation">Automation</string>
     <string name="pg_assistant">Assistant</string>
     <string name="pg_car">Car mode</string>
+    <string name="s_look">Look</string>
+    <string name="s_colour">Colour</string>
     <string name="s_terminal_fills">Fills the space under the headline (no cards or strip)</string>
     <string name="pg_car_sum">Speed, one notification, your few apps</string>
     <string name="c_start">Start it</string>

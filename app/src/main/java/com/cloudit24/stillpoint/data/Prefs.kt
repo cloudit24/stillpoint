@@ -119,6 +119,8 @@ class Prefs(context: Context) {
             calendarSync = loadSync(SyncFeature.CALENDAR),
             statusStyle = runCatching { StatusStyle.valueOf(sp.getString("status_style", null)!!) }.getOrDefault(d.statusStyle),
             statusFull = sp.getBoolean("status_full", d.statusFull),
+            termLook = runCatching { TermLook.valueOf(sp.getString("term_look", null)!!) }.getOrDefault(d.termLook),
+            termColor = runCatching { TermColor.valueOf(sp.getString("term_color", null)!!) }.getOrDefault(d.termColor),
             statusOff = (sp.getStringSet("status_off", null) ?: emptySet())
                 .mapNotNull { n -> runCatching { StatusTopic.valueOf(n) }.getOrNull() }.toSet(),
             weatherOn = sp.getBoolean(K_WEATHER_ON, d.weatherOn),
@@ -247,6 +249,8 @@ class Prefs(context: Context) {
             .putString(K_CAL_SRC, s.calendarSource.name)
             .putString("status_style", s.statusStyle.name)
             .putBoolean("status_full", s.statusFull)
+            .putString("term_look", s.termLook.name)
+            .putString("term_color", s.termColor.name)
             .putStringSet("status_off", s.statusOff.map { it.name }.toSet())
             .apply {
                 SyncFeature.entries.forEach { f ->
