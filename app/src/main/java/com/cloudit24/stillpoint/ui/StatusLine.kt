@@ -291,7 +291,7 @@ private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modi
 
     /** The lines: older ones dim, the live one bright with the cursor. [big] is the glass look's large live line. */
     @Composable
-    fun androidx.compose.foundation.layout.ColumnScope.Lines(labels: Boolean, big: Boolean, glowing: Boolean) {
+    fun androidx.compose.foundation.layout.ColumnScope.Lines(labels: Boolean, big: Boolean, glowing: Boolean, count: Int) {
         AnimatedContent(
             targetState = step,
             transitionSpec = {
@@ -311,13 +311,13 @@ private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modi
                         Text((if (labels || big) "" else "> ") + text, color = ph.hi, fontSize = if (big) 19.sp else 15.sp, lineHeight = if (big) 26.sp else 22.sp,
                             fontFamily = if (big) FontFamily.Default else mono, style = if (glowing) glow else androidx.compose.ui.text.TextStyle.Default,
                             fontWeight = if (big) androidx.compose.ui.text.font.FontWeight.Light else null,
-                            maxLines = if (big) 2 else 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                         Box(Modifier.padding(start = 3.dp).size(8.dp, 17.dp).graphicsLayer { alpha = if (motion) cursor else 1f }.background(ph.bright))
                     }
                 }
                 val olds: @Composable () -> Unit = {
                     // Older lines, kept even when empty so the window never changes height.
-                    for (k in older downTo 1) {
+                    for (k in count downTo 1) {
                         val o = if (st - k >= 0 && n > k) msgs[(st - k) % n] else null
                         if (labels) Text(o?.let { topicOf(it.rank) } ?: " ", color = ph.base.copy(alpha = 0.35f), fontSize = 9.5.sp, letterSpacing = 2.sp, fontFamily = mono)
                         TermLine(if (o == null) " " else (if (labels || big) "" else "> ") + o.text, if (big) Muted else ph.dim, o?.onTap, if (big) 13.sp else 15.sp)
@@ -342,8 +342,18 @@ private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modi
     val batteryText = { blocks: String -> (if (footer == null) "" else blocks + (if (footer.battery >= 0) " ${footer.battery}" else "") + (if (footer.charging) "\u26A1" else "")) }
     val lowColor = Color(0xFFFF6B3D)
 
-    Box(modifier.fillMaxWidth()) {
+    androidx.compose.foundation.layout.BoxWithConstraints(modifier.fillMaxWidth()) {
     val sizeMod = if (fill) Modifier.fillMaxSize() else Modifier.fillMaxWidth()
+    // How many older lines fit this box, for this look, at the phone's font size. Never overflows the footer.
+    val fs = androidx.compose.ui.platform.LocalDensity.current.fontScale
+    val fit = if (!fill) older else {
+        val (head, live, line, foot, pad) = when (look) {
+            TermLook.CRT, TermLook.HUD -> listOf(16.dp * fs + 8.dp, 24.dp * fs, 22.dp * fs + 6.dp, 14.dp * fs + 10.dp, 36.dp)
+            TermLook.GLASS -> listOf(0.dp, 26.dp * fs + 8.dp, 18.dp * fs + 6.dp, 14.dp * fs + 22.dp, 18.dp)
+            TermLook.RAIL -> listOf(14.dp * fs + 8.dp, 38.dp * fs, 36.dp * fs + 6.dp, 14.dp * fs + 10.dp, 20.dp)
+        }
+        ((maxHeight - head - live - foot - pad) / line).toInt().coerceIn(1, 9)
+    }
     when (look) {
         TermLook.CRT -> {
             val tube = listOf(lerp(ph.base, Color.Black, 0.88f), lerp(ph.base, Color.Black, 0.95f), Color.Black)
@@ -360,7 +370,7 @@ private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modi
                     Text("SYS://STILLPOINT", color = ph.bright, fontSize = 11.sp, letterSpacing = 2.sp, fontFamily = mono, style = glow, modifier = Modifier.weight(1f))
                     if (n > 1) Text("${step % n + 1}/$n", color = ph.dim, fontSize = 11.sp, letterSpacing = 1.sp, fontFamily = mono)
                 }
-                Lines(labels = false, big = false, glowing = true)
+                Lines(labels = false, big = false, glowing = true, count = fit)
                 Footer {
                     val blocks = if (footer == null || footer.battery < 0) 0 else ((footer.battery + 5) / 10).coerceIn(0, 10)
                     Text("PWR " + batteryText("\u25AE".repeat(blocks) + "\u25AF".repeat(10 - blocks)), color = if (low) lowColor else ph.dim, fontSize = 10.sp, letterSpacing = 1.sp, fontFamily = mono)
@@ -394,7 +404,7 @@ private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modi
                     if (footer != null && footer.battery >= 0) Text("${footer.battery}%", color = if (low) lowColor else ph.base, fontSize = 9.5.sp, letterSpacing = 1.sp, fontFamily = mono, modifier = chip)
                     if (n > 1) Text("${step % n + 1}/$n", color = ph.base, fontSize = 9.5.sp, letterSpacing = 1.sp, fontFamily = mono, modifier = chip)
                 }
-                Lines(labels = false, big = false, glowing = false)
+                Lines(labels = false, big = false, glowing = false, count = fit)
                 Footer {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("BAT " + batteryText(""), color = if (low) lowColor else ph.dim, fontSize = 10.sp, letterSpacing = 1.sp, fontFamily = mono)
@@ -409,7 +419,7 @@ private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modi
             Column(sizeMod.drawBehind {
                 drawRect(androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(ph.base, Color.Transparent), endX = size.width * 0.7f), size = androidx.compose.ui.geometry.Size(size.width, 1f))
             }.padding(top = 6.dp, start = 2.dp, end = 2.dp)) {
-                Lines(labels = false, big = true, glowing = false)
+                Lines(labels = false, big = true, glowing = false, count = fit)
                 footer?.progress?.let { p ->
                     Box(Modifier.fillMaxWidth().padding(top = 10.dp).height(2.dp).background(Color.White.copy(alpha = 0.07f))) {
                         Box(Modifier.fillMaxWidth(p.coerceIn(0f, 1f)).height(2.dp).background(ph.base))
@@ -427,7 +437,7 @@ private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modi
                     Text("LOG", color = ph.base, fontSize = 9.5.sp, letterSpacing = 2.sp, fontFamily = mono, modifier = Modifier.weight(1f))
                     if (n > 1) Text("${(step % n + 1).toString().padStart(2, '0')}/${n.toString().padStart(2, '0')}", color = ph.dim, fontSize = 9.5.sp, letterSpacing = 1.sp, fontFamily = mono)
                 }
-                Lines(labels = true, big = false, glowing = false)
+                Lines(labels = true, big = false, glowing = false, count = fit)
                 Footer {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("PWR " + batteryText(""), color = if (low) lowColor else ph.dim, fontSize = 10.sp, letterSpacing = 1.sp, fontFamily = mono)
