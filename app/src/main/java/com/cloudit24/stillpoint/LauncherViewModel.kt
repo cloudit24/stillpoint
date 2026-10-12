@@ -12,6 +12,7 @@ import com.cloudit24.stillpoint.data.BuiltIn
 import kotlinx.coroutines.Job
 import com.cloudit24.stillpoint.data.Automation
 import com.cloudit24.stillpoint.data.Rule
+import com.cloudit24.stillpoint.data.DialMode
 import kotlinx.coroutines.delay
 import com.cloudit24.stillpoint.notify.NotifyHub
 import com.cloudit24.stillpoint.notify.NotifyItem
