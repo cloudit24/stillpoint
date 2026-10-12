@@ -53,6 +53,10 @@ fun CarSettings(vm: LauncherViewModel) {
             onPlus = { vm.updateSettings { it.copy(carLimit = (it.carLimit + 10).coerceAtMost(200)) } })
         ToggleRow(stringResource(R.string.c_osm), s.carOsmLimit) { on -> vm.updateSettings { it.copy(carOsmLimit = on) } }
         Note(stringResource(R.string.c_osm_note))
+        ToggleRow(stringResource(R.string.c_cameras), s.carCameras) { on -> vm.updateSettings { it.copy(carCameras = on) } }
+        Note(stringResource(R.string.c_cameras_note))
+        ToggleRow(stringResource(R.string.c_glass), s.carGlass) { on -> vm.updateSettings { it.copy(carGlass = on) } }
+        Note(stringResource(R.string.c_glass_note))
         val names = s.carApps.mapNotNull { k -> vm.apps.firstOrNull { it.key == k }?.label }
         ActionRow(stringResource(R.string.c_apps), names.ifEmpty { listOf(stringResource(R.string.c_apps_none)) }.joinToString(", ")) { pick = "apps" }
         ToggleRow(stringResource(R.string.c_important_only), s.carImportantOnly) { on -> vm.updateSettings { it.copy(carImportantOnly = on) } }

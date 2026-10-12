@@ -146,7 +146,7 @@ data class LauncherSettings(
     val accentStyle: AccentStyle = AccentStyle.SOLID,
     /** A look that sets colours and extras at once. The accent above is kept and comes back with Stillpoint. */
     val theme: AppTheme = AppTheme.STILLPOINT,
-    val themeCat: Boolean = true,
+    val themeCat: Boolean = false,
     val themeDrone: Boolean = true,
     val catRoam: Boolean = true,
     val catReact: Boolean = true,
@@ -178,6 +178,8 @@ data class LauncherSettings(
     val carMph: Boolean = false,
     val carLimit: Int = 0,
     val carOsmLimit: Boolean = false,
+    val carCameras: Boolean = false,
+    val carGlass: Boolean = true,
     val carApps: List<String> = emptyList(),
     val carImportantOnly: Boolean = true,
     val carVoice: Boolean = true,

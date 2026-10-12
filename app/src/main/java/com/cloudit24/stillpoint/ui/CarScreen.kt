@@ -12,6 +12,16 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import com.cloudit24.stillpoint.data.Camera
+import com.cloudit24.stillpoint.data.SpeedCameras
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -119,18 +129,58 @@ fun CarScreen(vm: LauncherViewModel) {
     val kmh = if (speedMs < 0) -1 else (speedMs * 3.6f).toInt()
     val shown = if (kmh < 0) -1 else if (s.carMph) (kmh / 1.609f).toInt() else kmh
 
-    // Over the limit: a short tone, at most every ten seconds.
+    // Voice: tap the mic, speak, the assistant answers aloud.
+    val voice = remember { Voice(context) }
+    DisposableEffect(Unit) { onDispose { voice.release() } }
+    // Nearing the limit (within 3): one soft tone as you reach it. Over it: a sharper tone, at most every ten seconds.
     var lastTone by remember { mutableStateOf(0L) }
+    var warned by remember { mutableStateOf(false) }
+    val near = limit > 0 && shown >= limit - 3 && shown <= limit
+    val over = limit > 0 && shown > limit
     LaunchedEffect(shown) {
-        if (limit > 0 && shown > limit && System.currentTimeMillis() - lastTone > 10_000) {
+        if (limit <= 0) return@LaunchedEffect
+        if (shown < limit - 5) warned = false
+        if (near && !warned) {
+            warned = true
+            runCatching { ToneGenerator(AudioManager.STREAM_NOTIFICATION, 70).startTone(ToneGenerator.TONE_PROP_BEEP, 180) }
+        }
+        if (over && System.currentTimeMillis() - lastTone > 10_000) {
             lastTone = System.currentTimeMillis()
             runCatching { ToneGenerator(AudioManager.STREAM_NOTIFICATION, 80).startTone(ToneGenerator.TONE_PROP_BEEP2, 300) }
         }
     }
 
-    // Voice: tap the mic, speak, the assistant answers aloud.
-    val voice = remember { Voice(context) }
-    DisposableEffect(Unit) { onDispose { voice.release() } }
+    // Speed cameras from OpenStreetMap, if you turned that on: the nearest within a kilometre, and a warning once per camera.
+    var cameras by remember { mutableStateOf<List<Camera>>(emptyList()) }
+    var camCentre by remember { mutableStateOf<Pair<Double, Double>?>(null) }
+    LaunchedEffect(here, s.carCameras) {
+        val h = here ?: return@LaunchedEffect
+        if (!s.carCameras) { cameras = emptyList(); camCentre = null; return@LaunchedEffect }
+        val c = camCentre
+        if (c == null || SpeedCameras.metres(c.first, c.second, h.first, h.second) > 2000f) {
+            camCentre = h
+            cameras = withContext(Dispatchers.IO) { SpeedCameras.around(h.first, h.second) }
+        }
+    }
+    val nearest = remember(here, cameras) {
+        val h = here ?: return@remember null
+        cameras.map { it to SpeedCameras.metres(h.first, h.second, it.lat, it.lon) }.minByOrNull { it.second }?.takeIf { it.second < 1000f }
+    }
+    val warnedCams = remember { HashSet<String>() }
+    var lastCamDist by remember { mutableFloatStateOf(Float.MAX_VALUE) }
+    LaunchedEffect(nearest) {
+        val (cam, d) = nearest ?: run { lastCamDist = Float.MAX_VALUE; return@LaunchedEffect }
+        val closing = d < lastCamDist
+        lastCamDist = d
+        if (d < 600f && closing && warnedCams.add(cam.key)) {
+            runCatching {
+                val t = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 90)
+                t.startTone(ToneGenerator.TONE_PROP_BEEP2, 250); delay(350); t.startTone(ToneGenerator.TONE_PROP_BEEP2, 250)
+            }
+            if (s.carVoice) voice.speak("Speed camera ahead, ${(d / 50).toInt() * 50} metres" + (if (cam.limitKmh > 0) ", limit ${if (s.carMph) (cam.limitKmh / 1.609f).toInt() else cam.limitKmh}" else ""))
+        }
+    }
+
     val a = vm.assistant
     var hasMic by remember { mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) }
     val askMic = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { hasMic = it; if (it) voice.listen { q -> a.ask(q, s, statusFacts(vm, s, System.currentTimeMillis(), context), vm.assistantApps()) } }
@@ -174,11 +224,18 @@ fun CarScreen(vm: LauncherViewModel) {
 
         Column(Modifier.fillMaxWidth().weight(1f).clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) { zen = !zen },
             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            Text(if (shown < 0) "–" else "$shown", color = Color.White, fontSize = 132.sp, fontWeight = FontWeight.ExtraLight, lineHeight = 132.sp)
-            Text(if (s.carMph) "MPH" else "KM/H", color = Muted, fontSize = 15.sp, letterSpacing = 3.sp)
-            if (limit > 0) Box(Modifier.padding(top = 14.dp).size(40.dp).clip(CircleShape)
-                .border(2.dp, if (shown > limit) Color(0xFFE53935) else Color(0xFF8B2E2E), CircleShape), contentAlignment = Alignment.Center) {
-                Text("$limit", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            if (s.carGlass) SpeedDial(shown, limit, if (s.carMph) "MPH" else "KM/H", near, over)
+            else {
+                Text(if (shown < 0) "–" else "$shown", color = Color.White, fontSize = 132.sp, fontWeight = FontWeight.ExtraLight, lineHeight = 132.sp)
+                Text(if (s.carMph) "MPH" else "KM/H", color = Muted, fontSize = 15.sp, letterSpacing = 3.sp)
+                if (limit > 0) LimitSign(limit, over, Modifier.padding(top = 14.dp))
+            }
+            nearest?.let { (cam, d) ->
+                val close = d < 300f
+                Text("CAMERA · ${(d / 10).toInt() * 10} m" + (if (cam.limitKmh > 0) " · ${if (s.carMph) (cam.limitKmh / 1.609f).toInt() else cam.limitKmh}" else ""),
+                    color = if (close) Color.White else Color(0xFFE5A53A), fontSize = 13.sp, letterSpacing = 2.sp, fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(top = 12.dp).glassPill(GlassLevel.PANEL, if (close) Color(0xFFE53935) else Color(0xFFE5A53A))
+                        .padding(horizontal = 14.dp, vertical = 6.dp))
             }
             if (limit > 0 && osmLimit != null) Text("limit from OpenStreetMap", color = Muted.copy(alpha = 0.6f), fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
             // GPS strength: the fix's accuracy in metres and satellites in use.
@@ -251,5 +308,49 @@ fun CarScreen(vm: LauncherViewModel) {
             Text("GPS · once a second · swipe down to leave", color = Muted.copy(alpha = 0.6f), fontSize = 11.sp,
                 modifier = Modifier.fillMaxWidth().padding(top = 10.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         }
+    }
+}
+
+/** The posted limit as a road sign: a red ring, the number inside; brighter red when you are over it. */
+@Composable
+private fun LimitSign(limit: Int, over: Boolean, modifier: Modifier = Modifier) {
+    Box(modifier.size(44.dp).clip(CircleShape).background(Color.White.copy(alpha = if (over) 0.95f else 0.9f))
+        .border(4.dp, if (over) Color(0xFFFF3B30) else Color(0xFFC62828), CircleShape), contentAlignment = Alignment.Center) {
+        Text("$limit", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+/**
+ * The glass dial: a ring that fills with your speed toward the limit (or 120 when there is none), in the accent,
+ * amber as you near the limit and red over it; the speed in the middle, the limit sign in the ring's gap.
+ * Nothing animates: it redraws once a second with the GPS.
+ */
+@Composable
+private fun SpeedDial(shown: Int, limit: Int, unit: String, near: Boolean, over: Boolean) {
+    val accent = Accent
+    val tone = when { over -> Color(0xFFFF3B30); near -> Color(0xFFE5A53A); else -> accent }
+    val top = if (limit > 0) maxOf(limit + 20, (limit * 1.3f).toInt()) else 120
+    val frac = if (shown < 0) 0f else (shown.toFloat() / top).coerceIn(0f, 1f)
+    Box(Modifier.size(250.dp).glass(CircleShape, GlassLevel.SOFT, tone), contentAlignment = Alignment.Center) {
+        Canvas(Modifier.fillMaxSize().padding(12.dp)) {
+            val stroke = 11.dp.toPx()
+            val inset = stroke / 2
+            val arcSize = Size(size.width - stroke, size.height - stroke)
+            drawArc(Color.White.copy(alpha = 0.10f), 135f, 270f, false, Offset(inset, inset), arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
+            if (frac > 0f) drawArc(tone, 135f, 270f * frac, false, Offset(inset, inset), arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
+            if (limit > 0) {
+                // A tick where the limit sits on the ring.
+                val a = Math.toRadians((135f + 270f * (limit.toFloat() / top).coerceIn(0f, 1f)).toDouble())
+                val r = arcSize.width / 2
+                val c = Offset(size.width / 2, size.height / 2)
+                drawLine(Color.White.copy(alpha = 0.7f), Offset(c.x + (r - stroke) * Math.cos(a).toFloat(), c.y + (r - stroke) * Math.sin(a).toFloat()),
+                    Offset(c.x + (r + stroke) * Math.cos(a).toFloat(), c.y + (r + stroke) * Math.sin(a).toFloat()), 2.dp.toPx(), cap = StrokeCap.Round)
+            }
+        }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(if (shown < 0) "–" else "$shown", color = Color.White, fontSize = 92.sp, fontWeight = FontWeight.ExtraLight, lineHeight = 92.sp)
+            Text(unit, color = Muted, fontSize = 13.sp, letterSpacing = 3.sp)
+        }
+        if (limit > 0) LimitSign(limit, over, Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp))
     }
 }

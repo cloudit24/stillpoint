@@ -39,8 +39,44 @@ object SpeedLimits {
     }
 
     /** "80", "80 km/h", "50 mph" -> km/h. */
-    private fun parse(raw: String): Int {
+    internal fun parse(raw: String): Int {
         val n = Regex("""\d+""").find(raw)?.value?.toIntOrNull() ?: return 0
         return if (raw.contains("mph", true)) (n * 1.609f).toInt() else n
+    }
+}
+
+/** A fixed speed camera on the map, and the limit it enforces when the map says. */
+class Camera(val lat: Double, val lon: Double, val limitKmh: Int) {
+    val key: String get() = "%.5f,%.5f".format(lat, lon)
+}
+
+/**
+ * Fixed speed cameras near you, from OpenStreetMap ("highway=speed_camera") through the Overpass API.
+ * Only when you turn it on. One request covers 4 km around you; it is asked again after you've moved 2 km.
+ */
+object SpeedCameras {
+    private const val ENDPOINT = "https://overpass-api.de/api/interpreter"
+
+    /** Cameras within 4 km. Call off the main thread. Empty when nothing is known or the request failed. */
+    fun around(lat: Double, lon: Double): List<Camera> = runCatching {
+        val q = "[out:json][timeout:10];node(around:4000,$lat,$lon)[highway=speed_camera];out 80;"
+        val c = URL(ENDPOINT).openConnection() as HttpURLConnection
+        c.connectTimeout = 10_000; c.readTimeout = 10_000
+        c.requestMethod = "POST"; c.doOutput = true
+        c.setRequestProperty("User-Agent", "Stillpoint-Launcher")
+        c.outputStream.use { it.write(("data=" + URLEncoder.encode(q, "UTF-8")).toByteArray()) }
+        val els = JSONObject(c.inputStream.bufferedReader().readText()).optJSONArray("elements") ?: return@runCatching emptyList()
+        (0 until els.length()).mapNotNull { i ->
+            val e = els.getJSONObject(i)
+            if (!e.has("lat") || !e.has("lon")) null
+            else Camera(e.getDouble("lat"), e.getDouble("lon"), SpeedLimits.parse(e.optJSONObject("tags")?.optString("maxspeed").orEmpty()))
+        }
+    }.getOrDefault(emptyList())
+
+    /** Metres between two points. */
+    fun metres(aLat: Double, aLon: Double, bLat: Double, bLon: Double): Float {
+        val out = FloatArray(1)
+        android.location.Location.distanceBetween(aLat, aLon, bLat, bLon, out)
+        return out[0]
     }
 }

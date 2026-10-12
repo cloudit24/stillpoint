@@ -53,6 +53,8 @@ class Prefs(context: Context) {
             carMph = sp.getBoolean("car_mph", false),
             carLimit = sp.getInt("car_limit", 0),
             carOsmLimit = sp.getBoolean("car_osm", false),
+            carCameras = sp.getBoolean("car_cameras", false),
+            carGlass = sp.getBoolean("car_glass", true),
             carApps = (sp.getString("car_apps", "") ?: "").split("\n").filter { it.isNotBlank() },
             carImportantOnly = sp.getBoolean("car_important", true),
             carVoice = sp.getBoolean("car_voice", true),
@@ -209,6 +211,8 @@ class Prefs(context: Context) {
             .putBoolean("car_mph", s.carMph)
             .putInt("car_limit", s.carLimit)
             .putBoolean("car_osm", s.carOsmLimit)
+            .putBoolean("car_cameras", s.carCameras)
+            .putBoolean("car_glass", s.carGlass)
             .putString("car_apps", s.carApps.joinToString("\n"))
             .putBoolean("car_important", s.carImportantOnly)
             .putBoolean("car_voice", s.carVoice)

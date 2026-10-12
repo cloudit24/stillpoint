@@ -364,14 +364,9 @@ fun SettingsScreen(vm: LauncherViewModel) {
                     }
                     if (s.theme == AppTheme.NEON) {
                         Group("Neon Alley") {
-                            ToggleRow("Alley cat", s.themeCat) { on -> vm.updateSettings { it.copy(themeCat = on) } }
-                            if (s.themeCat) {
-                                ToggleRow("Roams along the display", s.catRoam) { on -> vm.updateSettings { it.copy(catRoam = on) } }
-                                ToggleRow("Reacts to messages, calls and prayer", s.catReact) { on -> vm.updateSettings { it.copy(catReact = on) } }
-                            }
                             ToggleRow("Drone companion", s.themeDrone) { on -> vm.updateSettings { it.copy(themeDrone = on) } }
                         }
-                        Note("They live on the terminal display in Terminal style. The cat sleeps at night and in Sleep focus. Tap the cat for a purr, the drone for the next message. Your special person is in Settings, Notifications.")
+                        Note("It lives on the terminal display in Terminal style. Tap it for the next message. Your special person is in Settings, Notifications.")
                     }
                     Group(stringResource(R.string.s_apps)) {
                         ActionRow(stringResource(R.string.s_home_apps_as), s.homeStyle.label) { dialog = SettingsDialog.HOME_STYLE }

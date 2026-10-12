@@ -69,23 +69,22 @@ val glassTint: Color
 @Composable
 fun Modifier.glass(shape: Shape = GlassShape, level: GlassLevel = GlassLevel.PANEL, tint: Color = glassTint): Modifier {
     val k = level.k
+    // The brushes are made once per tint and strength, not on every draw; the bloom sits behind the content.
+    val fill = remember(tint, k) { Brush.verticalGradient(listOf(tint.copy(alpha = 0.17f * k), tint.copy(alpha = 0.06f * k))) }
+    val edge = remember(tint, k) { Brush.verticalGradient(listOf(tint.copy(alpha = 0.60f * k), tint.copy(alpha = 0.10f * k), tint.copy(alpha = 0.26f * k))) }
+    val bloom = remember(tint, k) { listOf(tint.copy(alpha = 0.20f * k), Color.Transparent) }
     return this
         .clip(shape)
-        .background(Brush.verticalGradient(listOf(tint.copy(alpha = 0.17f * k), tint.copy(alpha = 0.06f * k))))
-        .border(1.dp, Brush.verticalGradient(listOf(tint.copy(alpha = 0.60f * k), tint.copy(alpha = 0.10f * k), tint.copy(alpha = 0.26f * k))), shape)
-        .drawWithContent {
-            drawContent()
-            drawRect(
-                Brush.radialGradient(listOf(tint.copy(alpha = 0.20f * k), Color.Transparent),
-                    center = Offset(size.width * 0.18f, 0f), radius = (size.width * 0.5f).coerceAtLeast(1f)),
-                size = Size(size.width, size.height),
-            )
+        .drawBehind {
+            drawRect(fill)
+            drawRect(Brush.radialGradient(bloom, center = Offset(size.width * 0.18f, 0f), radius = (size.width * 0.5f).coerceAtLeast(1f)))
         }
+        .border(1.dp, edge, shape)
 }
 
 /** A round glass pill; the common case. */
 @Composable
-fun Modifier.glassPill(level: GlassLevel = GlassLevel.SOFT): Modifier = glass(RoundedCornerShape(50), level)
+fun Modifier.glassPill(level: GlassLevel = GlassLevel.SOFT, tint: Color = glassTint): Modifier = glass(RoundedCornerShape(50), level, tint)
 
 /**
  * Ambient light behind a screen, in the accent and a neighbouring hue: two soft pools in opposite corners.
