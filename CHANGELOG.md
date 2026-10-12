@@ -3,7 +3,7 @@
 Every version of Stillpoint Launcher, newest first. Each links to its APK.
 The newest is always at **[Download the latest APK](https://github.com/cloudit24/stillpoint/releases/latest/download/Stillpoint-Launcher.apk)**.
 
-## v0.48.0 · not yet released
+## v0.48.0 · 12 Oct 2026
 - One design language: every pane, bar, chip and tile is tinted glass in your accent colour, on a soft accent light; your chosen font (Manrope by default) is used everywhere, with tabular digits; the terminal takes your accent by default. Shelf tabs that do not fit scroll to the chosen one and fade at the edge; while a card is carried on the Shelf, its name and controls are hidden and the others glide out of its way.
 - Automation (Settings, Productivity): rules in plain sentences. When: prayer time, iqama, before a prayer, a focus starting or ending, your special person messaging, Friday, night, battery under 20%. Then: start or end a focus, phone on silent for a while, switch theme, edge light off, calm the display (cat, drone, edge motion off), show a line in the terminal display, or tell Tasker. Friday, night and battery rules put the theme or display back when they end.
 - Tasker bridge, off by default: Stillpoint sends its events (prayer, iqama, focus, special person, Friday, night, battery), and Tasker can start or end a focus, switch theme, show a line, silence the phone or calm the display. Settings, Automation, Copy event names has the details; so does docs/TASKER.md.
@@ -20,6 +20,8 @@ The newest is always at **[Download the latest APK](https://github.com/cloudit24
 - The assistant has a soul and a memory. Settings, Assistant, Soul: its name and character, in your words. Memory: things it learns from you ("my wife is Mariam") kept as short notes you can see and forget; the conversation's last turns are kept between sessions. "Open WhatsApp" opens it, by text or by voice. Hermes 3 (Llama 3.2 3B) joins the download list.
 - Settings, Assistant, Advanced: threads, temperature, context size, longest answer, and extra instructions in your words ("Answer in Tamil").
 - Settings, Assistant says what this phone can carry (memory, cores) and marks the suggested model; each downloaded model has Test on this phone, which times a short answer: words per second, load time, and whether it's smooth.
+
+[stillpoint-v0.48.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.48.0/stillpoint-v0.48.0.apk)
 
 ## v0.47.2 · 11 Oct 2026
 - Battery: the home ring, the Shelf card and Senior home now read the same battery figure the status bar shows. Before, they used a shortcut that some phones report late or wrongly, so the percentage could lag or say "charging" while the battery was already full. The Shelf card says "full" in that case.

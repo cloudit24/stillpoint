@@ -1,0 +1,1 @@
+Automation rules and a Tasker bridge; an on-device assistant (llama.cpp, Qwen or Hermes 3B); car mode with GPS speed; a full terminal display in four looks; one glass design in your accent colour and font; pure black; screen time and battery fixes.
