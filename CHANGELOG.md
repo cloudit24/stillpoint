@@ -3,6 +3,10 @@
 Every version of Stillpoint Launcher, newest first. Each links to its APK.
 The newest is always at **[Download the latest APK](https://github.com/cloudit24/stillpoint/releases/latest/download/Stillpoint-Launcher.apk)**.
 
+## v0.48.1 · not yet released
+- Car mode keeps every notification that arrives during the drive, newest first, each with Read, plus Read all and Clear. Before, only the latest one showed.
+- Car mode voice works: the app now declares it uses the phone's speech recogniser and voice (Android hid them), uses the on-device recogniser where there is one, falls back online when no offline language pack is installed, and says in plain words what went wrong.
+
 ## v0.48.0 · 12 Oct 2026
 - One design language: every pane, bar, chip and tile is tinted glass in your accent colour, on a soft accent light; your chosen font (Manrope by default) is used everywhere, with tabular digits; the terminal takes your accent by default. Shelf tabs that do not fit scroll to the chosen one and fade at the edge; while a card is carried on the Shelf, its name and controls are hidden and the others glide out of its way.
 - Automation (Settings, Productivity): rules in plain sentences. When: prayer time, iqama, before a prayer, a focus starting or ending, your special person messaging, Friday, night, battery under 20%. Then: start or end a focus, phone on silent for a while, switch theme, edge light off, calm the display (cat, drone, edge motion off), show a line in the terminal display, or tell Tasker. Friday, night and battery rules put the theme or display back when they end.

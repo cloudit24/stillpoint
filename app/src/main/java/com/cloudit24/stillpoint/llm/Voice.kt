@@ -26,10 +26,21 @@ class Voice(private val context: Context) {
     private var ttsReady = false
     private var pending: String? = null
 
-    fun listen(onResult: (String) -> Unit) {
-        if (!SpeechRecognizer.isRecognitionAvailable(context)) { error = "No speech recognition on this phone."; return }
+    private var onDevice = false
+
+    fun listen(onResult: (String) -> Unit) = listen(onResult, preferOffline = true)
+
+    private fun listen(onResult: (String) -> Unit, preferOffline: Boolean) {
         stopSpeaking()
-        val r = recognizer ?: SpeechRecognizer.createSpeechRecognizer(context).also { recognizer = it }
+        val r = recognizer ?: run {
+            // The phone's own recogniser keeps speech on the phone; otherwise the default (Google's) one.
+            onDevice = android.os.Build.VERSION.SDK_INT >= 31 && SpeechRecognizer.isOnDeviceRecognitionAvailable(context)
+            when {
+                onDevice -> SpeechRecognizer.createOnDeviceSpeechRecognizer(context)
+                SpeechRecognizer.isRecognitionAvailable(context) -> SpeechRecognizer.createSpeechRecognizer(context)
+                else -> { error = "No speech recognition on this phone. Install Google's Speech Services."; return }
+            }.also { recognizer = it }
+        }
         r.setRecognitionListener(object : RecognitionListener {
             override fun onReadyForSpeech(params: Bundle?) { listening = true; heard = ""; error = "" }
             override fun onBeginningOfSpeech() {}
@@ -38,9 +49,15 @@ class Voice(private val context: Context) {
             override fun onEndOfSpeech() { listening = false }
             override fun onError(code: Int) {
                 listening = false
+                // No offline language pack: try again, letting the recogniser go online.
+                if (preferOffline && !onDevice && code in listOf(12, 13)) { listen(onResult, preferOffline = false); return }
                 error = when (code) {
                     SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "Didn't catch that."
                     SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Microphone permission is needed."
+                    SpeechRecognizer.ERROR_AUDIO -> "The microphone is busy."
+                    SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "Speech needs a connection right now."
+                    SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "The recogniser is busy. Try again."
+                    12, 13 -> "No speech pack for your language. Add one in the phone's Settings, Languages."
                     else -> "Couldn't listen (error $code)."
                 }
             }
@@ -58,7 +75,8 @@ class Voice(private val context: Context) {
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-            .putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
+            .putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, preferOffline)
+            .putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault().toLanguageTag())
             .putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
         runCatching { r.startListening(intent) }.onFailure { error = "Couldn't start listening."; listening = false }
     }

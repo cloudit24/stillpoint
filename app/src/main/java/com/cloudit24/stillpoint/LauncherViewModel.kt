@@ -505,8 +505,23 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     var notifyItems by mutableStateOf<List<NotifyItem>>(emptyList())
         private set
 
+    /** Every notification that arrived while car mode was on, newest first (kept for the drive, not saved). */
+    var carLog by mutableStateOf<List<NotifyItem>>(emptyList())
+        private set
+    private val carSeen = HashSet<String>()
+
+    fun clearCarLog() { carLog = emptyList(); carSeen.clear() }
+
     init {
-        viewModelScope.launch { NotifyHub.items.collect { notifyItems = it } }
+        viewModelScope.launch {
+            NotifyHub.items.collect { list ->
+                notifyItems = list
+                if (settings.carOn) {
+                    val fresh = list.filter { it.pkg !in settings.notifyOff && carSeen.add("${it.key}@${it.postTime}") }
+                    if (fresh.isNotEmpty()) carLog = (fresh.sortedByDescending { it.postTime } + carLog).take(60)
+                }
+            }
+        }
         // A rule (prayer alarm, Tasker) may change the settings behind our back; pick that up.
         viewModelScope.launch { Automation.changed.collect { if (it > 0) settings = prefs.loadSettings() } }
         viewModelScope.launch { while (true) { runCatching { Automation.tick(getApplication()) }; delay(60_000) } }

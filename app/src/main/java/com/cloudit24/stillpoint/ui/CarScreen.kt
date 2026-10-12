@@ -17,6 +17,10 @@ import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import com.cloudit24.stillpoint.notify.NotifyItem
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -148,7 +152,11 @@ fun CarScreen(vm: LauncherViewModel) {
         }
     }
 
-    val latest = vm.litNotifications().filter { !s.carImportantOnly || it.important || it.special }.maxByOrNull { it.postTime }
+    val log = vm.carLog.filter { !s.carImportantOnly || it.important || it.special }
+    fun say(n: NotifyItem): String {
+        val app = vm.apps.firstOrNull { it.packageName == n.pkg }
+        return listOf(app?.label, n.title, n.text).filter { !it.isNullOrBlank() }.joinToString(". ")
+    }
     val battery = remember(now) { batteryNow(context) }
     val next = remember(now) { s.city?.takeIf { s.prayerOn }?.let { c -> PrayerTimes.next(now, c.lat, c.lon, s.prayerMethod, s.asrHanafi) } }
     var zen by remember { mutableStateOf(false) }
@@ -188,19 +196,30 @@ fun CarScreen(vm: LauncherViewModel) {
         }
 
         if (!zen) {
-            latest?.let { n ->
-                val app = vm.apps.firstOrNull { it.packageName == n.pkg }
+            if (log.isNotEmpty()) {
                 val shape = RoundedCornerShape(14.dp)
-                Row(Modifier.fillMaxWidth().glass(shape)
-                    .clickable { app?.let { vm.launchNow(it) } }.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(8.dp).clip(CircleShape).background(if (n.special) SpecialPink else vm.notifyColor(n.pkg)))
-                    Column(Modifier.weight(1f).padding(start = 10.dp)) {
-                        Text(n.title.ifEmpty { app?.label ?: n.pkg }, color = Ink, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(n.text.ifEmpty { app?.label.orEmpty() }, color = Muted, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Column(Modifier.fillMaxWidth().glass(shape).padding(horizontal = 14.dp, vertical = 8.dp)) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text("${log.size} on this drive", color = Muted, fontSize = 12.sp, letterSpacing = 1.sp, modifier = Modifier.weight(1f))
+                        if (s.carVoice) Text("Read all", color = Accent, fontSize = 13.sp, modifier = Modifier.clickable {
+                            voice.speak(log.take(10).joinToString(". Next. ") { say(it) })
+                        }.padding(horizontal = 8.dp, vertical = 4.dp))
+                        Text("Clear", color = Muted, fontSize = 13.sp, modifier = Modifier.clickable { vm.clearCarLog() }.padding(start = 8.dp, top = 4.dp, bottom = 4.dp))
                     }
-                    if (s.carVoice) Text("Read", color = Accent, fontSize = 14.sp, modifier = Modifier.clickable {
-                        voice.speak(listOf(app?.label, n.title, n.text).filter { !it.isNullOrBlank() }.joinToString(". "))
-                    }.padding(start = 10.dp))
+                    Column(Modifier.heightIn(max = 190.dp).verticalScroll(rememberScrollState())) {
+                        log.forEach { n ->
+                            val app = vm.apps.firstOrNull { it.packageName == n.pkg }
+                            Row(Modifier.fillMaxWidth().clickable { app?.let { vm.launchNow(it) } }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Box(Modifier.size(8.dp).clip(CircleShape).background(if (n.special) SpecialPink else vm.notifyColor(n.pkg)))
+                                Column(Modifier.weight(1f).padding(start = 10.dp)) {
+                                    Text(n.title.ifEmpty { app?.label ?: n.pkg }, color = Ink, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(n.text.ifEmpty { app?.label.orEmpty() }, color = Muted, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
+                                Text(formatClock(context, n.postTime), color = Muted, fontSize = 11.sp, modifier = Modifier.padding(start = 8.dp))
+                                if (s.carVoice) Text("Read", color = Accent, fontSize = 14.sp, modifier = Modifier.clickable { voice.speak(say(n)) }.padding(start = 10.dp))
+                            }
+                        }
+                    }
                 }
             }
             val apps = s.carApps.mapNotNull { k -> vm.apps.firstOrNull { it.key == k } }
