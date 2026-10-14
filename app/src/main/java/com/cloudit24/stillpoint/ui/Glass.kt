@@ -166,6 +166,6 @@ fun GlassTabs(
 /** A small round glass button: Edit, Tools, +. */
 @Composable
 fun GlassButton(label: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Text(label, color = Ink, fontSize = 14.sp, maxLines = 1,
+    Text(label, color = Ink, fontSize = 14.sp, maxLines = 1, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
         modifier = modifier.glassPill(GlassLevel.PANEL).clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 9.dp))
 }

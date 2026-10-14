@@ -37,17 +37,16 @@ fun CarSettings(vm: LauncherViewModel) {
     val s = vm.settings
     var pick by remember { mutableStateOf<String?>(null) }
 
+    if (s.carOn) GlassButton(stringResource(R.string.c_open_now), Modifier.fillMaxWidth().padding(top = 16.dp)) { vm.screen = Screen.CAR }
+
     Group(stringResource(R.string.c_start)) {
         ToggleRow(stringResource(R.string.c_on), s.carOn) { on -> vm.updateSettings { it.copy(carOn = on) } }
-        if (s.carOn) {
-            ActionRow(stringResource(R.string.c_bluetooth), s.carBluetoothName.ifEmpty { stringResource(R.string.c_bluetooth_none) }) { pick = "bt" }
-            ActionRow(stringResource(R.string.c_open_now)) { vm.screen = Screen.CAR }
-        }
+        if (s.carOn) ActionRow(stringResource(R.string.c_bluetooth), s.carBluetoothName.ifEmpty { stringResource(R.string.c_bluetooth_none) }) { pick = "bt" }
         Note(stringResource(R.string.c_start_note))
         Note(stringResource(R.string.c_ways_note))
     }
 
-    if (s.carOn) Group(stringResource(R.string.c_on_screen)) {
+    if (s.carOn) Group(stringResource(R.string.c_road)) {
         ToggleRow(stringResource(R.string.c_mph), s.carMph) { on -> vm.updateSettings { it.copy(carMph = on) } }
         Stepper(stringResource(R.string.c_limit), if (s.carLimit > 0) "${s.carLimit} km/h" else stringResource(R.string.c_limit_off),
             onMinus = { vm.updateSettings { it.copy(carLimit = (it.carLimit - 10).coerceAtLeast(0)) } },
@@ -58,17 +57,23 @@ fun CarSettings(vm: LauncherViewModel) {
         Note(stringResource(R.string.c_cameras_note))
         ToggleRow(stringResource(R.string.c_glass), s.carGlass) { on -> vm.updateSettings { it.copy(carGlass = on) } }
         Note(stringResource(R.string.c_glass_note))
+    }
+
+    if (s.carOn) Group(stringResource(R.string.c_sound)) {
         Stepper(stringResource(R.string.c_tone), if (s.carTone <= 0) stringResource(R.string.c_tone_off) else "${s.carTone}%",
             onMinus = { vm.updateSettings { it.copy(carTone = (it.carTone - 25).coerceAtLeast(0)) } },
             onPlus = { vm.updateSettings { it.copy(carTone = (it.carTone + 25).coerceAtMost(100)) } })
         ActionRow(stringResource(R.string.c_test_sound), stringResource(R.string.c_test_sound_sum)) { carBeep(loudness = s.carTone) }
-        val names = s.carApps.mapNotNull { k -> vm.apps.firstOrNull { it.key == k }?.label }
-        ActionRow(stringResource(R.string.c_apps), names.ifEmpty { listOf(stringResource(R.string.c_apps_none)) }.joinToString(", ")) { pick = "apps" }
-        ToggleRow(stringResource(R.string.c_important_only), s.carImportantOnly) { on -> vm.updateSettings { it.copy(carImportantOnly = on) } }
         ToggleRow(stringResource(R.string.c_speak), s.carSpeak) { on -> vm.updateSettings { it.copy(carSpeak = on) } }
         Note(stringResource(R.string.c_speak_note))
         ToggleRow(stringResource(R.string.c_voice), s.carVoice) { on -> vm.updateSettings { it.copy(carVoice = on) } }
         if (s.carVoice && !s.assistantOn) Note(stringResource(R.string.c_voice_needs_assistant))
+    }
+
+    if (s.carOn) Group(stringResource(R.string.c_on_screen)) {
+        val names = s.carApps.mapNotNull { k -> vm.apps.firstOrNull { it.key == k }?.label }
+        ActionRow(stringResource(R.string.c_apps), names.ifEmpty { listOf(stringResource(R.string.c_apps_none)) }.joinToString(", ")) { pick = "apps" }
+        ToggleRow(stringResource(R.string.c_important_only), s.carImportantOnly) { on -> vm.updateSettings { it.copy(carImportantOnly = on) } }
         ToggleRow(stringResource(R.string.c_keep_on), s.carKeepOn) { on -> vm.updateSettings { it.copy(carKeepOn = on) } }
         Note(stringResource(R.string.c_battery_note))
     }

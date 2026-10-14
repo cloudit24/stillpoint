@@ -357,6 +357,8 @@
     <string name="s_terminal_fills">Fills the space under the headline (no cards or strip)</string>
     <string name="pg_car_sum">Speed, one notification, your few apps</string>
     <string name="c_start">Start it</string>
+    <string name="c_road">On the road</string>
+    <string name="c_sound">Sound and voice</string>
     <string name="c_on">Car mode</string>
     <string name="c_bluetooth">Start when this Bluetooth connects</string>
     <string name="c_bluetooth_none">None, by hand only</string>
@@ -378,10 +380,10 @@
     <string name="c_keep_on">Keep the screen on</string>
     <string name="c_cameras">Speed cameras from OpenStreetMap</string>
     <string name="c_tile">Car mode</string>
-    <string name="c_ways_note">Three more ways in: the Car mode tile in Quick Settings (pull the shade down twice, tap the pencil, drag it in), a swipe or bottom shortcut set to Car mode in Settings, Gestures, or the assistant: say \"car mode\".</string>
+    <string name="c_ways_note">Four more ways in: a Car mode card on the Shelf (Add, Car mode), the Car mode tile in Quick Settings (pull the shade down twice, tap the pencil, drag it in), a swipe or bottom shortcut set to Car mode in Settings, Gestures, or the assistant: say \"car mode\".</string>
     <string name="c_tone">Warning tones</string>
     <string name="c_speak">Spoken alerts</string>
-    <string name="c_speak_note">Says the speed limit when it changes, when you are over it, a camera ahead, and reads each notification as it arrives, so you never need to look. The drive keeps running in the background, with a notification to end it, until End drive or the car\'s Bluetooth drops.</string>
+    <string name="c_speak_note">Says the speed limit when it changes, when you are over it, a camera ahead, and reads each notification as it arrives, so you never need to look. The drive keeps running in the background, with a notification to end it, until End drive or the car's Bluetooth drops.</string>
     <string name="c_tone_off">Off</string>
     <string name="c_test_sound">Test the warning tone</string>
     <string name="c_test_sound_sum">Plays on the media volume, the one the car carries, at the loudness above. Turn the phone's media volume up if you hear nothing.</string>

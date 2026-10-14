@@ -29,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -84,6 +85,14 @@ fun BuiltInContent(vm: LauncherViewModel, kind: BuiltIn, id: Int) {
         BuiltIn.HOME_ASSISTANT -> HaCard(vm)
         BuiltIn.UPTIME -> KumaCard(vm)
         BuiltIn.MESSAGES -> MessagesCard(vm)
+        BuiltIn.CAR -> {
+            val running by com.cloudit24.stillpoint.service.CarService.running.collectAsState()
+            CardTitle("Car mode")
+            GlassButton(if (running) "Drive is on · open" else "Start drive", Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 4.dp)) {
+                if (!s.carOn) vm.updateSettings { it.copy(carOn = true) }
+                vm.screen = Screen.CAR
+            }
+        }
     }
 }
 

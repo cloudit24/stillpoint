@@ -4,6 +4,7 @@ Every version of Stillpoint Launcher, newest first. Each links to its APK.
 The newest is always at **[Download the latest APK](https://github.com/cloudit24/stillpoint/releases/latest/download/Stillpoint-Launcher.apk)**.
 
 ## v0.48.2 · not yet released
+- Car mode, faster to start: a Car mode card for the Shelf with one big Start drive button, a Start button on top of its settings page, and that page sorted into Start it, On the road, Sound and voice, On the screen.
 - Car mode runs as a drive in the background: GPS, the limit, the cameras and the warnings keep going if you leave the screen by accident or it goes dark, with a notification to end it; the car's Bluetooth dropping ends it too. Spoken alerts (Settings, Car mode, on by default) say the limit when it changes, when you are over it, a camera ahead, and read each notification as it arrives, so you never need to look.
 - Car mode says where the limit and the cameras stand when the dial is empty (no limit set, waiting for a position, nothing known here). Warning tones have their own loudness in Settings, Car mode (off to 100%), on top of the phone's media volume. Voice: when the phone's own recogniser refuses (error 10), the default one is used instead.
 

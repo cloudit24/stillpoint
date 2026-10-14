@@ -474,7 +474,8 @@ enum class BuiltIn(val code: Int, val title: String, val summary: String, val ca
     COUNTDOWN(15, "Countdown", "Days to a date you choose", canHalf = true),
     HOME_ASSISTANT(20, "Home Assistant", "Your lights, switches, scenes and sensors"),
     UPTIME(21, "Uptime Kuma", "Which of your services are up"),
-    MESSAGES(22, "ntfy or Gotify", "The latest messages from your server");
+    MESSAGES(22, "ntfy or Gotify", "The latest messages from your server"),
+    CAR(30, "Car mode", "A button that starts the drive", canHalf = true);
 
     fun id(shelf: Int): Int = -(code * 100 + shelf)
 
