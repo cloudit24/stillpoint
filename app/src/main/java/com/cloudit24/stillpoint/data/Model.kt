@@ -183,6 +183,8 @@ data class LauncherSettings(
     val carGlass: Boolean = true,
     /** Loudness of the warning tones, 0 (off) to 100, on the media volume. */
     val carTone: Int = 100,
+    /** Says the limit, over the limit, a camera ahead, and each notification aloud. */
+    val carSpeak: Boolean = true,
     val carApps: List<String> = emptyList(),
     val carImportantOnly: Boolean = true,
     val carVoice: Boolean = true,

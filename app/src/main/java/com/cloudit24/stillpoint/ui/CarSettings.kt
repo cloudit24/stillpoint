@@ -65,6 +65,8 @@ fun CarSettings(vm: LauncherViewModel) {
         val names = s.carApps.mapNotNull { k -> vm.apps.firstOrNull { it.key == k }?.label }
         ActionRow(stringResource(R.string.c_apps), names.ifEmpty { listOf(stringResource(R.string.c_apps_none)) }.joinToString(", ")) { pick = "apps" }
         ToggleRow(stringResource(R.string.c_important_only), s.carImportantOnly) { on -> vm.updateSettings { it.copy(carImportantOnly = on) } }
+        ToggleRow(stringResource(R.string.c_speak), s.carSpeak) { on -> vm.updateSettings { it.copy(carSpeak = on) } }
+        Note(stringResource(R.string.c_speak_note))
         ToggleRow(stringResource(R.string.c_voice), s.carVoice) { on -> vm.updateSettings { it.copy(carVoice = on) } }
         if (s.carVoice && !s.assistantOn) Note(stringResource(R.string.c_voice_needs_assistant))
         ToggleRow(stringResource(R.string.c_keep_on), s.carKeepOn) { on -> vm.updateSettings { it.copy(carKeepOn = on) } }

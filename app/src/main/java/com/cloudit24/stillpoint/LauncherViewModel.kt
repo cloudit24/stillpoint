@@ -152,7 +152,8 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         val s = settings
         if (!s.carOn || s.carBluetoothAddr.isEmpty() || addr != s.carBluetoothAddr) return
         carConnected = connected
-        if (connected) screen = Screen.CAR else if (screen == Screen.CAR) screen = Screen.HOME
+        if (connected) { screen = Screen.CAR; com.cloudit24.stillpoint.service.CarService.start(getApplication()) }
+        else { com.cloudit24.stillpoint.service.CarService.stop(getApplication()); if (screen == Screen.CAR) screen = Screen.HOME }
     }
     var hasUsageAccess by mutableStateOf(false)
         private set

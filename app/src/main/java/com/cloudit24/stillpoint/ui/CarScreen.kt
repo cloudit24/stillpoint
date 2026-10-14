@@ -18,6 +18,8 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import com.cloudit24.stillpoint.data.Camera
+import com.cloudit24.stillpoint.service.CarService
+import androidx.compose.runtime.collectAsState
 import com.cloudit24.stillpoint.data.SpeedCameras
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -81,113 +83,24 @@ fun CarScreen(vm: LauncherViewModel) {
     val view = LocalView.current
     DisposableEffect(s.carKeepOn) { view.keepScreenOn = s.carKeepOn; onDispose { view.keepScreenOn = false } }
 
-    // Speed from GPS, one reading a second.
-    var speedMs by remember { mutableFloatStateOf(-1f) }
-    var accuracy by remember { mutableFloatStateOf(-1f) }     // metres; how good the fix is
-    var sats by remember { mutableIntStateOf(-1) }            // satellites used in the fix
-    var here by remember { mutableStateOf<Pair<Double, Double>?>(null) }
-    var osmLimit by remember { mutableStateOf<Int?>(null) }
+    // The drive runs in CarService, so it carries on if this screen is left by accident. Start it once we may use the GPS.
     var hasGps by remember { mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) }
     val askGps = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { hasGps = it }
     LaunchedEffect(Unit) { if (!hasGps) askGps.launch(Manifest.permission.ACCESS_FINE_LOCATION) }
-    DisposableEffect(hasGps) {
-        val lm = context.getSystemService(LocationManager::class.java)
-        var last: Location? = null
-        val listener = object : LocationListener {
-            override fun onLocationChanged(l: Location) {
-                val prev = last
-                last = l
-                // Some fixes carry no speed: work it out from how far we came since the last one.
-                speedMs = when {
-                    l.hasSpeed() -> l.speed
-                    prev != null && l.time - prev.time in 300..6000 -> prev.distanceTo(l) / ((l.time - prev.time) / 1000f)
-                    else -> -1f
-                }
-                accuracy = if (l.hasAccuracy()) l.accuracy else -1f
-                here = l.latitude to l.longitude
-            }
-            @Deprecated("Deprecated in Java") override fun onStatusChanged(provider: String?, status: Int, extras: android.os.Bundle?) {}
-            override fun onProviderEnabled(provider: String) {}
-            override fun onProviderDisabled(provider: String) { speedMs = -1f }
-        }
-        val gnss = object : android.location.GnssStatus.Callback() {
-            override fun onSatelliteStatusChanged(status: android.location.GnssStatus) {
-                sats = (0 until status.satelliteCount).count { status.usedInFix(it) }
-            }
-            override fun onStopped() { sats = -1 }
-        }
-        if (hasGps && lm != null) runCatching {
-            lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000L, 0f, listener)
-            // The phone's fused position (GPS helped by the network) gets a fix sooner, under trees and between buildings.
-            if (android.os.Build.VERSION.SDK_INT >= 31 && lm.allProviders.contains(LocationManager.FUSED_PROVIDER))
-                lm.requestLocationUpdates(LocationManager.FUSED_PROVIDER, 1000L, 0f, listener)
-            lm.registerGnssStatusCallback(gnss, android.os.Handler(android.os.Looper.getMainLooper()))
-        }
-        onDispose { runCatching { lm?.removeUpdates(listener); lm?.unregisterGnssStatusCallback(gnss) } }
-    }
-    // The road's posted limit from OpenStreetMap, only if you turned that on: asked again after ~150 m.
-    var asked by remember { mutableStateOf<Pair<Double, Double>?>(null) }
-    LaunchedEffect(here, s.carOsmLimit) {
-        val h = here ?: return@LaunchedEffect
-        if (!s.carOsmLimit) { osmLimit = null; return@LaunchedEffect }
-        val a = asked
-        if (a != null && Math.abs(a.first - h.first) < 0.0013 && Math.abs(a.second - h.second) < 0.0015) return@LaunchedEffect
-        asked = h
-        osmLimit = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.cloudit24.stillpoint.data.SpeedLimits.at(h.first, h.second) } ?: osmLimit
-    }
+    LaunchedEffect(hasGps) { if (hasGps) CarService.start(context) }
+    val st by CarService.state.collectAsState()
+    val speedMs = st.speedMs; val accuracy = st.accuracy; val sats = st.sats; val here = st.here; val osmLimit = st.osmLimit; val nearest = st.nearest
+
     val limitKmh = osmLimit ?: s.carLimit
     val limit = if (limitKmh <= 0) 0 else if (s.carMph) (limitKmh / 1.609f).toInt() else limitKmh
     val kmh = if (speedMs < 0) -1 else (speedMs * 3.6f).toInt()
     val shown = if (kmh < 0) -1 else if (s.carMph) (kmh / 1.609f).toInt() else kmh
+    val near = limit > 0 && shown >= limit - 3 && shown <= limit
+    val over = limit > 0 && shown > limit
 
     // Voice: tap the mic, speak, the assistant answers aloud.
     val voice = remember { Voice(context) }
     DisposableEffect(Unit) { onDispose { voice.release() } }
-    // Nearing the limit (within 3): one soft tone as you reach it. Over it: a sharper tone, at most every ten seconds.
-    var lastTone by remember { mutableStateOf(0L) }
-    var warned by remember { mutableStateOf(false) }
-    val near = limit > 0 && shown >= limit - 3 && shown <= limit
-    val over = limit > 0 && shown > limit
-    LaunchedEffect(shown) {
-        if (limit <= 0) return@LaunchedEffect
-        if (shown < limit - 5) warned = false
-        if (near && !warned) {
-            warned = true
-            carBeep(soft = true, loudness = s.carTone)
-        }
-        if (over && System.currentTimeMillis() - lastTone > 10_000) {
-            lastTone = System.currentTimeMillis()
-            carBeep(loudness = s.carTone)
-        }
-    }
-
-    // Speed cameras from OpenStreetMap, if you turned that on: the nearest within a kilometre, and a warning once per camera.
-    var cameras by remember { mutableStateOf<List<Camera>>(emptyList()) }
-    var camCentre by remember { mutableStateOf<Pair<Double, Double>?>(null) }
-    LaunchedEffect(here, s.carCameras) {
-        val h = here ?: return@LaunchedEffect
-        if (!s.carCameras) { cameras = emptyList(); camCentre = null; return@LaunchedEffect }
-        val c = camCentre
-        if (c == null || SpeedCameras.metres(c.first, c.second, h.first, h.second) > 2000f) {
-            camCentre = h
-            cameras = withContext(Dispatchers.IO) { SpeedCameras.around(h.first, h.second) }
-        }
-    }
-    val nearest = remember(here, cameras) {
-        val h = here ?: return@remember null
-        cameras.map { it to SpeedCameras.metres(h.first, h.second, it.lat, it.lon) }.minByOrNull { it.second }?.takeIf { it.second < 1000f }
-    }
-    val warnedCams = remember { HashSet<String>() }
-    var lastCamDist by remember { mutableFloatStateOf(Float.MAX_VALUE) }
-    LaunchedEffect(nearest) {
-        val (cam, d) = nearest ?: run { lastCamDist = Float.MAX_VALUE; return@LaunchedEffect }
-        val closing = d < lastCamDist
-        lastCamDist = d
-        if (d < 600f && closing && warnedCams.add(cam.key)) {
-            carBeep(loudness = s.carTone); delay(450); carBeep(loudness = s.carTone)
-            if (s.carVoice) voice.speak("Speed camera ahead, ${(d / 50).toInt() * 50} metres" + (if (cam.limitKmh > 0) ", limit ${if (s.carMph) (cam.limitKmh / 1.609f).toInt() else cam.limitKmh}" else ""))
-        }
-    }
 
     val a = vm.assistant
     var hasMic by remember { mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) }
@@ -323,8 +236,11 @@ fun CarScreen(vm: LauncherViewModel) {
                     }, color = Muted, fontSize = 14.sp, maxLines = 3, overflow = TextOverflow.Ellipsis,
                 )
             }
-            Text("GPS · once a second · swipe down to leave", color = Muted.copy(alpha = 0.6f), fontSize = 11.sp,
-                modifier = Modifier.fillMaxWidth().padding(top = 10.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("Keeps running when you leave · swipe down for home", color = Muted.copy(alpha = 0.6f), fontSize = 11.sp, modifier = Modifier.weight(1f))
+                Text("End drive", color = Accent, fontSize = 13.sp, modifier = Modifier.glassPill().clickable { CarService.stop(context); vm.screen = Screen.HOME }
+                    .padding(horizontal = 12.dp, vertical = 6.dp))
+            }
         }
     }
 }
