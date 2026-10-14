@@ -5,6 +5,8 @@ The newest is always at **[Download the latest APK](https://github.com/cloudit24
 
 ## v0.48.1 · not yet released
 - Car mode keeps every notification that arrives during the drive, newest first, each with Read, plus Read all and Clear. Before, only the latest one showed.
+- Car mode is easier to reach: a Car mode tile for Quick Settings, Car mode as a swipe or bottom-shortcut target, and "car mode" said or typed to the assistant.
+- Car mode: the speed shows sooner and on more phones (the fused position too, and worked out from distance when a fix carries no speed). The dial and the number blend from your accent to amber from 85% of the limit and go red over it. Warning tones play on the media volume, the one the car's speakers carry, louder and longer; Settings, Car mode has Test the warning tone.
 - Car mode: a glass speed dial (Settings, Car mode, Glass dial; off for the plain number). The ring fills toward the limit, turns amber as you near it with one soft tone, red over it with the sharper tone. The limit is a road sign in the ring. Speed cameras from OpenStreetMap, off by default: the nearest within a kilometre shows with its distance; within 600 m and closing, a double tone and, with voice on, a spoken warning, once per camera.
 - Glass is lighter: each pane's brushes are made once and drawn in one pass behind the content.
 - Neon Alley: the alley cat is gone; the drone stays.

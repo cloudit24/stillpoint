@@ -92,9 +92,17 @@ fun CarScreen(vm: LauncherViewModel) {
     LaunchedEffect(Unit) { if (!hasGps) askGps.launch(Manifest.permission.ACCESS_FINE_LOCATION) }
     DisposableEffect(hasGps) {
         val lm = context.getSystemService(LocationManager::class.java)
+        var last: Location? = null
         val listener = object : LocationListener {
             override fun onLocationChanged(l: Location) {
-                speedMs = if (l.hasSpeed()) l.speed else -1f
+                val prev = last
+                last = l
+                // Some fixes carry no speed: work it out from how far we came since the last one.
+                speedMs = when {
+                    l.hasSpeed() -> l.speed
+                    prev != null && l.time - prev.time in 300..6000 -> prev.distanceTo(l) / ((l.time - prev.time) / 1000f)
+                    else -> -1f
+                }
                 accuracy = if (l.hasAccuracy()) l.accuracy else -1f
                 here = l.latitude to l.longitude
             }
@@ -110,6 +118,9 @@ fun CarScreen(vm: LauncherViewModel) {
         }
         if (hasGps && lm != null) runCatching {
             lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000L, 0f, listener)
+            // The phone's fused position (GPS helped by the network) gets a fix sooner, under trees and between buildings.
+            if (android.os.Build.VERSION.SDK_INT >= 31 && lm.allProviders.contains(LocationManager.FUSED_PROVIDER))
+                lm.requestLocationUpdates(LocationManager.FUSED_PROVIDER, 1000L, 0f, listener)
             lm.registerGnssStatusCallback(gnss, android.os.Handler(android.os.Looper.getMainLooper()))
         }
         onDispose { runCatching { lm?.removeUpdates(listener); lm?.unregisterGnssStatusCallback(gnss) } }
@@ -142,11 +153,11 @@ fun CarScreen(vm: LauncherViewModel) {
         if (shown < limit - 5) warned = false
         if (near && !warned) {
             warned = true
-            runCatching { ToneGenerator(AudioManager.STREAM_NOTIFICATION, 70).startTone(ToneGenerator.TONE_PROP_BEEP, 180) }
+            carBeep(soft = true)
         }
         if (over && System.currentTimeMillis() - lastTone > 10_000) {
             lastTone = System.currentTimeMillis()
-            runCatching { ToneGenerator(AudioManager.STREAM_NOTIFICATION, 80).startTone(ToneGenerator.TONE_PROP_BEEP2, 300) }
+            carBeep()
         }
     }
 
@@ -173,10 +184,7 @@ fun CarScreen(vm: LauncherViewModel) {
         val closing = d < lastCamDist
         lastCamDist = d
         if (d < 600f && closing && warnedCams.add(cam.key)) {
-            runCatching {
-                val t = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 90)
-                t.startTone(ToneGenerator.TONE_PROP_BEEP2, 250); delay(350); t.startTone(ToneGenerator.TONE_PROP_BEEP2, 250)
-            }
+            carBeep(); delay(450); carBeep()
             if (s.carVoice) voice.speak("Speed camera ahead, ${(d / 50).toInt() * 50} metres" + (if (cam.limitKmh > 0) ", limit ${if (s.carMph) (cam.limitKmh / 1.609f).toInt() else cam.limitKmh}" else ""))
         }
     }
@@ -226,7 +234,8 @@ fun CarScreen(vm: LauncherViewModel) {
             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             if (s.carGlass) SpeedDial(shown, limit, if (s.carMph) "MPH" else "KM/H", near, over)
             else {
-                Text(if (shown < 0) "–" else "$shown", color = Color.White, fontSize = 132.sp, fontWeight = FontWeight.ExtraLight, lineHeight = 132.sp)
+                Text(if (shown < 0) "–" else "$shown", color = if (limit > 0) speedTone(shown, limit, near, over, Accent) else Color.White,
+                    fontSize = 132.sp, fontWeight = if (over) FontWeight.Normal else FontWeight.ExtraLight, lineHeight = 132.sp)
                 Text(if (s.carMph) "MPH" else "KM/H", color = Muted, fontSize = 15.sp, letterSpacing = 3.sp)
                 if (limit > 0) LimitSign(limit, over, Modifier.padding(top = 14.dp))
             }
@@ -328,7 +337,7 @@ private fun LimitSign(limit: Int, over: Boolean, modifier: Modifier = Modifier) 
 @Composable
 private fun SpeedDial(shown: Int, limit: Int, unit: String, near: Boolean, over: Boolean) {
     val accent = Accent
-    val tone = when { over -> Color(0xFFFF3B30); near -> Color(0xFFE5A53A); else -> accent }
+    val tone = speedTone(shown, limit, near, over, accent)
     val top = if (limit > 0) maxOf(limit + 20, (limit * 1.3f).toInt()) else 120
     val frac = if (shown < 0) 0f else (shown.toFloat() / top).coerceIn(0f, 1f)
     Box(Modifier.size(250.dp).glass(CircleShape, GlassLevel.SOFT, tone), contentAlignment = Alignment.Center) {
@@ -348,9 +357,36 @@ private fun SpeedDial(shown: Int, limit: Int, unit: String, near: Boolean, over:
             }
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(if (shown < 0) "–" else "$shown", color = Color.White, fontSize = 92.sp, fontWeight = FontWeight.ExtraLight, lineHeight = 92.sp)
+            Text(if (shown < 0) "–" else "$shown", color = if (limit > 0) tone else Color.White, fontSize = 92.sp,
+                fontWeight = if (over) FontWeight.Normal else FontWeight.ExtraLight, lineHeight = 92.sp)
             Text(unit, color = Muted, fontSize = 13.sp, letterSpacing = 3.sp)
         }
         if (limit > 0) LimitSign(limit, over, Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp))
+    }
+}
+
+/**
+ * One warning tone, on the media volume (the one the car's speakers carry), so it is heard in the car.
+ * Soft: nearing the limit. Otherwise: over it, or a camera.
+ */
+fun carBeep(soft: Boolean = false) {
+    runCatching {
+        val t = ToneGenerator(AudioManager.STREAM_MUSIC, if (soft) 70 else 100)
+        t.startTone(if (soft) ToneGenerator.TONE_PROP_BEEP else ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, if (soft) 220 else 500)
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ t.release() }, 1200)
+    }
+}
+
+/** The colour of the speed against the limit: the accent, blending to amber from 85% of the limit, red over it. */
+private fun speedTone(shown: Int, limit: Int, near: Boolean, over: Boolean, accent: Color): Color {
+    if (limit <= 0 || shown < 0) return accent
+    val amber = Color(0xFFE5A53A)
+    return when {
+        over -> Color(0xFFFF3B30)
+        near -> amber
+        else -> {
+            val ratio = shown.toFloat() / limit
+            if (ratio < 0.85f) accent else androidx.compose.ui.graphics.lerp(accent, amber, ((ratio - 0.85f) / 0.15f).coerceIn(0f, 1f))
+        }
     }
 }

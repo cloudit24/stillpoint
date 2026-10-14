@@ -377,6 +377,10 @@
     <string name="c_voice_needs_assistant">Turn the Assistant on (Settings, Assistant) and download a model first.</string>
     <string name="c_keep_on">Keep the screen on</string>
     <string name="c_cameras">Speed cameras from OpenStreetMap</string>
+    <string name="c_tile">Car mode</string>
+    <string name="c_ways_note">Three more ways in: the Car mode tile in Quick Settings (pull the shade down twice, tap the pencil, drag it in), a swipe or bottom shortcut set to Car mode in Settings, Gestures, or the assistant: say \"car mode\".</string>
+    <string name="c_test_sound">Test the warning tone</string>
+    <string name="c_test_sound_sum">Plays on the media volume, the one the car carries. Turn that up if you hear nothing.</string>
     <string name="c_cameras_note">Looks up fixed cameras within 4 km of you, again after 2 km. Within 600 m of one, a double tone and, with voice on, a warning. Same server and privacy as the limit.</string>
     <string name="c_glass">Glass dial</string>
     <string name="c_glass_note">A ring that fills toward the limit, amber as you near it, red over it. Off, a plain big number, the lightest on the battery.</string>

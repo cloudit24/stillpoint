@@ -97,7 +97,10 @@ fun AssistantSheet(vm: LauncherViewModel) {
                 a.suggestions.forEach { c -> Chip(c, neon) {
                     c.rule?.let { vm.saveRule(it) }
                     c.focus?.let { name -> s.focusProfiles.firstOrNull { it.name == name }?.let { vm.startFocus(it) } }
-                    c.open?.let { name -> vm.apps.firstOrNull { it.label == name }?.let { vm.launchNow(it); vm.assistOpen = false } }
+                    c.open?.let { name ->
+                        if (name == com.cloudit24.stillpoint.llm.CAR_MODE) { vm.screen = com.cloudit24.stillpoint.Screen.CAR; vm.assistOpen = false }
+                        else vm.apps.firstOrNull { it.label == name }?.let { vm.launchNow(it); vm.assistOpen = false }
+                    }
                     a.suggestions = a.suggestions - c
                 } }
             }

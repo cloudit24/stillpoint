@@ -25,6 +25,7 @@ fun runTarget(vm: LauncherViewModel, context: Context, target: String) {
             vm.toolsReturn = Screen.HOME
             vm.screen = Screen.TOOLS
         }
+        HomeAction.CAR -> vm.screen = Screen.CAR
         HomeAction.PHONE -> context.safeStart(Intent(Intent.ACTION_DIAL))
         HomeAction.CAMERA -> context.safeStart(Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA))
         HomeAction.NOTIFICATIONS -> if (!LockAccessibilityService.openNotifications()) needsService(context)

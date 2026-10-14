@@ -66,6 +66,9 @@ object Models {
 
 class Turn(val role: String, val text: String)
 
+/** The [Suggested.open] value that means car mode rather than an app. */
+const val CAR_MODE = "\u0000car"
+
 /** Something the model suggested doing; shown as a chip under its answer. */
 class Suggested(val label: String, val rule: Rule? = null, val focus: String? = null, val open: String? = null)
 
@@ -91,6 +94,12 @@ class Assistant(private val scope: CoroutineScope, private val prefs: com.cloudi
 
     fun ask(question: String, s: LauncherSettings, facts: List<String>, apps: List<String> = emptyList()) {
         if (busy || question.isBlank()) return
+        // "car mode": no need to wake the model.
+        if (Regex("^(?:open |start )?car mode\\.?$", RegexOption.IGNORE_CASE).matches(question.trim())) {
+            turns = turns + Turn("user", question.trim()) + Turn("assistant", "Opening car mode.")
+            suggestions = listOf(Suggested("Car mode", open = CAR_MODE))
+            return
+        }
         // "open whatsapp": no need to wake the model.
         Regex("^(?:open|launch|start)\\s+(.{2,40})$", RegexOption.IGNORE_CASE).matchEntire(question.trim())?.let { m ->
             val want = m.groupValues[1].trim().trimEnd('.', '!')

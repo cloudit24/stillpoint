@@ -95,6 +95,10 @@ class MainActivity : ComponentActivity() {
         if (intent?.getBooleanExtra(UpdateNotice.EXTRA_OPEN_SETTINGS, false) == true) vm.screen = Screen.SETTINGS
         if (intent?.getBooleanExtra(AssistActivity.EXTRA_ASSIST, false) == true && vm.settings.assistantOn) { vm.screen = Screen.HOME; vm.assistOpen = true }
         intent?.getStringExtra(Guard.EXTRA_PKG)?.let { vm.guard(it, intent.getBooleanExtra(Guard.EXTRA_BLOCK, false)) }
+        if (intent?.getBooleanExtra(com.cloudit24.stillpoint.service.CarTileService.EXTRA_CAR, false) == true) {
+            if (!vm.settings.carOn) vm.updateSettings { it.copy(carOn = true) }
+            vm.screen = Screen.CAR
+        }
     }
 
     /** The car's Bluetooth connecting or dropping opens or closes car mode. */

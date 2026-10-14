@@ -44,6 +44,7 @@ fun CarSettings(vm: LauncherViewModel) {
             ActionRow(stringResource(R.string.c_open_now)) { vm.screen = Screen.CAR }
         }
         Note(stringResource(R.string.c_start_note))
+        Note(stringResource(R.string.c_ways_note))
     }
 
     if (s.carOn) Group(stringResource(R.string.c_on_screen)) {
@@ -57,6 +58,7 @@ fun CarSettings(vm: LauncherViewModel) {
         Note(stringResource(R.string.c_cameras_note))
         ToggleRow(stringResource(R.string.c_glass), s.carGlass) { on -> vm.updateSettings { it.copy(carGlass = on) } }
         Note(stringResource(R.string.c_glass_note))
+        ActionRow(stringResource(R.string.c_test_sound), stringResource(R.string.c_test_sound_sum)) { carBeep() }
         val names = s.carApps.mapNotNull { k -> vm.apps.firstOrNull { it.key == k }?.label }
         ActionRow(stringResource(R.string.c_apps), names.ifEmpty { listOf(stringResource(R.string.c_apps_none)) }.joinToString(", ")) { pick = "apps" }
         ToggleRow(stringResource(R.string.c_important_only), s.carImportantOnly) { on -> vm.updateSettings { it.copy(carImportantOnly = on) } }
