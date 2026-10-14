@@ -185,6 +185,8 @@ data class LauncherSettings(
     val carTone: Int = 100,
     /** Says the limit, over the limit, a camera ahead, and each notification aloud. */
     val carSpeak: Boolean = true,
+    /** Reads each notification aloud; off when there are passengers. */
+    val carReadAloud: Boolean = true,
     val carApps: List<String> = emptyList(),
     val carImportantOnly: Boolean = true,
     val carVoice: Boolean = true,

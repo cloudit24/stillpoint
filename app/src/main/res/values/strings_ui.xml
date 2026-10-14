@@ -382,8 +382,9 @@
     <string name="c_tile">Car mode</string>
     <string name="c_ways_note">Four more ways in: a Car mode card on the Shelf (Add, Car mode), the Car mode tile in Quick Settings (pull the shade down twice, tap the pencil, drag it in), a swipe or bottom shortcut set to Car mode in Settings, Gestures, or the assistant: say \"car mode\".</string>
     <string name="c_tone">Warning tones</string>
-    <string name="c_speak">Spoken alerts</string>
-    <string name="c_speak_note">Says the speed limit when it changes, when you are over it, a camera ahead, and reads each notification as it arrives, so you never need to look. The drive keeps running in the background, with a notification to end it, until End drive or the car's Bluetooth drops.</string>
+    <string name="c_speak">Say the limit and cameras</string>
+    <string name="c_read">Read messages aloud</string>
+    <string name="c_speak_note">The first says the speed limit when it changes, when you are over it, and a camera ahead. The second reads each notification as it arrives. Both have switches on the drive screen itself, for when there are passengers. The drive keeps running in the background, with a notification to end it, until End drive or the car's Bluetooth drops.</string>
     <string name="c_tone_off">Off</string>
     <string name="c_test_sound">Test the warning tone</string>
     <string name="c_test_sound_sum">Plays on the media volume, the one the car carries, at the loudness above. Turn the phone's media volume up if you hear nothing.</string>

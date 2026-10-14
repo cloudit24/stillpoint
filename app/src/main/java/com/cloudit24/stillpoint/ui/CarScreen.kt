@@ -143,6 +143,13 @@ fun CarScreen(vm: LauncherViewModel) {
             Text(if (battery.percent >= 0) "${battery.percent}%" + (if (battery.charging) " ⚡" else "") else "", color = Muted, fontSize = 15.sp)
         }
 
+        // Quick switches for the drive: what is said aloud, and the tones. Off when there are passengers.
+        Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            CarSwitch("Read messages", s.carReadAloud, Modifier.weight(1f)) { vm.updateSettings { it.copy(carReadAloud = !it.carReadAloud) } }
+            CarSwitch("Say limit", s.carSpeak, Modifier.weight(1f)) { vm.updateSettings { it.copy(carSpeak = !it.carSpeak) } }
+            CarSwitch("Tones", s.carTone > 0, Modifier.weight(1f)) { vm.updateSettings { it.copy(carTone = if (it.carTone > 0) 0 else 100) } }
+        }
+
         Column(Modifier.fillMaxWidth().weight(1f).clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) { zen = !zen },
             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             if (s.carGlass) SpeedDial(shown, limit, if (s.carMph) "MPH" else "KM/H", near, over)
@@ -315,4 +322,13 @@ private fun speedTone(shown: Int, limit: Int, near: Boolean, over: Boolean, acce
             if (ratio < 0.85f) accent else androidx.compose.ui.graphics.lerp(accent, amber, ((ratio - 0.85f) / 0.15f).coerceIn(0f, 1f))
         }
     }
+}
+
+/** A switch as a glass pill: lit in the accent when on, dim when off. Big enough for a finger in a moving car. */
+@Composable
+private fun CarSwitch(label: String, on: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val tint = if (on) Accent else glassTint
+    Text(label, color = if (on) Color.White else Muted, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        modifier = modifier.glassPill(if (on) GlassLevel.RAISED else GlassLevel.SOFT, tint).clickable(onClick = onClick).padding(horizontal = 10.dp, vertical = 12.dp))
 }

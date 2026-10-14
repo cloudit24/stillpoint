@@ -92,7 +92,7 @@ class CarService : Service() {
                 val s = prefs.loadSettings()
                 val fresh = list.filter { it.pkg !in s.notifyOff && readKeys.add("${it.key}@${it.postTime}") }
                 if (!primed) { primed = true; return@collect }
-                if (!s.carSpeak) return@collect
+                if (!s.carReadAloud) return@collect
                 fresh.filter { !s.carImportantOnly || it.important || it.special }.sortedBy { it.postTime }.forEach { n ->
                     val app = runCatching { packageManager.getApplicationLabel(packageManager.getApplicationInfo(n.pkg, 0)).toString() }.getOrDefault("")
                     val words = listOf(app, n.title, n.text.take(220)).filter { it.isNotBlank() }.joinToString(". ")

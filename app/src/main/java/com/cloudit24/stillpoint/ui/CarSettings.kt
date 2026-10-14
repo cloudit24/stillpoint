@@ -65,6 +65,7 @@ fun CarSettings(vm: LauncherViewModel) {
             onPlus = { vm.updateSettings { it.copy(carTone = (it.carTone + 25).coerceAtMost(100)) } })
         ActionRow(stringResource(R.string.c_test_sound), stringResource(R.string.c_test_sound_sum)) { carBeep(loudness = s.carTone) }
         ToggleRow(stringResource(R.string.c_speak), s.carSpeak) { on -> vm.updateSettings { it.copy(carSpeak = on) } }
+        ToggleRow(stringResource(R.string.c_read), s.carReadAloud) { on -> vm.updateSettings { it.copy(carReadAloud = on) } }
         Note(stringResource(R.string.c_speak_note))
         ToggleRow(stringResource(R.string.c_voice), s.carVoice) { on -> vm.updateSettings { it.copy(carVoice = on) } }
         if (s.carVoice && !s.assistantOn) Note(stringResource(R.string.c_voice_needs_assistant))
