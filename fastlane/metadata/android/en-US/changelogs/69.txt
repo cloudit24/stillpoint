@@ -1,0 +1,1 @@
+Car mode: glass speed dial that blends to amber and red toward the limit, warning tones on media volume, speed cameras from OpenStreetMap (opt-in), every notification of the drive listed, voice fixed, a Quick Settings tile and gesture to open it. Lighter glass. The alley cat is gone.
