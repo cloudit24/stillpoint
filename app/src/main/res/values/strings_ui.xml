@@ -384,10 +384,10 @@
     <string name="c_tone">Warning tones</string>
     <string name="c_speak">Say the limit and cameras</string>
     <string name="c_read">Read messages aloud</string>
-    <string name="c_speak_note">The first says the speed limit when it changes, when you are over it, and a camera ahead. The second reads each notification as it arrives. Both have switches on the drive screen itself, for when there are passengers. The drive keeps running in the background, with a notification to end it, until End drive or the car's Bluetooth drops.</string>
+    <string name="c_speak_note">The first says the speed limit when it changes, when you are over it, and a camera ahead. The second reads each notification as it arrives. Both have switches on the drive screen itself, for when there are passengers. The drive keeps running in the background, with a notification to end it, until End drive or the car\'s Bluetooth drops.</string>
     <string name="c_tone_off">Off</string>
     <string name="c_test_sound">Test the warning tone</string>
-    <string name="c_test_sound_sum">Plays on the media volume, the one the car carries, at the loudness above. Turn the phone's media volume up if you hear nothing.</string>
+    <string name="c_test_sound_sum">Plays on the media volume, the one the car carries, at the loudness above. Turn the phone\'s media volume up if you hear nothing.</string>
     <string name="c_cameras_note">Looks up fixed cameras within 4 km of you, again after 2 km. Within 600 m of one, a double tone and, with voice on, a warning. Same server and privacy as the limit.</string>
     <string name="c_glass">Glass dial</string>
     <string name="c_glass_note">A ring that fills toward the limit, amber as you near it, red over it. Off, a plain big number, the lightest on the battery.</string>
