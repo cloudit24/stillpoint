@@ -27,6 +27,7 @@ class Voice(private val context: Context) {
     private var pending: String? = null
 
     private var onDevice = false
+    private var avoidOnDevice = false
 
     fun listen(onResult: (String) -> Unit) = listen(onResult, preferOffline = true)
 
@@ -34,7 +35,7 @@ class Voice(private val context: Context) {
         stopSpeaking()
         val r = recognizer ?: run {
             // The phone's own recogniser keeps speech on the phone; otherwise the default (Google's) one.
-            onDevice = android.os.Build.VERSION.SDK_INT >= 31 && SpeechRecognizer.isOnDeviceRecognitionAvailable(context)
+            onDevice = !avoidOnDevice && android.os.Build.VERSION.SDK_INT >= 31 && SpeechRecognizer.isOnDeviceRecognitionAvailable(context)
             when {
                 onDevice -> SpeechRecognizer.createOnDeviceSpeechRecognizer(context)
                 SpeechRecognizer.isRecognitionAvailable(context) -> SpeechRecognizer.createSpeechRecognizer(context)
@@ -51,12 +52,18 @@ class Voice(private val context: Context) {
                 listening = false
                 // No offline language pack: try again, letting the recogniser go online.
                 if (preferOffline && !onDevice && code in listOf(12, 13)) { listen(onResult, preferOffline = false); return }
+                // The phone's own recogniser refused (error 10, "too many requests", is its usual way): use the default one instead.
+                if (onDevice && code in listOf(10, 12, 13) && SpeechRecognizer.isRecognitionAvailable(context)) {
+                    runCatching { recognizer?.destroy() }; recognizer = null; onDevice = false; avoidOnDevice = true
+                    listen(onResult, preferOffline = false); return
+                }
                 error = when (code) {
                     SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "Didn't catch that."
                     SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Microphone permission is needed."
                     SpeechRecognizer.ERROR_AUDIO -> "The microphone is busy."
                     SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "Speech needs a connection right now."
                     SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "The recogniser is busy. Try again."
+                    10 -> "The recogniser refused. Check Google's Speech Services is on in the phone's Settings."
                     12, 13 -> "No speech pack for your language. Add one in the phone's Settings, Languages."
                     else -> "Couldn't listen (error $code)."
                 }

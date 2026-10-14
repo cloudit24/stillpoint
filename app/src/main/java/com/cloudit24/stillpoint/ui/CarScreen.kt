@@ -239,6 +239,15 @@ fun CarScreen(vm: LauncherViewModel) {
                 Text(if (s.carMph) "MPH" else "KM/H", color = Muted, fontSize = 15.sp, letterSpacing = 3.sp)
                 if (limit > 0) LimitSign(limit, over, Modifier.padding(top = 14.dp))
             }
+            if (limit <= 0) Text(
+                when {
+                    !s.carOsmLimit && s.carLimit <= 0 -> "No limit set · Settings, Car mode"
+                    here == null -> "Limit from the map once there is a position"
+                    else -> "No limit known for this road"
+                }, color = Muted.copy(alpha = 0.7f), fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
+            if (s.carCameras && nearest == null) Text(
+                if (here == null) "Cameras from the map once there is a position" else "No camera within 1 km",
+                color = Muted.copy(alpha = 0.7f), fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
             nearest?.let { (cam, d) ->
                 val close = d < 300f
                 Text("CAMERA · ${(d / 10).toInt() * 10} m" + (if (cam.limitKmh > 0) " · ${if (s.carMph) (cam.limitKmh / 1.609f).toInt() else cam.limitKmh}" else ""),
