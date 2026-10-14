@@ -153,11 +153,11 @@ fun CarScreen(vm: LauncherViewModel) {
         if (shown < limit - 5) warned = false
         if (near && !warned) {
             warned = true
-            carBeep(soft = true)
+            carBeep(soft = true, loudness = s.carTone)
         }
         if (over && System.currentTimeMillis() - lastTone > 10_000) {
             lastTone = System.currentTimeMillis()
-            carBeep()
+            carBeep(loudness = s.carTone)
         }
     }
 
@@ -184,7 +184,7 @@ fun CarScreen(vm: LauncherViewModel) {
         val closing = d < lastCamDist
         lastCamDist = d
         if (d < 600f && closing && warnedCams.add(cam.key)) {
-            carBeep(); delay(450); carBeep()
+            carBeep(loudness = s.carTone); delay(450); carBeep(loudness = s.carTone)
             if (s.carVoice) voice.speak("Speed camera ahead, ${(d / 50).toInt() * 50} metres" + (if (cam.limitKmh > 0) ", limit ${if (s.carMph) (cam.limitKmh / 1.609f).toInt() else cam.limitKmh}" else ""))
         }
     }
@@ -378,9 +378,10 @@ private fun SpeedDial(shown: Int, limit: Int, unit: String, near: Boolean, over:
  * One warning tone, on the media volume (the one the car's speakers carry), so it is heard in the car.
  * Soft: nearing the limit. Otherwise: over it, or a camera.
  */
-fun carBeep(soft: Boolean = false) {
+fun carBeep(soft: Boolean = false, loudness: Int = 100) {
+    if (loudness <= 0) return
     runCatching {
-        val t = ToneGenerator(AudioManager.STREAM_MUSIC, if (soft) 70 else 100)
+        val t = ToneGenerator(AudioManager.STREAM_MUSIC, (if (soft) loudness * 7 / 10 else loudness).coerceIn(1, 100))
         t.startTone(if (soft) ToneGenerator.TONE_PROP_BEEP else ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, if (soft) 220 else 500)
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ t.release() }, 1200)
     }

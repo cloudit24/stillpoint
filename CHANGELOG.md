@@ -4,7 +4,7 @@ Every version of Stillpoint Launcher, newest first. Each links to its APK.
 The newest is always at **[Download the latest APK](https://github.com/cloudit24/stillpoint/releases/latest/download/Stillpoint-Launcher.apk)**.
 
 ## v0.48.2 · not yet released
-- Car mode says where the limit and the cameras stand when the dial is empty (no limit set, waiting for a position, nothing known here). Voice: when the phone's own recogniser refuses (error 10), the default one is used instead.
+- Car mode says where the limit and the cameras stand when the dial is empty (no limit set, waiting for a position, nothing known here). Warning tones have their own loudness in Settings, Car mode (off to 100%), on top of the phone's media volume. Voice: when the phone's own recogniser refuses (error 10), the default one is used instead.
 
 ## v0.48.1 · 14 Oct 2026
 - Car mode keeps every notification that arrives during the drive, newest first, each with Read, plus Read all and Clear. Before, only the latest one showed.
