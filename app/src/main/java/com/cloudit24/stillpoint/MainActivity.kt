@@ -84,6 +84,12 @@ class MainActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
         )
         setContent {
+            // Keep the screen on in car mode only; everywhere else the phone sleeps as usual.
+            val awake = vm.screen == Screen.CAR && vm.settings.carKeepOn
+            androidx.compose.runtime.LaunchedEffect(awake) {
+                if (awake) window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                else window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            }
             StillpointTheme(accent = androidx.compose.ui.graphics.Color(vm.settings.accent), accentStyle = vm.settings.accentStyle, font = vm.settings.font,
                 theme = vm.settings.theme) { LauncherRoot(vm, ::addWidget) }
         }
@@ -104,6 +110,7 @@ class MainActivity : ComponentActivity() {
     /** The car's Bluetooth connecting or dropping opens or closes car mode. */
     private val bluetooth = object : android.content.BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == Intent.ACTION_POWER_CONNECTED) { vm.carCharging(); return }
             val device: android.bluetooth.BluetoothDevice? = if (Build.VERSION.SDK_INT >= 33)
                 intent.getParcelableExtra(android.bluetooth.BluetoothDevice.EXTRA_DEVICE, android.bluetooth.BluetoothDevice::class.java)
             else @Suppress("DEPRECATION") intent.getParcelableExtra(android.bluetooth.BluetoothDevice.EXTRA_DEVICE)
@@ -118,6 +125,7 @@ class MainActivity : ComponentActivity() {
             val f = android.content.IntentFilter().apply {
                 addAction(android.bluetooth.BluetoothDevice.ACTION_ACL_CONNECTED)
                 addAction(android.bluetooth.BluetoothDevice.ACTION_ACL_DISCONNECTED)
+                addAction(Intent.ACTION_POWER_CONNECTED)
             }
             androidx.core.content.ContextCompat.registerReceiver(this, bluetooth, f, androidx.core.content.ContextCompat.RECEIVER_EXPORTED)
         }

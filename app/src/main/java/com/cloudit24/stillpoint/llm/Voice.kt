@@ -29,6 +29,8 @@ class Voice(private val context: Context) {
     private var onDevice = false
     private var avoidOnDevice = false
 
+    private var english = false   // the phone's recogniser lacks your language: listen in English
+
     fun listen(onResult: (String) -> Unit) = listen(onResult, preferOffline = true)
 
     private fun listen(onResult: (String) -> Unit, preferOffline: Boolean) {
@@ -57,6 +59,8 @@ class Voice(private val context: Context) {
                     runCatching { recognizer?.destroy() }; recognizer = null; onDevice = false; avoidOnDevice = true
                     listen(onResult, preferOffline = false); return
                 }
+                // Still no pack for your language, even online: listen in English.
+                if (!english && code in listOf(12, 13)) { english = true; listen(onResult, preferOffline = false); return }
                 error = when (code) {
                     SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "Didn't catch that."
                     SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Microphone permission is needed."
@@ -83,7 +87,7 @@ class Voice(private val context: Context) {
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
             .putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, preferOffline)
-            .putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault().toLanguageTag())
+            .putExtra(RecognizerIntent.EXTRA_LANGUAGE, if (english) "en-US" else Locale.getDefault().toLanguageTag())
             .putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
         runCatching { r.startListening(intent) }.onFailure { error = "Couldn't start listening."; listening = false }
     }
@@ -99,7 +103,9 @@ class Voice(private val context: Context) {
             tts = TextToSpeech(context) { status ->
                 ttsReady = status == TextToSpeech.SUCCESS
                 if (ttsReady) {
-                    tts?.language = Locale.getDefault()
+                    // The phone's voice may not have your language: fall back to English rather than stay silent.
+                    val r = tts?.setLanguage(Locale.getDefault()) ?: TextToSpeech.LANG_NOT_SUPPORTED
+                    if (r == TextToSpeech.LANG_MISSING_DATA || r == TextToSpeech.LANG_NOT_SUPPORTED) tts?.language = Locale.US
                     tts?.setOnUtteranceProgressListener(object : android.speech.tts.UtteranceProgressListener() {
                         override fun onStart(id: String?) {}
                         override fun onError(id: String?) { finish() }

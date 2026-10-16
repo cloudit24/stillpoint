@@ -148,6 +148,13 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     var carConnected by mutableStateOf(false)
 
     /** A Bluetooth device came or went; the car's opens or closes car mode. */
+    /** The charger went in: with that option on, the drive starts. */
+    fun carCharging() {
+        if (!settings.carOn || !settings.carOnCharge) return
+        screen = Screen.CAR
+        com.cloudit24.stillpoint.service.CarService.start(getApplication())
+    }
+
     fun carBluetooth(addr: String?, connected: Boolean) {
         val s = settings
         if (!s.carOn || s.carBluetoothAddr.isEmpty() || addr != s.carBluetoothAddr) return
@@ -512,6 +519,14 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     private val carSeen = HashSet<String>()
 
     fun clearCarLog() { carLog = emptyList(); carSeen.clear() }
+
+    init {
+        // A new drive starts with an empty list; the last drive's messages don't carry over.
+        viewModelScope.launch {
+            var was = false
+            com.cloudit24.stillpoint.service.CarService.running.collect { on -> if (on && !was) clearCarLog(); was = on }
+        }
+    }
 
     init {
         viewModelScope.launch {

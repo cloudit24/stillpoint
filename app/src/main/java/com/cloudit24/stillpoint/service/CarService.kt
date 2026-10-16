@@ -71,6 +71,7 @@ class CarService : Service() {
     private var wasOver = false
     private var lastOverSaid = 0L
     private var saidLimit = 0
+    private var saidWithVoice = false
     private val warnedCams = HashSet<String>()
     private var lastCamDist = Float.MAX_VALUE
     private val readKeys = HashSet<String>()
@@ -92,8 +93,8 @@ class CarService : Service() {
                 val s = prefs.loadSettings()
                 val fresh = list.filter { it.pkg !in s.notifyOff && readKeys.add("${it.key}@${it.postTime}") }
                 if (!primed) { primed = true; return@collect }
-                if (!s.carReadAloud) return@collect
-                fresh.filter { !s.carImportantOnly || it.important || it.special }.sortedBy { it.postTime }.forEach { n ->
+                if (s.carAlert <= 0 || !s.carReadAloud) return@collect
+                fresh.filter { s.carAlert >= 2 || it.important || it.special }.sortedBy { it.postTime }.forEach { n ->
                     val app = runCatching { packageManager.getApplicationLabel(packageManager.getApplicationInfo(n.pkg, 0)).toString() }.getOrDefault("")
                     val words = listOf(app, n.title, n.text.take(220)).filter { it.isNotBlank() }.joinToString(". ")
                     if (words.isNotBlank()) voice.speak(words)
@@ -200,9 +201,10 @@ class CarService : Service() {
         val limitKmh = st.osmLimit ?: s.carLimit
         val limit = if (limitKmh <= 0) 0 else shown(limitKmh, s)
         val shown = if (st.speedMs < 0) -1 else shown((st.speedMs * 3.6f).toInt(), s)
-        if (limit > 0 && limit != saidLimit) {
+        if (limit > 0 && (limit != saidLimit || !saidWithVoice) ) {
             saidLimit = limit
-            if (s.carSpeak) voice.speak("Speed limit $limit")
+            saidWithVoice = s.carSpeak
+            if (s.carSpeak) voice.speak("Speed limit $limit" + if (s.carMph) " miles" else "")
         }
         if (limit <= 0 || shown < 0) { wasOver = false; return }
         val near = shown >= limit - 3 && shown <= limit

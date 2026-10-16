@@ -3,6 +3,12 @@
 Every version of Stillpoint Launcher, newest first. Each links to its APK.
 The newest is always at **[Download the latest APK](https://github.com/cloudit24/stillpoint/releases/latest/download/Stillpoint-Launcher.apk)**.
 
+## v0.48.3 · not yet released
+- Fix: the phone sleeps again on home. Keeping the screen on is now tied to car mode alone.
+- Car mode: messages on the drive come in three levels, All, Important only, Mute, as three buttons on the drive screen and in Settings; Mute shows and reads nothing. The list starts empty with each drive.
+- Car mode: Start when the phone starts charging (Settings, Car mode), for cars without Bluetooth.
+- Voice: when the phone's speech or voice lacks your language, English is used rather than failing; the limit is spoken on the first fix and again when Say limit is switched on.
+
 ## v0.48.2 · 16 Oct 2026
 - Car mode has switches on the drive screen itself: Read messages, Say limit, Tones. Turn Read messages off when there are passengers; the limit and camera warnings keep coming.
 - Car mode, faster to start: a Car mode card for the Shelf with one big Start drive button, a Start button on top of its settings page, and that page sorted into Start it, On the road, Sound and voice, On the screen.

@@ -179,6 +179,9 @@ data class LauncherSettings(
     val carMph: Boolean = false,
     val carLimit: Int = 0,
     val carOsmLimit: Boolean = false,
+    /** Messages on the drive: 2 = all, 1 = important people and apps only, 0 = mute (nothing shown or read). */
+    val carAlert: Int = 1,
+    val carOnCharge: Boolean = false,
     val carCameras: Boolean = false,
     val carGlass: Boolean = true,
     /** Loudness of the warning tones, 0 (off) to 100, on the media volume. */

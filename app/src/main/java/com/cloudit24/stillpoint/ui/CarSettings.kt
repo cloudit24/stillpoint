@@ -42,6 +42,7 @@ fun CarSettings(vm: LauncherViewModel) {
     Group(stringResource(R.string.c_start)) {
         ToggleRow(stringResource(R.string.c_on), s.carOn) { on -> vm.updateSettings { it.copy(carOn = on) } }
         if (s.carOn) ActionRow(stringResource(R.string.c_bluetooth), s.carBluetoothName.ifEmpty { stringResource(R.string.c_bluetooth_none) }) { pick = "bt" }
+        if (s.carOn) ToggleRow(stringResource(R.string.c_on_charge), s.carOnCharge) { on -> vm.updateSettings { it.copy(carOnCharge = on) } }
         Note(stringResource(R.string.c_start_note))
         Note(stringResource(R.string.c_ways_note))
     }
@@ -74,7 +75,9 @@ fun CarSettings(vm: LauncherViewModel) {
     if (s.carOn) Group(stringResource(R.string.c_on_screen)) {
         val names = s.carApps.mapNotNull { k -> vm.apps.firstOrNull { it.key == k }?.label }
         ActionRow(stringResource(R.string.c_apps), names.ifEmpty { listOf(stringResource(R.string.c_apps_none)) }.joinToString(", ")) { pick = "apps" }
-        ToggleRow(stringResource(R.string.c_important_only), s.carImportantOnly) { on -> vm.updateSettings { it.copy(carImportantOnly = on) } }
+        Stepper(stringResource(R.string.c_alert), listOf(stringResource(R.string.c_alert_mute), stringResource(R.string.c_alert_important), stringResource(R.string.c_alert_all))[s.carAlert.coerceIn(0, 2)],
+            onMinus = { vm.updateSettings { it.copy(carAlert = (it.carAlert - 1).coerceAtLeast(0)) } },
+            onPlus = { vm.updateSettings { it.copy(carAlert = (it.carAlert + 1).coerceAtMost(2)) } })
         ToggleRow(stringResource(R.string.c_keep_on), s.carKeepOn) { on -> vm.updateSettings { it.copy(carKeepOn = on) } }
         Note(stringResource(R.string.c_battery_note))
     }

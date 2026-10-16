@@ -80,8 +80,6 @@ fun CarScreen(vm: LauncherViewModel) {
     val context = LocalContext.current
     val s = vm.settings
     val now by rememberTicker(15_000)
-    val view = LocalView.current
-    DisposableEffect(s.carKeepOn) { view.keepScreenOn = s.carKeepOn; onDispose { view.keepScreenOn = false } }
 
     // The drive runs in CarService, so it carries on if this screen is left by accident. Start it once we may use the GPS.
     var hasGps by remember { mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) }
@@ -123,7 +121,7 @@ fun CarScreen(vm: LauncherViewModel) {
         }
     }
 
-    val log = vm.carLog.filter { !s.carImportantOnly || it.important || it.special }
+    val log = if (s.carAlert <= 0) emptyList() else vm.carLog.filter { s.carAlert >= 2 || it.important || it.special }
     fun say(n: NotifyItem): String {
         val app = vm.apps.firstOrNull { it.packageName == n.pkg }
         return listOf(app?.label, n.title, n.text).filter { !it.isNullOrBlank() }.joinToString(". ")
@@ -143,9 +141,14 @@ fun CarScreen(vm: LauncherViewModel) {
             Text(if (battery.percent >= 0) "${battery.percent}%" + (if (battery.charging) " ⚡" else "") else "", color = Muted, fontSize = 15.sp)
         }
 
-        // Quick switches for the drive: what is said aloud, and the tones. Off when there are passengers.
+        // Messages on this drive: all of them, important people and apps only, or none (with passengers). Then the voice and the tones.
         Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            CarSwitch("Read messages", s.carReadAloud, Modifier.weight(1f)) { vm.updateSettings { it.copy(carReadAloud = !it.carReadAloud) } }
+            CarSwitch("All", s.carAlert >= 2, Modifier.weight(1f)) { vm.updateSettings { it.copy(carAlert = 2) } }
+            CarSwitch("Important", s.carAlert == 1, Modifier.weight(1f)) { vm.updateSettings { it.copy(carAlert = 1) } }
+            CarSwitch("Mute", s.carAlert <= 0, Modifier.weight(1f)) { vm.updateSettings { it.copy(carAlert = 0) } }
+        }
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            CarSwitch("Read aloud", s.carReadAloud, Modifier.weight(1f)) { vm.updateSettings { it.copy(carReadAloud = !it.carReadAloud) } }
             CarSwitch("Say limit", s.carSpeak, Modifier.weight(1f)) { vm.updateSettings { it.copy(carSpeak = !it.carSpeak) } }
             CarSwitch("Tones", s.carTone > 0, Modifier.weight(1f)) { vm.updateSettings { it.copy(carTone = if (it.carTone > 0) 0 else 100) } }
         }

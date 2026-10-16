@@ -375,6 +375,11 @@
     <string name="c_apps">Apps on the screen</string>
     <string name="c_apps_none">None yet, up to four</string>
     <string name="c_important_only">Only important people and apps</string>
+    <string name="c_alert">Messages on the drive</string>
+    <string name="c_alert_all">All</string>
+    <string name="c_alert_important">Important only</string>
+    <string name="c_alert_mute">Mute</string>
+    <string name="c_on_charge">Start when the phone starts charging</string>
     <string name="c_voice">Voice assistant and reading aloud</string>
     <string name="c_voice_needs_assistant">Turn the Assistant on (Settings, Assistant) and download a model first.</string>
     <string name="c_keep_on">Keep the screen on</string>
