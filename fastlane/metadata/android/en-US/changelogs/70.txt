@@ -1,0 +1,1 @@
+Car mode: the drive keeps running in the background with spoken limit, over-limit and camera warnings and messages read aloud; switches on the screen for passengers; a Shelf card with a Start drive button; tone loudness; settings regrouped.
