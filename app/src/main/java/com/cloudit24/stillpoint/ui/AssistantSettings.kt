@@ -110,6 +110,7 @@ fun AssistantSettings(vm: LauncherViewModel) {
         Note(stringResource(R.string.a_advanced_note))
     }
 
+    if (!com.cloudit24.stillpoint.BuildConfig.LLM) { Note(stringResource(R.string.a_light_build)); return }
     Group(stringResource(R.string.a_model)) {
         val (suggest, why) = remember { Models.advice(ctx) }
         Note(why)

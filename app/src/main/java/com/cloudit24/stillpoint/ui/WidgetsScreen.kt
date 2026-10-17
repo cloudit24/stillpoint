@@ -625,7 +625,7 @@ private fun WidgetPicker(vm: LauncherViewModel, onBuiltIn: (BuiltIn) -> Unit, on
             }
         }
         val shelfId = vm.shelfPages.getOrNull(vm.shelfIndex)?.id ?: 0
-        val cards = BuiltIn.entries.filter { !it.retired && it.id(shelfId) !in vm.widgetIds }
+        val cards = BuiltIn.entries.filter { it.id(shelfId) !in vm.widgetIds }
         if (cards.isNotEmpty()) {
             item { Text(stringResource(R.string.s_stillpoint_cards), color = Accent, fontSize = 17.sp, modifier = Modifier.padding(vertical = 6.dp)) }
             items(cards, key = { "card_${it.name}" }) { b ->

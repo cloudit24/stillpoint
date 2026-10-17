@@ -27,10 +27,7 @@ class Prefs(context: Context) {
                 .getOrDefault(d.drawerStart),
             accent = sp.getLong(K_ACCENT, d.accent),
             theme = runCatching { AppTheme.valueOf(sp.getString(K_THEME, d.theme.name)!!) }.getOrDefault(d.theme),
-            themeCat = sp.getBoolean(K_THEME_CAT, d.themeCat),
             themeDrone = sp.getBoolean(K_THEME_DRONE, d.themeDrone),
-            catRoam = sp.getBoolean("cat_roam", d.catRoam),
-            catReact = sp.getBoolean("cat_react", d.catReact),
             specialPerson = sp.getString("special_person", d.specialPerson) ?: "",
             specialGlow = sp.getBoolean("special_glow", d.specialGlow),
             rules = readRules(sp.getString("auto_rules", null)),
@@ -190,10 +187,7 @@ class Prefs(context: Context) {
             .putString(K_DRAWER_START, s.drawerStart.name)
             .putLong(K_ACCENT, s.accent)
             .putString(K_THEME, s.theme.name)
-            .putBoolean(K_THEME_CAT, s.themeCat)
             .putBoolean(K_THEME_DRONE, s.themeDrone)
-            .putBoolean("cat_roam", s.catRoam)
-            .putBoolean("cat_react", s.catReact)
             .putString("special_person", s.specialPerson)
             .putBoolean("special_glow", s.specialGlow)
             .putString("auto_rules", JSONArray().also { a -> s.rules.forEach { a.put(it.toJson()) } }.toString())
@@ -663,7 +657,6 @@ class Prefs(context: Context) {
         const val K_DRAWER_START = "drawer_start"
         const val K_ACCENT = "accent"
         const val K_THEME = "theme"
-        const val K_THEME_CAT = "theme_cat"
         const val K_THEME_DRONE = "theme_drone"
         const val K_WIDGET_IDS = "widget_ids"
         const val K_GESTURE = "gesture_"

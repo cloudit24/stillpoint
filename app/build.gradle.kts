@@ -29,8 +29,10 @@ android {
     // fdroid: no self-update code; F-Droid delivers updates.
     flavorDimensions += "distribution"
     productFlavors {
-        create("github") { dimension = "distribution" }
-        create("fdroid") { dimension = "distribution" }
+        create("github") { dimension = "distribution"; buildConfigField("boolean", "LLM", "true") }
+        // The light build: no llama.cpp (5.8 MB), so no on-device assistant.
+        create("fdroid") { dimension = "distribution"; buildConfigField("boolean", "LLM", "false")
+            externalNativeBuild { cmake { arguments += listOf("-DSTILLPOINT_NO_LLM=ON") } } }
     }
 
     signingConfigs {
@@ -79,7 +81,6 @@ dependencies {
     // Installs the start-up profile on sideloaded phones too (faster first open).
     implementation("androidx.profileinstaller:profileinstaller:1.4.1")
     // QR codes for Tools (pure Java, open source, no network).
-    implementation("com.google.zxing:core:3.5.3")
 
     testImplementation("junit:junit:4.13.2")
     // The real org.json for checks that run on the computer (Android's copy only exists on phones).

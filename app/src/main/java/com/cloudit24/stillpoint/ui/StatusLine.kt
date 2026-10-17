@@ -74,9 +74,6 @@ import kotlin.math.roundToInt
 /** One thing Stillpoint has to say. Higher [rank] comes first; [onTap] acts on it. */
 private class StatusMsg(val text: String, val rank: Int, val onTap: (() -> Unit)? = null)
 
-private val Lcd = Color(0xFFEF9F27)
-private val LcdDim = Color(0xFF8A6420)
-private val LcdBack = Color(0xFF1C1A10)
 
 /**
  * The terminal display above the apps: the one place Stillpoint talks to you. Prayer, calls, battery, updates,
@@ -105,7 +102,6 @@ fun StatusLine(vm: LauncherViewModel, s: LauncherSettings, now: Long, modifier: 
             mood = if (neon && s.themeDrone) catMood(vm, s, now, msgs) else null,
             onAsk = if (s.assistantOn) ({ vm.assistOpen = true }) else null, footer = footer, fill = fill,
             look = s.termLook, color = s.termColor)
-        StatusStyle.LCD -> LcdStyle(msgs, modifier)
         StatusStyle.QUIET -> QuietStyle(msgs, modifier)
     }
 }
@@ -284,7 +280,6 @@ private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modi
     val anim = rememberInfiniteTransition(label = "term")
     val cursor by anim.animateFloat(1f, 0f, infiniteRepeatable(tween(530), RepeatMode.Reverse), label = "cursor")
     val lowBlink by anim.animateFloat(1f, 0.2f, infiniteRepeatable(tween(650), RepeatMode.Reverse), label = "low")
-    val sweep = anim.animateFloat(-0.2f, 1.2f, infiniteRepeatable(tween(7_000, easing = androidx.compose.animation.core.LinearEasing)), label = "sweep")
     val glow = androidx.compose.ui.text.TextStyle(shadow = androidx.compose.ui.graphics.Shadow(ph.base.copy(alpha = 0.55f), blurRadius = 7f))
     val low = footer != null && footer.battery in 0..20 && !footer.charging
 
@@ -347,9 +342,8 @@ private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modi
     val fs = androidx.compose.ui.platform.LocalDensity.current.fontScale
     val fit = if (!fill) older else {
         val (head, live, line, foot, pad) = when (look) {
-            TermLook.CRT, TermLook.HUD -> listOf(16.dp * fs + 8.dp, 24.dp * fs, 22.dp * fs + 6.dp, 14.dp * fs + 10.dp, 36.dp)
+            TermLook.CRT -> listOf(16.dp * fs + 8.dp, 24.dp * fs, 22.dp * fs + 6.dp, 14.dp * fs + 10.dp, 36.dp)
             TermLook.GLASS -> listOf(0.dp, 26.dp * fs + 8.dp, 18.dp * fs + 6.dp, 14.dp * fs + 22.dp, 18.dp)
-            TermLook.RAIL -> listOf(14.dp * fs + 8.dp, 38.dp * fs, 36.dp * fs + 6.dp, 14.dp * fs + 10.dp, 20.dp)
         }
         ((maxHeight - head - live - foot - pad) / line).toInt().coerceIn(1, 9)
     }
@@ -376,44 +370,6 @@ private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modi
                 }
             }
         }
-        TermLook.HUD -> {
-            val shape = RoundedCornerShape(12.dp)
-            Column(sizeMod.clip(shape).background(ph.base.copy(alpha = 0.05f))
-                .drawWithContent {
-                    drawContent()
-                    val c = ph.base; val l = 14.dp.toPx(); val w = 1.5.dp.toPx(); val r = 12.dp.toPx()
-                    // Corner brackets and a hairline that fades at the ends.
-                    for ((x, y, sx, sy) in listOf(listOf(0f, 0f, 1f, 1f), listOf(size.width, 0f, -1f, 1f), listOf(0f, size.height, 1f, -1f), listOf(size.width, size.height, -1f, -1f))) {
-                        drawLine(c, androidx.compose.ui.geometry.Offset(x, y + sy * r), androidx.compose.ui.geometry.Offset(x, y + sy * l), w, alpha = 0.75f)
-                        drawLine(c, androidx.compose.ui.geometry.Offset(x + sx * r, y), androidx.compose.ui.geometry.Offset(x + sx * l, y), w, alpha = 0.75f)
-                    }
-                    val hair = androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Color.Transparent, c.copy(alpha = 0.45f), Color.Transparent))
-                    drawRect(hair, androidx.compose.ui.geometry.Offset(l, 0f), androidx.compose.ui.geometry.Size(size.width - 2 * l, 1f))
-                    drawRect(hair, androidx.compose.ui.geometry.Offset(l, size.height - 1f), androidx.compose.ui.geometry.Size(size.width - 2 * l, 1f))
-                    if (motion) {   // a faint light sweep drifting down
-                        val y = sweep.value * size.height; val h = 26.dp.toPx()
-                        drawRect(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, c.copy(alpha = 0.08f), Color.Transparent), y, y + h),
-                            androidx.compose.ui.geometry.Offset(0f, y), androidx.compose.ui.geometry.Size(size.width, h))
-                    }
-                }.padding(horizontal = 14.dp, vertical = 12.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp)) {
-                    Text("STILLPOINT", color = ph.base, fontSize = 10.sp, letterSpacing = 1.5.sp, modifier = Modifier.weight(1f))
-                    val chip = Modifier.border(1.dp, ph.base.copy(alpha = 0.35f), RoundedCornerShape(4.dp)).padding(horizontal = 5.dp, vertical = 1.dp)
-                    if (footer != null && footer.mid.isNotEmpty()) Text(footer.mid.substringBefore(" IN ").take(8), color = ph.base, fontSize = 9.5.sp, letterSpacing = 1.sp, modifier = chip)
-                    if (footer != null && footer.battery >= 0) Text("${footer.battery}%", color = if (low) lowColor else ph.base, fontSize = 9.5.sp, letterSpacing = 1.sp, modifier = chip)
-                    if (n > 1) Text("${step % n + 1}/$n", color = ph.base, fontSize = 9.5.sp, letterSpacing = 1.sp, modifier = chip)
-                }
-                Lines(labels = false, big = false, glowing = false, count = fit)
-                Footer {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("BAT " + batteryText(""), color = if (low) lowColor else ph.dim, fontSize = 10.sp, letterSpacing = 1.sp)
-                        Box(Modifier.padding(start = 6.dp).size(40.dp, 3.dp).background(Color.White.copy(alpha = 0.08f))) {
-                            Box(Modifier.fillMaxWidth(((footer?.battery ?: 0).coerceIn(0, 100)) / 100f).height(3.dp).background(if (low) lowColor else ph.base))
-                        }
-                    }
-                }
-            }
-        }
         TermLook.GLASS -> {
             Column(sizeMod.drawBehind {
                 drawRect(androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(ph.base, Color.Transparent), endX = size.width * 0.7f), size = androidx.compose.ui.geometry.Size(size.width, 1f))
@@ -425,27 +381,6 @@ private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modi
                     }
                 }
                 Footer { Text(batteryText("").trim().let { if (it.isEmpty()) "" else "$it%" }.lowercase(), color = if (low) lowColor else Muted, fontSize = 10.5.sp, letterSpacing = 1.sp) }
-            }
-        }
-        TermLook.RAIL -> {
-            Column(sizeMod.drawBehind {
-                val x = 0f
-                drawLine(ph.base.copy(alpha = 0.3f), androidx.compose.ui.geometry.Offset(x, 0f), androidx.compose.ui.geometry.Offset(x, size.height), 1f)
-            }.padding(start = 14.dp, top = 4.dp, bottom = 4.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("LOG", color = ph.base, fontSize = 9.5.sp, letterSpacing = 2.sp, modifier = Modifier.weight(1f))
-                    if (n > 1) Text("${(step % n + 1).toString().padStart(2, '0')}/${n.toString().padStart(2, '0')}", color = ph.dim, fontSize = 9.5.sp, letterSpacing = 1.sp)
-                }
-                Lines(labels = true, big = false, glowing = false, count = fit)
-                Footer {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("PWR " + batteryText(""), color = if (low) lowColor else ph.dim, fontSize = 10.sp, letterSpacing = 1.sp)
-                        val lit = if (footer == null || footer.battery < 0) 0 else ((footer.battery + 12) / 25).coerceIn(0, 4)
-                        Row(Modifier.padding(start = 6.dp), verticalAlignment = Alignment.Bottom, horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(2.dp)) {
-                            for (i in 0 until 4) Box(Modifier.size(3.dp, (4 + i * 2).dp).background(if (i < lit) (if (low) lowColor else ph.base) else ph.base.copy(alpha = 0.3f)))
-                        }
-                    }
-                }
             }
         }
     }
@@ -465,7 +400,7 @@ private fun catMood(vm: LauncherViewModel, s: LauncherSettings, now: Long, msgs:
     val hour = Instant.ofEpochMilli(now).atZone(ZoneId.systemDefault()).hour
     // At night and in Sleep focus the cat stays curled up and ignores everything.
     val asleep = hour >= 23 || hour < 6 || vm.activeFocus(now)?.kind == 2
-    val react = s.catReact && !asleep
+    val react = !asleep
     val lit = vm.litNotifications()
     return CatMood(
         special = react && lit.any { it.special },
@@ -475,7 +410,7 @@ private fun catMood(vm: LauncherViewModel, s: LauncherSettings, now: Long, msgs:
         unread = if (react) lit.size else 0,
         color = lit.maxByOrNull { it.postTime }?.let { vm.notifyColor(it.pkg) },
         asleep = asleep,
-        roam = s.catRoam,
+        roam = true,
     )
 }
 
@@ -537,30 +472,6 @@ private fun Drone(m: CatMood, motion: Boolean, typing: Boolean, onTap: () -> Uni
 private fun TermLine(text: String, color: Color, onTap: (() -> Unit)?, size: androidx.compose.ui.unit.TextUnit = 15.sp) {
     Text(text, color = color, fontSize = size, maxLines = 1, overflow = TextOverflow.Ellipsis,
         modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp).then(onTap?.let { Modifier.clickable(onClick = it) } ?: Modifier))
-}
-
-/** An amber segment-style panel: the main message big, the next two under it. Tap a line to act; tap 1/4 for the next. */
-@Composable
-private fun LcdStyle(msgs: List<StatusMsg>, modifier: Modifier) {
-    var index by remember { mutableIntStateOf(0) }
-    val i = index % msgs.size
-    val m = msgs[i]
-    val shape = RoundedCornerShape(10.dp)
-    Column(modifier.fillMaxWidth().heightIn(min = 104.dp).clip(shape).background(LcdBack).border(1.dp, Color(0xFF3A3420), shape)
-        .padding(horizontal = 14.dp, vertical = 12.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(m.text.uppercase(), color = Lcd, fontSize = 18.sp, letterSpacing = 1.sp,
-                maxLines = 2, overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f).then(m.onTap?.let { Modifier.clickable(onClick = it) } ?: Modifier))
-            if (msgs.size > 1) Text("${i + 1}/${msgs.size}", color = LcdDim, fontSize = 13.sp,
-                modifier = Modifier.clip(RoundedCornerShape(50)).clickable { index++ }.padding(start = 10.dp, top = 4.dp, bottom = 4.dp))
-        }
-        (1..2).mapNotNull { k -> msgs.getOrNull((i + k) % msgs.size)?.takeIf { msgs.size > k } }.forEach { n ->
-            Text(n.text.uppercase(), color = LcdDim, fontSize = 13.sp, letterSpacing = 1.sp,
-                maxLines = 1, overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = 6.dp).fillMaxWidth().then(n.onTap?.let { Modifier.clickable(onClick = it) } ?: Modifier))
-        }
-    }
 }
 
 /** One calm sentence with a dot, Apple-like. Tap the count on the right for the next. */

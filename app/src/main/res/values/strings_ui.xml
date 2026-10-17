@@ -385,6 +385,7 @@
     <string name="c_keep_on">Keep the screen on</string>
     <string name="c_cameras">Speed cameras from OpenStreetMap</string>
     <string name="c_tile">Car mode</string>
+    <string name="a_light_build">This is the light build (F-Droid): the on-device assistant is not in it. The GitHub build has it.</string>
     <string name="c_ways_note">Four more ways in: a Car mode card on the Shelf (Add, Car mode), the Car mode tile in Quick Settings (pull the shade down twice, tap the pencil, drag it in), a swipe or bottom shortcut set to Car mode in Settings, Gestures, or the assistant: say \"car mode\".</string>
     <string name="c_tone">Warning tones</string>
     <string name="c_speak">Say the limit and cameras</string>

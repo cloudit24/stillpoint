@@ -19,6 +19,11 @@ set(GGML_NATIVE          OFF CACHE BOOL "" FORCE)
 # Dot-product instructions: every arm64 phone since about 2018. Q4 models lean on them.
 set(GGML_CPU_ARM_ARCH "armv8.2-a+dotprod" CACHE STRING "" FORCE)
 
+# The light (F-Droid) build skips the engine altogether.
+if(STILLPOINT_NO_LLM)
+  return()
+endif()
+
 add_subdirectory(llama.cpp EXCLUDE_FROM_ALL)
 
 add_library(stillpoint_llm SHARED stillpoint_llm.cpp)

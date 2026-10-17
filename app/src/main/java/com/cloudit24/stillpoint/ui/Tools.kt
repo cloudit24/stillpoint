@@ -6,7 +6,6 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.graphics.Bitmap
 import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.net.ConnectivityManager
@@ -55,7 +54,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -67,9 +65,6 @@ import com.cloudit24.stillpoint.Screen
 import com.cloudit24.stillpoint.data.LiveRepository
 import com.cloudit24.stillpoint.data.Prefs
 import com.cloudit24.stillpoint.data.SourceKey
-import com.google.zxing.BarcodeFormat
-import com.google.zxing.EncodeHintType
-import com.google.zxing.qrcode.QRCodeWriter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -84,7 +79,6 @@ import java.net.InetSocketAddress
 import java.net.Socket
 import java.net.URL
 import java.net.URLEncoder
-import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.Locale
 import java.util.UUID
@@ -94,16 +88,13 @@ import java.util.concurrent.TimeUnit
 enum class Tool(val section: String, val title: String, val summary: String) {
     DEVICE("Device", "Device info", "Battery, storage, memory, screen, hardware"),
     PASSWORD("Security and text", "Password generator", "Strong passwords, copied in one tap"),
-    HASH("Security and text", "Hash", "MD5, SHA-1, SHA-256, SHA-512 of any text"),
     BASE64("Security and text", "Base64", "Encode and decode"),
     UUIDS("Security and text", "UUID", "Random unique IDs"),
     JSON("Security and text", "JSON formatter", "Tidy, check or squeeze JSON"),
-    QR("Security and text", "QR code", "Turn text or a link into a QR code"),
     MYIP("Network", "My addresses", "Local and public IP, gateway, DNS servers"),
     SUBNET("Network", "Subnet calculator", "Range, hosts and mask from an address"),
     PING("Network", "Ping", "Is a host reachable, and how fast"),
     PORT("Network", "Port check", "Is a port open on a host"),
-    DNS("Network", "DNS lookup", "A, AAAA, MX, TXT, CNAME and NS records"),
     WIFI("Network", "Wi-Fi details", "Signal, speed and band"),
     WOL("Network", "Wake-on-LAN", "Wake a computer on your network"),
 }
@@ -132,16 +123,13 @@ fun ToolsScreen(vm: LauncherViewModel) {
             }
             Tool.DEVICE -> DeviceTool()
             Tool.PASSWORD -> PasswordTool()
-            Tool.HASH -> HashTool()
             Tool.BASE64 -> Base64Tool()
             Tool.UUIDS -> UuidTool()
             Tool.JSON -> JsonTool()
-            Tool.QR -> QrTool()
             Tool.MYIP -> MyIpTool()
             Tool.SUBNET -> SubnetTool()
             Tool.PING -> PingTool()
             Tool.PORT -> PortTool()
-            Tool.DNS -> DnsTool()
             Tool.WIFI -> WifiTool()
             Tool.WOL -> WolTool()
         }
@@ -292,17 +280,6 @@ private fun PasswordTool() {
     Hint("Made on the phone with a secure random source. Look-alike letters (l, 1, O, 0) are left out.")
 }
 
-@Composable
-private fun HashTool() {
-    var text by rememberSaveable { mutableStateOf("") }
-    Field(text, { text = it }, "Text", singleLine = false)
-    if (text.isNotEmpty()) listOf("MD5", "SHA-1", "SHA-256", "SHA-512").forEach { alg ->
-        val hex = MessageDigest.getInstance(alg).digest(text.toByteArray()).joinToString("") { "%02x".format(it) }
-        Text(alg, color = Muted, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
-        Output(hex)
-    }
-}
-
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun Base64Tool() {
@@ -347,26 +324,6 @@ private fun JsonTool() {
     }
     Output(out)
 }
-
-@Composable
-private fun QrTool() {
-    var text by rememberSaveable { mutableStateOf("") }
-    Field(text, { text = it }, "Text or link", singleLine = false)
-    val bmp = remember(text) { if (text.isBlank()) null else runCatching { qr(text, 720) }.getOrNull() }
-    if (bmp != null) {
-        Image(bmp.asImageBitmap(), contentDescription = "QR code", modifier = Modifier.padding(top = 12.dp).fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp)).background(Color.White).padding(12.dp))
-    }
-    Hint("Made on the phone. Point any camera at it.")
-}
-
-private fun qr(text: String, size: Int): Bitmap {
-    val m = QRCodeWriter().encode(text, BarcodeFormat.QR_CODE, size, size, mapOf(EncodeHintType.MARGIN to 1))
-    val px = IntArray(size * size) { i -> if (m[i % size, i / size]) 0xFF000000.toInt() else 0xFFFFFFFF.toInt() }
-    return Bitmap.createBitmap(px, size, size, Bitmap.Config.ARGB_8888)
-}
-
-// ---------------- Network ----------------
 
 @Composable
 private fun MyIpTool() {
@@ -495,55 +452,6 @@ private fun PortTool() {
         Pill("Common ports") { ports = "21, 22, 25, 53, 80, 110, 143, 443, 445, 587, 993, 3306, 3389, 5432, 8080, 8443" }
     }
     Output(out)
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun DnsTool() {
-    val ctx = LocalContext.current
-    val scope = rememberCoroutineScope()
-    var name by rememberSaveable { mutableStateOf("") }
-    var type by rememberSaveable { mutableStateOf("A") }
-    var out by remember { mutableStateOf("") }
-    Field(name, { name = it }, "Domain, like example.com")
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        listOf("A", "AAAA", "MX", "TXT", "CNAME", "NS").forEach { t ->
-            Text(t, color = if (t == type) Color.Black else Accent, fontSize = 13.sp, modifier = Modifier.clip(RoundedCornerShape(50))
-                .then(if (t == type) Modifier.background(Accent) else Modifier.glassPill()).clickable { type = t }
-                .padding(horizontal = 14.dp, vertical = 6.dp))
-        }
-    }
-    Row(Modifier.padding(top = 10.dp)) {
-        Pill("Look up") {
-            out = "Looking up…"
-            scope.launch { out = withContext(Dispatchers.IO) { dns(Prefs(ctx).loadSources().url(SourceKey.DNS), name.trim(), type) } }
-        }
-    }
-    Output(out)
-    Hint("Asked through DNS over HTTPS (Settings, Online sources); A and AAAA fall back to the phone's own DNS.")
-}
-
-private fun dns(server: String, name: String, type: String): String {
-    if (name.isEmpty()) return "Type a domain first."
-    val viaDoh = runCatching {
-        val conn = (URL("$server?name=${URLEncoder.encode(name, "UTF-8")}&type=$type").openConnection() as HttpURLConnection).apply {
-            connectTimeout = 8000; readTimeout = 8000
-            setRequestProperty("Accept", "application/dns-json")
-        }
-        val body = conn.inputStream.bufferedReader().use { it.readText() }
-        conn.disconnect()
-        val answers = JSONObject(body).optJSONArray("Answer") ?: return "No $type records for $name."
-        (0 until answers.length()).joinToString("\n") { i ->
-            val a = answers.getJSONObject(i)
-            "${a.optString("data")}   (TTL ${a.optInt("TTL")} s)"
-        }
-    }.getOrNull()
-    if (viaDoh != null) return viaDoh
-    if (type == "A" || type == "AAAA") return runCatching {
-        InetAddress.getAllByName(name).filter { (it.address.size == 4) == (type == "A") }.joinToString("\n") { it.hostAddress.orEmpty() }
-            .ifEmpty { "No $type records for $name." }
-    }.getOrElse { "Couldn't look up $name." }
-    return "Couldn't reach the DNS server."
 }
 
 @Composable

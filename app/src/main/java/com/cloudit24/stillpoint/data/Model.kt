@@ -147,10 +147,7 @@ data class LauncherSettings(
     val accentStyle: AccentStyle = AccentStyle.SOLID,
     /** A look that sets colours and extras at once. The accent above is kept and comes back with Stillpoint. */
     val theme: AppTheme = AppTheme.STILLPOINT,
-    val themeCat: Boolean = false,
     val themeDrone: Boolean = true,
-    val catRoam: Boolean = true,
-    val catReact: Boolean = true,
     /** One person whose messages feel different: a heart, a pink glow, and the cat runs to greet them. */
     val specialPerson: String = "",
     val specialGlow: Boolean = true,
@@ -388,7 +385,7 @@ val DEFAULT_PROFILES = listOf(
 )
 
 /** How the terminal display above the apps looks. */
-enum class StatusStyle(val label: String) { TERMINAL("Terminal"), LCD("Retro LCD"), QUIET("Quiet line") }
+enum class StatusStyle(val label: String) { TERMINAL("Terminal"), QUIET("Quiet line") }
 
 /** What the terminal display talks about. The greeting is always there. */
 enum class StatusTopic(val label: String) {
@@ -407,9 +404,7 @@ enum class StatusTopic(val label: String) {
 /** How the terminal display is drawn. */
 enum class TermLook(val label: String, val detail: String) {
     CRT("CRT", "Phosphor on curved glass, scanlines, a soft glow"),
-    HUD("HUD", "Corner brackets, chips in the header, a slow light sweep"),
     GLASS("Quiet glass", "No box: the newest line big, the rest small, a thin prayer bar"),
-    RAIL("Data rail", "A numbered rail with a topic label on each line"),
 }
 
 /** The terminal display's colour. ACCENT follows your accent; the rest are phosphors. */
@@ -438,9 +433,7 @@ enum class DialMode(val label: String) {
 /** The app's typeface. The bundled ones are open-source (docs/FONTS.md). */
 enum class AppFont(val label: String) {
     SYSTEM("Phone's font"),
-    INTER("Inter"),
     MANROPE("Manrope"),
-    SPACE("Space Grotesk"),
     LORA("Lora (serif)"),
 }
 
@@ -466,11 +459,8 @@ data class ShelfPage(val id: Int, val name: String, val items: List<Int>)
  * Stillpoint's own cards for the Shelf. On a shelf each has the id -(code * 100 + shelf id),
  * so it never collides with a widget id (always positive) and can appear once per shelf.
  */
-/** [retired]: no longer offered or shown; kept so old ids still mean the same thing. */
-enum class BuiltIn(val code: Int, val title: String, val summary: String, val canHalf: Boolean = false, val retired: Boolean = false) {
+enum class BuiltIn(val code: Int, val title: String, val summary: String, val canHalf: Boolean = false) {
     NOTES(1, "Notes", "A scribble board"),
-    TASKS(2, "Tasks", "Moved to the Project Hub app", retired = true),
-    PROJECTS(3, "Projects", "Steps and how far along you are", retired = true),
     CALENDAR(10, "Calendar", "This month, with your calendars"),
     CLOCKS(11, "World clock", "Your cities at a glance"),
     BATTERY(12, "Battery and storage", "Charge, temperature, space and memory", canHalf = true),

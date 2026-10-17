@@ -60,7 +60,6 @@ fun BuiltInContent(vm: LauncherViewModel, kind: BuiltIn, id: Int) {
     val s = vm.settings
     when (kind) {
         BuiltIn.NOTES -> NotesCard(vm)
-        BuiltIn.TASKS, BuiltIn.PROJECTS -> Unit // Retired: moved to the Project Hub app.
         BuiltIn.CALENDAR -> MonthCard(s)
         BuiltIn.CLOCKS -> {
             val now by rememberTicker(30_000)

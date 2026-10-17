@@ -112,9 +112,7 @@ private fun variable(res: Int, lo: Int, hi: Int) = FontFamily((1..9).map { i ->
 
 fun fontFamilyFor(f: AppFont): FontFamily = when (f) {
     AppFont.SYSTEM -> FontFamily.Default
-    AppFont.INTER -> variable(R.font.inter, 100, 900)
     AppFont.MANROPE -> variable(R.font.manrope, 200, 800)
-    AppFont.SPACE -> variable(R.font.space_grotesk, 300, 700)
     AppFont.LORA -> variable(R.font.lora, 400, 700)
 }
 
