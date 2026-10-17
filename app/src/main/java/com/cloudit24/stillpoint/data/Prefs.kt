@@ -430,7 +430,8 @@ class Prefs(context: Context) {
                     // Shelves still called "Shelf" or "Shelf 2" take their own short name.
                     val plain = pg.name == "Shelf" || Regex("""Shelf \d+""").matches(pg.name)
                     pg.copy(name = if (plain) SHELF_NAMES.getOrElse(idx) { pg.name } else pg.name,
-                        items = pg.items.filter { i -> BuiltIn.of(i)?.retired != true })
+                        // Cards that no longer exist (the old Tasks and Projects) drop off the shelf.
+                        items = pg.items.filter { i -> i >= 0 || BuiltIn.of(i) != null })
                 }
                 // Three shelves at most. Setups from before the limit: a fourth shelf's things move onto the third.
                 val max = SHELF_NAMES.size
