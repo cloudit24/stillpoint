@@ -3,7 +3,7 @@
 Every version of Stillpoint Launcher, newest first. Each links to its APK.
 The newest is always at **[Download the latest APK](https://github.com/cloudit24/stillpoint/releases/latest/download/Stillpoint-Launcher.apk)**.
 
-## v0.49.0 · not yet released
+## v0.49.0 · 22 Oct 2026
 - A quiet home. The terminal display, its looks, colours, scanlines, typing, cursor, header, power bar and the drone are gone. Under the headline there is now a stack of up to four plain lines in your font, most pressing first, only the first with the accent dot, each with a small word for what it is about; or one line, if you prefer (Settings, Home, Under the headline). Nothing moves unless a fact changes. Tap a line to act; Ask Stillpoint sits under the stack when the assistant is on.
 - The home cards (calendar, day, week, weather, world clock) are gone from home; they live on the Shelf as cards, with a new Today card for what is left on your calendar.
 - Settings, the app list and the assistant are pure black like home; the glass panes are the only light. The Glow look for widgets is gone (Plain and Glass stay). Neon Alley and Cyberpunk are colour sets now, with nothing living on the display.
@@ -14,6 +14,8 @@ The newest is always at **[Download the latest APK](https://github.com/cloudit24
 - Car mode: messages on the drive come in three levels, All, Important only, Mute, as three buttons on the drive screen and in Settings; Mute shows and reads nothing. The list starts empty with each drive.
 - Car mode: Start when the phone starts charging (Settings, Car mode), for cars without Bluetooth.
 - Voice: when the phone's speech or voice lacks your language, English is used rather than failing; the limit is spoken on the first fix and again when Say limit is switched on.
+
+[stillpoint-v0.49.0.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.49.0/stillpoint-v0.49.0.apk)
 
 ## v0.48.2 · 16 Oct 2026
 - Car mode has switches on the drive screen itself: Read messages, Say limit, Tones. Turn Read messages off when there are passengers; the limit and camera warnings keep coming.
