@@ -87,22 +87,6 @@ fun Modifier.glass(shape: Shape = GlassShape, level: GlassLevel = GlassLevel.PAN
 fun Modifier.glassPill(level: GlassLevel = GlassLevel.SOFT, tint: Color = glassTint): Modifier = glass(RoundedCornerShape(50), level, tint)
 
 /**
- * Ambient light behind a screen, in the accent and a neighbouring hue: two soft pools in opposite corners.
- * Most of the screen stays black; the glass panes pick the light up and show their colour.
- */
-@Composable
-fun Modifier.aurora(): Modifier {
-    val a = LocalAccent.current
-    val b = shiftHue(a, 42f)
-    return drawBehind {
-        drawRect(Brush.radialGradient(listOf(a.copy(alpha = 0.15f), Color.Transparent),
-            center = Offset(size.width * 0.88f, -size.height * 0.04f), radius = size.width * 0.95f))
-        drawRect(Brush.radialGradient(listOf(b.copy(alpha = 0.11f), Color.Transparent),
-            center = Offset(size.width * 0.08f, size.height * 1.02f), radius = size.width * 0.85f))
-    }
-}
-
-/**
  * A glass segmented control: a dim track, and a brighter accent-tinted pill that slides under the chosen tab.
  * [trailing] goes after the tabs, inside the track (a "+" for a new shelf, say).
  */

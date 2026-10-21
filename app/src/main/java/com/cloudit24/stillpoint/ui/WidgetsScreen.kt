@@ -366,7 +366,7 @@ private fun WidgetItem(vm: LauncherViewModel, id: Int, editing: Boolean, areaW: 
             }
             // Its look: each chip moves to the next choice.
             Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                LookChip(listOf("Plain", "Glass", "Glow")[look.style]) { vm.setWidgetLook(id, look.copy(style = (look.style + 1) % 3)) }
+                LookChip(listOf("Plain", "Glass")[look.style.coerceIn(0, 1)]) { vm.setWidgetLook(id, look.copy(style = (look.style + 1) % 2)) }
                 LookChip(listOf("Square", "Soft", "Round")[look.corners]) { vm.setWidgetLook(id, look.copy(corners = (look.corners + 1) % 3)) }
                 LookChip("${look.alpha}%") {
                     vm.setWidgetLook(id, look.copy(alpha = when (look.alpha) { 100 -> 80; 80 -> 60; else -> 100 }))
@@ -417,7 +417,7 @@ private fun BuiltInItem(vm: LauncherViewModel, id: Int, editing: Boolean, areaW:
         if (editing) Column(Modifier.graphicsLayer { alpha = if (drag.id == id) 0f else 1f }) {
             Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 if (kind.canHalf) LookChip(if (isHalf) "Half" else "Full") { vm.setWidgetSize(id, 0, if (isHalf) 0 else 1) }
-                LookChip(listOf("Plain", "Glass", "Glow")[look.style]) { vm.setWidgetLook(id, look.copy(style = (look.style + 1) % 3)) }
+                LookChip(listOf("Plain", "Glass")[look.style.coerceIn(0, 1)]) { vm.setWidgetLook(id, look.copy(style = (look.style + 1) % 2)) }
                 LookChip(listOf("Square", "Soft", "Round")[look.corners]) { vm.setWidgetLook(id, look.copy(corners = (look.corners + 1) % 3)) }
             }
         }
@@ -715,23 +715,15 @@ private fun cornerFor(look: WidgetLook): Dp = when (look.corners) {
 }
 
 /**
- * Glass: a frosted tile with a hairline edge around the widget. Glow: soft accent light behind it.
+ * Glass: a frosted tile with a hairline edge around the widget.
  * Opacity fades the whole widget.
  */
 @Composable
 private fun Modifier.widgetLook(look: WidgetLook, accent: Color): Modifier {
     val shape = RoundedCornerShape(cornerFor(look) + 6.dp)
-    val glow = if (look.style != 2) Modifier else Modifier.drawBehind {
-        val pad = 22.dp.toPx()
-        drawRoundRect(
-            Brush.radialGradient(listOf(accent.copy(alpha = 0.32f), Color.Transparent), center, size.maxDimension * 0.8f),
-            topLeft = Offset(-pad, -pad), size = Size(size.width + pad * 2, size.height + pad * 2),
-            cornerRadius = CornerRadius(40.dp.toPx()),
-        )
-    }
     val glass = if (look.style != 1) Modifier
     else Modifier.glass(shape, GlassLevel.SOFT)
-    return this.then(glow).graphicsLayer { alpha = look.alpha / 100f }.then(glass)
+    return this.graphicsLayer { alpha = look.alpha / 100f }.then(glass)
 }
 
 @Composable

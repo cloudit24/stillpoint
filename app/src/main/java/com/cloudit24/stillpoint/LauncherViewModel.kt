@@ -24,7 +24,6 @@ import com.cloudit24.stillpoint.data.CustomGold
 import com.cloudit24.stillpoint.data.GoldSource
 import com.cloudit24.stillpoint.update.UpdateNotice
 import com.cloudit24.stillpoint.data.Note
-import com.cloudit24.stillpoint.data.InfoPanel
 import com.cloudit24.stillpoint.data.CalendarSource
 import com.cloudit24.stillpoint.data.Ics
 import com.cloudit24.stillpoint.data.SyncConfig
@@ -275,7 +274,8 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Today's remaining events from the chosen calendar source. */
     private suspend fun loadAgenda(): List<AgendaItem> {
-        if (!settings.showAgenda && InfoPanel.AGENDA !in settings.infoPanels) return emptyList()
+        val onShelf = shelfPages.any { p -> p.items.any { com.cloudit24.stillpoint.data.BuiltIn.of(it) == com.cloudit24.stillpoint.data.BuiltIn.AGENDA } }
+        if (!settings.showAgenda && !onShelf) return emptyList()
         return when (settings.calendarSource) {
             CalendarSource.PHONE -> withContext(Dispatchers.IO) { runCatching { calendarRepo.today() }.getOrDefault(emptyList()) }
             CalendarSource.ICS -> withContext(Dispatchers.IO) {

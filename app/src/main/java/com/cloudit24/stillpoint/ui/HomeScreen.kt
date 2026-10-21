@@ -262,29 +262,8 @@ fun HomeScreen(vm: LauncherViewModel) {
         // terminal display, fixed · apps, at most a third of the screen, scrolls inside itself · shortcuts, fixed.
         // New things go inside a zone; zones never push each other off the screen.
         HeroHeader(vm, s, now)
-        val infoScroll = rememberScrollState()
-        // Scrolls only when it has to, so swipe gestures keep working when everything fits.
-        val fullTerminal = s.statusFull && s.statusStyle == StatusStyle.TERMINAL
-        if (fullTerminal) {
-            // The terminal display takes the whole zone: as many lines as fit, no cards, no strip.
-            androidx.compose.foundation.layout.BoxWithConstraints(Modifier.weight(1f).padding(top = 22.dp, bottom = 14.dp)) {
-                // The terminal works out how many lines fit its box, per look and font size.
-                StatusLine(vm, s, now, Modifier.fillMaxSize(), older = 9, fill = true)
-            }
-        } else {
-        Column(Modifier.weight(1f).padding(top = 26.dp).fadingEdges(infoScroll)
-            .verticalScroll(infoScroll, enabled = infoScroll.maxValue > 0)) {
-        HeroInfo(vm, s, now)
-
-        // Focus, usage access and setup tips now speak through the terminal display below.
-        Column(Modifier.padding(top = 28.dp)) {
-            if (s.showAgenda) AgendaBlock(context, vm.agenda)
-        }
-        }
-
-        // The terminal display: Stillpoint talks to you here, right above the apps.
-        StatusLine(vm, s, now, Modifier.padding(bottom = 14.dp))
-        }
+        // Under the headline: what matters now, as plain lines. Nothing else lives here; cards are on the Shelf.
+        Column(Modifier.weight(1f).padding(top = 30.dp, bottom = 14.dp)) { StatusLine(vm, s, now, Modifier.fillMaxWidth()) }
         // A set space for the apps (about a third of the screen); more apps scroll inside it.
         val listScale = 1f
         val maxListHeight = (LocalConfiguration.current.screenHeightDp * 0.34f).dp

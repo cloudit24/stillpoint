@@ -84,6 +84,11 @@ fun BuiltInContent(vm: LauncherViewModel, kind: BuiltIn, id: Int) {
         BuiltIn.HOME_ASSISTANT -> HaCard(vm)
         BuiltIn.UPTIME -> KumaCard(vm)
         BuiltIn.MESSAGES -> MessagesCard(vm)
+        BuiltIn.AGENDA -> {
+            val now by rememberTicker(30_000)
+            CardTitle("Today")
+            AgendaInfo(vm, now, Modifier.padding(top = 4.dp, bottom = 4.dp))
+        }
         BuiltIn.CAR -> {
             val running by com.cloudit24.stillpoint.service.CarService.running.collectAsState()
             CardTitle("Car mode")

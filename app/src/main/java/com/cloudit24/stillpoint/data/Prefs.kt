@@ -31,7 +31,6 @@ class Prefs(context: Context) {
                 .getOrDefault(d.drawerStart),
             accent = sp.getLong(K_ACCENT, d.accent),
             theme = runCatching { AppTheme.valueOf(sp.getString(K_THEME, d.theme.name)!!) }.getOrDefault(d.theme),
-            themeDrone = sp.getBoolean(K_THEME_DRONE, d.themeDrone),
             specialPerson = sp.getString("special_person", d.specialPerson) ?: "",
             specialGlow = sp.getBoolean("special_glow", d.specialGlow),
             rules = readRules(sp.getString("auto_rules", null)),
@@ -124,19 +123,12 @@ class Prefs(context: Context) {
             importantPeople = (sp.getString("important_people", "") ?: "").split("\n").filter { it.isNotBlank() },
             worldClocks = (sp.getString("world_clocks", "") ?: "").split("\n").filter { it.isNotBlank() },
             remindEvery = sp.getInt("remind_every", d.remindEvery),
-            // Before 0.17 only one could be chosen (key "info_panel").
-            infoPanels = (sp.getString(K_INFO_PANELS, null) ?: sp.getString(K_INFO_PANEL, null))
-                ?.split(",")?.mapNotNull { n -> runCatching { InfoPanel.valueOf(n) }.getOrNull() }?.toSet()
-                ?: d.infoPanels,
             dialMode = runCatching { DialMode.valueOf(sp.getString(K_DIAL, null)!!) }.getOrDefault(d.dialMode),
             compassHaptics = sp.getBoolean(K_COMPASS_HAPTICS, d.compassHaptics),
             toolsOn = sp.getBoolean("tools_on", d.toolsOn),
             calendarSource = runCatching { CalendarSource.valueOf(sp.getString(K_CAL_SRC, null)!!) }.getOrDefault(d.calendarSource),
             calendarSync = loadSync(SyncFeature.CALENDAR),
             statusStyle = runCatching { StatusStyle.valueOf(sp.getString("status_style", null)!!) }.getOrDefault(d.statusStyle),
-            statusFull = sp.getBoolean("status_full", d.statusFull),
-            termLook = runCatching { TermLook.valueOf(sp.getString("term_look", null)!!) }.getOrDefault(d.termLook),
-            termColor = runCatching { TermColor.valueOf(sp.getString("term_color", null)!!) }.getOrDefault(d.termColor),
             statusOff = (sp.getStringSet("status_off", null) ?: emptySet())
                 .mapNotNull { n -> runCatching { StatusTopic.valueOf(n) }.getOrNull() }.toSet(),
             weatherOn = sp.getBoolean(K_WEATHER_ON, d.weatherOn),
@@ -191,7 +183,6 @@ class Prefs(context: Context) {
             .putString(K_DRAWER_START, s.drawerStart.name)
             .putLong(K_ACCENT, s.accent)
             .putString(K_THEME, s.theme.name)
-            .putBoolean(K_THEME_DRONE, s.themeDrone)
             .putString("special_person", s.specialPerson)
             .putBoolean("special_glow", s.specialGlow)
             .putString("auto_rules", JSONArray().also { a -> s.rules.forEach { a.put(it.toJson()) } }.toString())
@@ -270,15 +261,11 @@ class Prefs(context: Context) {
             .putString("important_people", s.importantPeople.joinToString("\n"))
             .putString("world_clocks", s.worldClocks.joinToString("\n"))
             .putInt("remind_every", s.remindEvery)
-            .putString(K_INFO_PANELS, s.infoPanels.joinToString(",") { it.name })
             .putString(K_DIAL, s.dialMode.name)
             .putBoolean(K_COMPASS_HAPTICS, s.compassHaptics)
             .putBoolean("tools_on", s.toolsOn)
             .putString(K_CAL_SRC, s.calendarSource.name)
             .putString("status_style", s.statusStyle.name)
-            .putBoolean("status_full", s.statusFull)
-            .putString("term_look", s.termLook.name)
-            .putString("term_color", s.termColor.name)
             .putStringSet("status_off", s.statusOff.map { it.name }.toSet())
             .apply {
                 SyncFeature.entries.forEach { f ->
@@ -662,7 +649,6 @@ class Prefs(context: Context) {
         const val K_DRAWER_START = "drawer_start"
         const val K_ACCENT = "accent"
         const val K_THEME = "theme"
-        const val K_THEME_DRONE = "theme_drone"
         const val K_WIDGET_IDS = "widget_ids"
         const val K_GESTURE = "gesture_"
         const val K_CLOCK = "clock_style"
@@ -694,8 +680,6 @@ class Prefs(context: Context) {
         const val K_EDGE_MOTION = "edge_motion"
         const val K_EDGE_RIGHT = "edge_right"
         const val K_ICON_TINT = "icon_tint"
-        const val K_INFO_PANEL = "info_panel"
-        const val K_INFO_PANELS = "info_panels"
         const val K_DIAL = "dial_mode"
         const val K_COMPASS_HAPTICS = "compass_haptics"
         const val K_CAL_SRC = "calendar_source"

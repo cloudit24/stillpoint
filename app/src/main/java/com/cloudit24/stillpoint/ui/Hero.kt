@@ -17,7 +17,6 @@ import com.cloudit24.stillpoint.data.DialMode
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.runtime.mutableFloatStateOf
-import com.cloudit24.stillpoint.data.InfoPanel
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.ui.text.style.TextAlign
@@ -183,15 +182,6 @@ fun HeroHeader(vm: LauncherViewModel, s: LauncherSettings, now: Long) {
 
 /** The info zone under the headline: the chosen panels, then the quiet footer figures. */
 @Composable
-fun HeroInfo(vm: LauncherViewModel, s: LauncherSettings, now: Long) {
-    InfoSlot(vm, s, now, Modifier)
-    if (s.showStats || s.showLocalIp || s.publicIpOn) {
-        StatsStrip(vm, s, Modifier.padding(top = 26.dp))
-    }
-}
-
-/** Flips around its horizontal axis when [key] changes; otherwise shows [card] live. */
-@Composable
 private fun FlipCard(key: Int, card: HeroCard, modifier: Modifier) {
     var shownKey by remember { mutableIntStateOf(key) }
     var shown by remember { mutableStateOf(card) }
@@ -301,86 +291,6 @@ private fun FitText(text: String, color: Color, maxSp: Float, minSp: Float) {
  * The info zone under the headline. One card, or several you swipe across (small dots show where you are).
  * The cards share one fixed height, so nothing below moves when you swipe.
  */
-@Composable
-private fun InfoSlot(vm: LauncherViewModel, s: LauncherSettings, now: Long, modifier: Modifier) {
-    val shown = InfoPanel.entries.filter { p ->
-        p in s.infoPanels && p != InfoPanel.PRAYER && (p != InfoPanel.WEATHER || (s.weatherOn && vm.weather != null))
-    }
-    if (shown.isEmpty()) return
-    if (shown.size == 1) {
-        Box(modifier) { InfoPage(vm, s, now, shown[0]) }
-        return
-    }
-    val pager = rememberPagerState { shown.size }
-    val accent = Accent
-    Column(modifier) {
-        HorizontalPager(pager, Modifier.fillMaxWidth().height(100.dp), pageSpacing = 24.dp, verticalAlignment = Alignment.Top) { i ->
-            InfoPage(vm, s, now, shown[i])
-        }
-        Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-            shown.indices.forEach { i ->
-                val on = i == pager.currentPage
-                val w by animateDpAsState(if (on) 14.dp else 4.dp, tween(250), label = "page")
-                Box(Modifier.height(4.dp).width(w).clip(RoundedCornerShape(2.dp))
-                    .background(if (on) accent.copy(alpha = 0.8f) else Muted.copy(alpha = 0.3f)))
-            }
-        }
-    }
-}
-
-@Composable
-private fun InfoPage(vm: LauncherViewModel, s: LauncherSettings, now: Long, panel: InfoPanel) {
-    when (panel) {
-        InfoPanel.PRAYER -> Unit
-        InfoPanel.AGENDA -> AgendaInfo(vm, now, Modifier)
-        InfoPanel.DAY -> DayInfo(now, Modifier)
-        InfoPanel.WEEK -> WeekInfo(s, Modifier)
-        InfoPanel.WEATHER -> WeatherInfo(vm, s, Modifier)
-        InfoPanel.WORLD -> WorldInfo(s, now, Modifier)
-    }
-}
-
-/** This week, today in the accent, and today's date in each calendar you turned on. */
-@Composable
-private fun WeekInfo(s: LauncherSettings, modifier: Modifier) {
-    val today = LocalDate.now()
-    val locale = Locale.getDefault()
-    val weeks = WeekFields.of(locale)
-    val first = today.with(TemporalAdjusters.previousOrSame(weeks.firstDayOfWeek))
-    val accent = Accent
-    val line = remember(today, s.hijriOn, s.hijriAdjust, s.sakaOn, s.malayalamOn, s.tamilOn) {
-        buildList {
-            if (s.hijriOn) add(Calendars.hijri(today, s.hijriAdjust))
-            if (s.sakaOn) add(Calendars.saka(today))
-            if (s.malayalamOn) add(Calendars.malayalam(today).substringBefore(" · "))
-            if (s.tamilOn) add(Calendars.tamil(today).substringBefore(" · "))
-        }.ifEmpty { listOf("Week ${today.get(weeks.weekOfWeekBasedYear())}") }.joinToString("  ·  ")
-    }
-    Column(modifier.fillMaxWidth()) {
-        Row(Modifier.fillMaxWidth()) {
-            (0L..6L).forEach { i ->
-                val d = first.plusDays(i)
-                val isToday = d == today
-                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(d.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, locale), maxLines = 1,
-                        color = if (isToday) accent else Muted, fontSize = 10.sp)
-                    Box(Modifier.padding(top = 4.dp).size(32.dp).clip(CircleShape).background(if (isToday) accent else Color.Transparent),
-                        contentAlignment = Alignment.Center) {
-                        Text("${d.dayOfMonth}", fontSize = 15.sp, color = when {
-                            isToday -> Color(0xFF0B0B0A)
-                            d.isBefore(today) -> Muted
-                            else -> Ink
-                        })
-                    }
-                }
-            }
-        }
-        Text(line, color = Muted, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(top = 10.dp))
-    }
-}
-
-/** The weather now, bigger than the headline card, with when it was last fetched. */
 @Composable
 internal fun WeatherInfo(vm: LauncherViewModel, s: LauncherSettings, modifier: Modifier) {
     val context = LocalContext.current
@@ -543,7 +453,7 @@ private fun MoonIcon(age: Double, size: Dp) {
 
 /** The next event today, with where it sits in the day. */
 @Composable
-private fun AgendaInfo(vm: LauncherViewModel, now: Long, modifier: Modifier) {
+internal fun AgendaInfo(vm: LauncherViewModel, now: Long, modifier: Modifier) {
     val context = LocalContext.current
     val midnight = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
     fun frac(ms: Long) = ((ms - midnight) / 86_400_000f).coerceIn(0f, 1f)
@@ -572,24 +482,6 @@ private fun AgendaInfo(vm: LauncherViewModel, now: Long, modifier: Modifier) {
 }
 
 /** How much of today is left, and the battery. */
-@Composable
-private fun DayInfo(now: Long, modifier: Modifier) {
-    val context = LocalContext.current
-    val midnight = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-    val left = (midnight + 86_400_000L - now).coerceAtLeast(0)
-    val (pct, charging) = remember(now) { battery(context) }
-    InfoLayout(
-        title = "${formatDuration(left)} left",
-        titleExtra = null,
-        sub = "of today",
-        right = if (pct >= 0) "Battery $pct%" else "",
-        rightSub = if (charging) "charging" else "",
-        modifier = modifier,
-    ) { accent ->
-        barTrack(accent, ((now - midnight) / 86_400_000f).coerceIn(0f, 1f), null)
-    }
-}
-
 private fun battery(context: Context): Pair<Int, Boolean> =
     com.cloudit24.stillpoint.data.batteryNow(context).let { it.percent to it.charging }
 

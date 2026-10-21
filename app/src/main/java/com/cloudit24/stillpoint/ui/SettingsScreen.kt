@@ -26,7 +26,6 @@ import androidx.compose.material.icons.outlined.Settings
 import kotlinx.coroutines.delay
 import com.cloudit24.stillpoint.data.AppFont
 import com.cloudit24.stillpoint.data.DialMode
-import com.cloudit24.stillpoint.data.InfoPanel
 import com.cloudit24.stillpoint.data.IconTint
 import com.cloudit24.stillpoint.CrashLog
 import androidx.compose.material.icons.outlined.LocationOn
@@ -44,8 +43,6 @@ import com.cloudit24.stillpoint.data.SYNC_INTERVALS
 import com.cloudit24.stillpoint.data.SyncConfig
 import com.cloudit24.stillpoint.data.SyncFeature
 import com.cloudit24.stillpoint.data.StatusStyle
-import com.cloudit24.stillpoint.data.TermColor
-import com.cloudit24.stillpoint.data.TermLook
 import com.cloudit24.stillpoint.data.StatusTopic
 import com.cloudit24.stillpoint.data.intervalLabel
 import com.cloudit24.stillpoint.sync.Sync
@@ -270,7 +267,7 @@ fun SettingsScreen(vm: LauncherViewModel) {
         label = "settings",
     ) { current ->
         Column(
-            Modifier.fillMaxSize().aurora().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp),
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp),
         ) {
             if (current == null) {
                 Text(stringResource(R.string.s_settings), fontSize = 34.sp, fontWeight = FontWeight.Light,
@@ -362,12 +359,6 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         ActionRow(stringResource(R.string.s_icon_colours), s.iconTint.label) { dialog = SettingsDialog.ICON_TINT }
                         ActionRow(stringResource(R.string.s_font), s.font.label) { dialog = SettingsDialog.FONT }
                     }
-                    if (s.theme == AppTheme.NEON) {
-                        Group("Neon Alley") {
-                            ToggleRow("Drone companion", s.themeDrone) { on -> vm.updateSettings { it.copy(themeDrone = on) } }
-                        }
-                        Note("It lives on the terminal display in Terminal style. Tap it for the next message. Your special person is in Settings, Notifications.")
-                    }
                     Group(stringResource(R.string.s_apps)) {
                         ActionRow(stringResource(R.string.s_home_apps_as), s.homeStyle.label) { dialog = SettingsDialog.HOME_STYLE }
                         Stepper("App size on home", "${s.homeSize}",
@@ -408,15 +399,6 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         ActionRow(stringResource(R.string.s_style), s.statusStyle.label) {
                             vm.updateSettings { it.copy(statusStyle = StatusStyle.entries[(it.statusStyle.ordinal + 1) % StatusStyle.entries.size]) }
                         }
-                        if (s.statusStyle == StatusStyle.TERMINAL) {
-                            ActionRow(stringResource(R.string.s_look), s.termLook.label + " · " + s.termLook.detail) {
-                                vm.updateSettings { it.copy(termLook = TermLook.entries[(it.termLook.ordinal + 1) % TermLook.entries.size]) }
-                            }
-                            ActionRow(stringResource(R.string.s_colour), s.termColor.label) {
-                                vm.updateSettings { it.copy(termColor = TermColor.entries[(it.termColor.ordinal + 1) % TermColor.entries.size]) }
-                            }
-                            ToggleRow(stringResource(R.string.s_terminal_fills), s.statusFull) { on -> vm.updateSettings { it.copy(statusFull = on) } }
-                        }
                         StatusTopic.entries.forEach { t ->
                             ToggleRow(t.label, t !in s.statusOff) { on ->
                                 vm.updateSettings { it.copy(statusOff = if (on) it.statusOff - t else it.statusOff + t) }
@@ -440,20 +422,10 @@ fun SettingsScreen(vm: LauncherViewModel) {
                         ToggleRow(stringResource(R.string.s_tamil), s.tamilOn) { on -> vm.updateSettings { it.copy(tamilOn = on) } }
                     }
                     Note(stringResource(R.string.s_shown_in_the_headline_and_on))
-                    Group(stringResource(R.string.s_cards_under_the_headline)) {
-                        InfoPanel.entries.filter { it != InfoPanel.PRAYER }.forEach { panel ->
-                            ToggleRow(panel.label, panel in s.infoPanels) { on ->
-                                vm.updateSettings { it.copy(infoPanels = if (on) it.infoPanels + panel else it.infoPanels - panel) }
-                                if (on && panel == InfoPanel.AGENDA) vm.refresh()
-                                if (on && panel == InfoPanel.WORLD && s.worldClocks.isEmpty()) worldOpen = true
-                            }
-                        }
-                        if (InfoPanel.WORLD in s.infoPanels) {
-                            ActionRow(stringResource(R.string.s_world_clock_cities),
-                                s.worldClocks.joinToString(", ") { it.substringBefore("|") }.ifEmpty { "Choose up to three" }) { worldOpen = true }
-                        }
+                    Group(stringResource(R.string.s_world_clock)) {
+                        ActionRow(stringResource(R.string.s_world_clock_cities),
+                            s.worldClocks.joinToString(", ") { it.substringBefore("|") }.ifEmpty { "Choose up to three" }) { worldOpen = true }
                     }
-                    Note(stringResource(R.string.s_swipe_between_cards_on_home_weather))
                     if (worldOpen) {
                         WorldCitiesDialog(s.worldClocks, onDismiss = { worldOpen = false }) { list ->
                             vm.updateSettings { it.copy(worldClocks = list) }

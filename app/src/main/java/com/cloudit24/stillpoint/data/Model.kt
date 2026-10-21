@@ -147,7 +147,6 @@ data class LauncherSettings(
     val accentStyle: AccentStyle = AccentStyle.SOLID,
     /** A look that sets colours and extras at once. The accent above is kept and comes back with Stillpoint. */
     val theme: AppTheme = AppTheme.STILLPOINT,
-    val themeDrone: Boolean = true,
     /** One person whose messages feel different: a heart, a pink glow, and the cat runs to greet them. */
     val specialPerson: String = "",
     val specialGlow: Boolean = true,
@@ -247,7 +246,6 @@ data class LauncherSettings(
     val importantApps: Set<String> = emptySet(),
     val importantPeople: List<String> = emptyList(),
     val remindEvery: Int = 0,
-    val infoPanels: Set<InfoPanel> = setOf(InfoPanel.PRAYER),
     /** Cities for the world clock card, "Label|Zone", up to three. */
     val worldClocks: List<String> = emptyList(),
     val dialMode: DialMode = DialMode.DAY,
@@ -257,12 +255,8 @@ data class LauncherSettings(
     // The calendar: where it comes from and how it syncs.
     val calendarSource: CalendarSource = CalendarSource.PHONE,
     val calendarSync: SyncConfig = SyncConfig(),
-    // The terminal display above the apps: its look, and the topics switched off.
-    val statusStyle: StatusStyle = StatusStyle.TERMINAL,
-    /** The terminal display takes the whole space under the headline, instead of the cards and the strip. */
-    val statusFull: Boolean = true,
-    val termLook: TermLook = TermLook.CRT,
-    val termColor: TermColor = TermColor.ACCENT,
+    // Under the headline: the display style, and the topics switched off.
+    val statusStyle: StatusStyle = StatusStyle.STACK,
     val statusOff: Set<StatusTopic> = emptySet(),
     // Live data: all off by default. Nothing goes online unless one of these is on.
     val weatherOn: Boolean = false,
@@ -385,7 +379,7 @@ val DEFAULT_PROFILES = listOf(
 )
 
 /** How the terminal display above the apps looks. */
-enum class StatusStyle(val label: String) { TERMINAL("Terminal"), QUIET("Quiet line") }
+enum class StatusStyle(val label: String) { STACK("Stack: up to four lines"), QUIET("One line") }
 
 /** What the terminal display talks about. The greeting is always there. */
 enum class StatusTopic(val label: String) {
@@ -398,28 +392,6 @@ enum class StatusTopic(val label: String) {
     NOTES("Latest note"),
     WELLBEING("Screen time, unlocks and limits"),
     SETUP("Setup tips"),
-}
-
-/** What the important-info slot under the headline shows. */
-/** How the terminal display is drawn. */
-enum class TermLook(val label: String, val detail: String) {
-    CRT("CRT", "Phosphor on curved glass, scanlines, a soft glow"),
-    GLASS("Quiet glass", "No box: the newest line big, the rest small, a thin prayer bar"),
-}
-
-/** The terminal display's colour. ACCENT follows your accent; the rest are phosphors. */
-enum class TermColor(val label: String, val argb: Long) {
-    AMBER("Amber", 0xFFFFB84D), ACCENT("Your accent", 0L), CYAN("Electric cyan", 0xFF00E5FF),
-    YELLOW("Acid yellow", 0xFFE8FF3A), GREEN("Matrix green", 0xFF5CFF7A), MAGENTA("Magenta", 0xFFFF2BD6),
-}
-
-enum class InfoPanel(val label: String) {
-    PRAYER("Prayer times"),
-    AGENDA("Next on your calendar"),
-    DAY("Day and battery"),
-    WEEK("This week, with your calendars"),
-    WEATHER("Weather now"),
-    WORLD("World clock"),
 }
 
 /** What the ring beside the headline shows. */
@@ -470,7 +442,8 @@ enum class BuiltIn(val code: Int, val title: String, val summary: String, val ca
     HOME_ASSISTANT(20, "Home Assistant", "Your lights, switches, scenes and sensors"),
     UPTIME(21, "Uptime Kuma", "Which of your services are up"),
     MESSAGES(22, "ntfy or Gotify", "The latest messages from your server"),
-    CAR(30, "Car mode", "A button that starts the drive", canHalf = true);
+    CAR(30, "Car mode", "A button that starts the drive", canHalf = true),
+    AGENDA(31, "Today", "What is left on your calendar today");
 
     fun id(shelf: Int): Int = -(code * 100 + shelf)
 

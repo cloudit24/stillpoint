@@ -17,8 +17,8 @@ android {
         minSdk = 26
         targetSdk = 35
         // Bump both for every release. The GitHub tag must be "v" + versionName.
-        versionCode = 71
-        versionName = "0.48.3"
+        versionCode = 72
+        versionName = "0.49.0"
         // The assistant's llama.cpp build: arm64 only (every phone of the last six years); CPU, no GPU code.
         ndk { abiFilters += "arm64-v8a" }
         externalNativeBuild { cmake { arguments += listOf("-DANDROID_STL=c++_static") } }

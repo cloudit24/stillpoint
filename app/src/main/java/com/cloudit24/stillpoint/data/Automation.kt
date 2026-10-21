@@ -192,7 +192,7 @@ object Automation {
         val now = System.currentTimeMillis()
         if (r.action.setting && state != null) {
             val snap = JSONObject().put("theme", s.theme.name).put("edge", s.edgeStyle.name)
-                .put("drone", s.themeDrone).put("motion", s.edgeMotion)
+                .put("motion", s.edgeMotion)
             state.put("restore_${r.id}", snap)
         }
         return when (r.action) {
@@ -205,7 +205,7 @@ object Automation {
             Action.SILENT -> { PrayerAlerts.silence(context, r.actionArg.toIntOrNull() ?: 20); s }
             Action.THEME -> s.copy(theme = runCatching { AppTheme.valueOf(r.actionArg) }.getOrDefault(AppTheme.STILLPOINT))
             Action.EDGE_OFF -> s.copy(edgeStyle = EdgeStyle.OFF)
-            Action.CALM -> s.copy(themeDrone = false, edgeMotion = false)
+            Action.CALM -> s.copy(edgeMotion = false)
             Action.LINE -> { Prefs(context).setAutoLine(r.actionArg.replace("{name}", name), now + LINE_HOURS * 3_600_000L); s }
             Action.TELL_TASKER -> { tell(context, r.trigger.name.lowercase(), name); s }
         }
@@ -218,7 +218,7 @@ object Automation {
         return when (r.action) {
             Action.THEME -> s.copy(theme = runCatching { AppTheme.valueOf(snap.getString("theme")) }.getOrDefault(s.theme))
             Action.EDGE_OFF -> s.copy(edgeStyle = runCatching { EdgeStyle.valueOf(snap.getString("edge")) }.getOrDefault(s.edgeStyle))
-            Action.CALM -> s.copy(themeDrone = snap.optBoolean("drone", true),
+            Action.CALM -> s.copy(
                 edgeMotion = snap.optBoolean("motion", true))
             else -> s
         }

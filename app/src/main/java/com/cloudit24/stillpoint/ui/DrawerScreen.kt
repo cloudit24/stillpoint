@@ -172,7 +172,7 @@ fun DrawerScreen(vm: LauncherViewModel) {
         )
     }
 
-    Box(Modifier.fillMaxSize().aurora()) {
+    Box(Modifier.fillMaxSize()) {
         if (searching) {
             SearchPanel(
                 query = query,

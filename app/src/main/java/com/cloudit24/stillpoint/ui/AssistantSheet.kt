@@ -76,7 +76,7 @@ fun AssistantSheet(vm: LauncherViewModel) {
     LaunchedEffect(a.turns.size, a.draft.length) { if (a.turns.isNotEmpty()) list.animateScrollToItem(a.turns.size) }
 
     ModalBottomSheet(onDismissRequest = { vm.assistOpen = false }, sheetState = sheet, containerColor = look.surface) {
-        Column(Modifier.fillMaxWidth().aurora().imePadding().padding(horizontal = 18.dp).padding(bottom = 18.dp)) {
+        Column(Modifier.fillMaxWidth().imePadding().padding(horizontal = 18.dp).padding(bottom = 18.dp)) {
             LazyColumn(Modifier.fillMaxWidth().heightIn(min = 120.dp, max = 420.dp), state = list) {
                 if (a.turns.isEmpty() && a.draft.isEmpty()) item {
                     Text(stringResource(R.string.a_hello), color = Muted, fontSize = 14.sp, modifier = Modifier.padding(vertical = 10.dp))
