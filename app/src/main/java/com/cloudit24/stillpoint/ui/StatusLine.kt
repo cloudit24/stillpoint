@@ -277,11 +277,13 @@ private fun TerminalStyle(msgs: List<StatusMsg>, motion: Boolean, modifier: Modi
         while (typed < cur.text.length) { delay(28); typed++ }
         if (n > 1) { delay(if (cur.rank >= 80) 5_000 else 3_200); step++ }
     }
-    val anim = rememberInfiniteTransition(label = "term")
-    val cursor by anim.animateFloat(1f, 0f, infiniteRepeatable(tween(530), RepeatMode.Reverse), label = "cursor")
-    val lowBlink by anim.animateFloat(1f, 0.2f, infiniteRepeatable(tween(650), RepeatMode.Reverse), label = "low")
     val glow = androidx.compose.ui.text.TextStyle(shadow = androidx.compose.ui.graphics.Shadow(ph.base.copy(alpha = 0.55f), blurRadius = 7f))
     val low = footer != null && footer.battery in 0..20 && !footer.charging
+    // Endless animations only when they are seen: the cursor with motion on, the blink while the battery is low.
+    val cursor by if (motion) rememberInfiniteTransition(label = "term").animateFloat(1f, 0f, infiniteRepeatable(tween(530), RepeatMode.Reverse), label = "cursor")
+        else remember { mutableStateOf(1f) }
+    val lowBlink by if (motion && low) rememberInfiniteTransition(label = "low").animateFloat(1f, 0.2f, infiniteRepeatable(tween(650), RepeatMode.Reverse), label = "low")
+        else remember { mutableStateOf(1f) }
 
     /** The lines: older ones dim, the live one bright with the cursor. [big] is the glass look's large live line. */
     @Composable

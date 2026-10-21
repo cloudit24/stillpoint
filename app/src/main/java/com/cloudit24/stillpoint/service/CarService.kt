@@ -56,6 +56,9 @@ data class CarState(
 class CarService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private lateinit var prefs: Prefs
+    private lateinit var s: LauncherSettings
+    // The settings are read once and again only when one changes, not on every GPS fix.
+    private val watcher = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> s = prefs.loadSettings() }
     private lateinit var voice: Voice
     private var lm: LocationManager? = null
     private var listener: LocationListener? = null
@@ -82,6 +85,8 @@ class CarService : Service() {
     override fun onCreate() {
         super.onCreate()
         prefs = Prefs(this)
+        s = prefs.loadSettings()
+        prefs.watch(watcher)
         voice = Voice(this)
         startForeground(NOTE_ID, note())
         running.value = true
@@ -90,7 +95,7 @@ class CarService : Service() {
         // Notifications, read aloud as they arrive.
         scope.launch {
             NotifyHub.items.collect { list ->
-                val s = prefs.loadSettings()
+                val s = this@CarService.s
                 val fresh = list.filter { it.pkg !in s.notifyOff && readKeys.add("${it.key}@${it.postTime}") }
                 if (!primed) { primed = true; return@collect }
                 if (s.carAlert <= 0 || !s.carReadAloud) return@collect
@@ -110,6 +115,7 @@ class CarService : Service() {
 
     override fun onDestroy() {
         runCatching { listener?.let { lm?.removeUpdates(it) }; gnss?.let { lm?.unregisterGnssStatusCallback(it) } }
+        prefs.unwatch(watcher)
         voice.release()
         scope.cancel()
         running.value = false
@@ -154,7 +160,7 @@ class CarService : Service() {
         }
         val here = l.latitude to l.longitude
         state.value = state.value.copy(speedMs = speed, accuracy = if (l.hasAccuracy()) l.accuracy else -1f, here = here)
-        val s = prefs.loadSettings()
+        val s = this.s
         lookUp(here, s)
         judge(s)
     }

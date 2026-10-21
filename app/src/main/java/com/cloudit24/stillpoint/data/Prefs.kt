@@ -8,6 +8,10 @@ import org.json.JSONObject
 class Prefs(context: Context) {
     private val sp = context.getSharedPreferences("stillpoint", Context.MODE_PRIVATE)
 
+    /** Runs [listener] whenever any setting changes. Keep the returned object alive, or the listener is dropped. */
+    fun watch(listener: android.content.SharedPreferences.OnSharedPreferenceChangeListener) = sp.registerOnSharedPreferenceChangeListener(listener)
+    fun unwatch(listener: android.content.SharedPreferences.OnSharedPreferenceChangeListener) = sp.unregisterOnSharedPreferenceChangeListener(listener)
+
     fun loadSettings(): LauncherSettings {
         if (!sp.getBoolean(K_HEADLINE_INTRO, false)) {
             sp.edit().putBoolean(K_HEADLINE_INTRO, true).putString(K_CLOCK, ClockStyle.HEADLINE.name).apply()
