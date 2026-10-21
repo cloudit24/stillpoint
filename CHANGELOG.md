@@ -4,6 +4,7 @@ Every version of Stillpoint Launcher, newest first. Each links to its APK.
 The newest is always at **[Download the latest APK](https://github.com/cloudit24/stillpoint/releases/latest/download/Stillpoint-Launcher.apk)**.
 
 ## v0.48.3 · not yet released
+- Assistant fixed and faster: a long brief (many apps, many facts) no longer breaks the first answer (it was read in one piece larger than the engine accepts); follow-ups re-read only what is new instead of the whole conversation, so they start in a moment; four threads by default (the big cores); repetition kept in check; when the chat outgrows the context, older turns are dropped on their own; answers are asked to be one to three plain sentences.
 - Lighter still: the drive reads the settings once and again only when one changes, not on every GPS fix; the terminal's cursor animates only with motion on and the low-battery blink only while the battery is low.
 - Lighter: the Inter and Space Grotesk fonts are gone (Manrope and Lora stay), the HUD, Data rail and Retro LCD displays are gone (CRT, Quiet glass and Quiet line stay), the Hash, QR code and DNS lookup tools are gone with the QR library, the retired Tasks and Projects cards and the cat's settings are gone. The F-Droid build no longer carries the assistant engine, which makes it 5.8 MB smaller.
 - Fix: the phone sleeps again on home. Keeping the screen on is now tied to car mode alone.

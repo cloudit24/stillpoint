@@ -2,6 +2,7 @@
 #include <jni.h>
 #include <string>
 #include <vector>
+#include <algorithm>
 #include "llama.h"
 
 namespace {
@@ -11,6 +12,7 @@ struct Llm {
     llama_context * ctx;
     const llama_vocab * vocab;
     llama_sampler * smpl;
+    std::vector<llama_token> cached;   // what the context already holds, so a follow-up re-reads only what is new
 };
 
 std::string jstr(JNIEnv * env, jstring s) {
@@ -23,10 +25,13 @@ std::string jstr(JNIEnv * env, jstring s) {
 
 void quiet(ggml_log_level, const char *, void *) {}
 
-llama_sampler * sampler(float temp) {
+llama_sampler * sampler(float temp, int n_vocab) {
     auto sp = llama_sampler_chain_default_params();
     sp.no_perf = true;
     llama_sampler * smpl = llama_sampler_chain_init(sp);
+    // No word repeated too often (small models loop otherwise), and never the long tail.
+    llama_sampler_chain_add(smpl, llama_sampler_init_penalties(n_vocab, 64, 1.12f, 0.0f, 0.0f));
+    llama_sampler_chain_add(smpl, llama_sampler_init_top_k(40));
     llama_sampler_chain_add(smpl, llama_sampler_init_min_p(0.05f, 1));
     if (temp <= 0.05f) llama_sampler_chain_add(smpl, llama_sampler_init_greedy());
     else {
@@ -53,14 +58,16 @@ Java_com_cloudit24_stillpoint_llm_LlmNative_load(JNIEnv * env, jclass, jstring j
 
     auto cp = llama_context_default_params();
     cp.n_ctx = (uint32_t) nCtx;
-    cp.n_batch = 512;
+    cp.n_batch = 1024;
+    cp.n_ubatch = 256;
     cp.n_threads = threads;
     cp.n_threads_batch = threads;
     cp.no_perf = true;
     llama_context * ctx = llama_init_from_model(model, cp);
     if (!ctx) { llama_model_free(model); return 0; }
 
-    return (jlong) new Llm{model, ctx, llama_model_get_vocab(model), sampler(0.6f)};
+    const llama_vocab * vocab = llama_model_get_vocab(model);
+    return (jlong) new Llm{model, ctx, vocab, sampler(0.6f, llama_vocab_n_tokens(vocab)), {}};
 }
 
 /** How the next word is picked: a little randomness ([temp]), never the long tail (min-p). */
@@ -69,7 +76,7 @@ Java_com_cloudit24_stillpoint_llm_LlmNative_sampling(JNIEnv *, jclass, jlong han
     auto * llm = (Llm *) handle;
     if (!llm) return;
     llama_sampler_free(llm->smpl);
-    llm->smpl = sampler(temp);
+    llm->smpl = sampler(temp, llama_vocab_n_tokens(llm->vocab));
 }
 
 JNIEXPORT void JNICALL
@@ -126,13 +133,27 @@ Java_com_cloudit24_stillpoint_llm_LlmNative_generate(JNIEnv * env, jclass, jlong
     std::vector<llama_token> tokens(n_prompt);
     llama_tokenize(llm->vocab, prompt.c_str(), (int32_t) prompt.size(), tokens.data(), n_prompt, true, true);
 
-    llama_memory_clear(llama_get_memory(llm->ctx), true);
-    llama_batch batch = llama_batch_get_one(tokens.data(), n_prompt);
+    // The context keeps what it already read (the system prompt and the earlier turns): drop only what differs.
+    llama_memory_t mem = llama_get_memory(llm->ctx);
+    size_t keep = 0;
+    while (keep < llm->cached.size() && keep < tokens.size() && llm->cached[keep] == tokens[keep]) keep++;
+    if (keep == tokens.size()) keep--;           // the last token is always re-read, so there is something to sample from
+    if (keep == 0) llama_memory_clear(mem, true);
+    else llama_memory_seq_rm(mem, 0, (llama_pos) keep, -1);
+    llm->cached.clear();
+
+    // Read the new part in slices no bigger than one batch.
+    const int n_batch = (int) llama_n_batch(llm->ctx);
+    for (int pos = (int) keep; pos < n_prompt; pos += n_batch) {
+        const int n = std::min(n_batch, n_prompt - pos);
+        if (llama_decode(llm->ctx, llama_batch_get_one(tokens.data() + pos, n)) != 0) { llama_memory_clear(mem, true); return 2; }
+    }
+    llm->cached = tokens;
+    llama_sampler_reset(llm->smpl);
+
     char piece[512];
-    llama_token tok = 0;   // outlives each step: the next decode reads it through the batch
     for (int i = 0; i < maxTokens; i++) {
-        if (llama_decode(llm->ctx, batch) != 0) return 2;
-        tok = llama_sampler_sample(llm->smpl, llm->ctx, -1);
+        llama_token tok = llama_sampler_sample(llm->smpl, llm->ctx, -1);
         if (llama_vocab_is_eog(llm->vocab, tok)) break;
         const int len = llama_token_to_piece(llm->vocab, tok, piece, sizeof(piece), 0, true);
         if (len > 0) {
@@ -142,7 +163,8 @@ Java_com_cloudit24_stillpoint_llm_LlmNative_generate(JNIEnv * env, jclass, jlong
             env->DeleteLocalRef(arr);
             if (env->ExceptionCheck() || !more) break;
         }
-        batch = llama_batch_get_one(&tok, 1);
+        llm->cached.push_back(tok);
+        if (llama_decode(llm->ctx, llama_batch_get_one(&tok, 1)) != 0) { llm->cached.clear(); llama_memory_clear(mem, true); return 2; }
     }
     return 0;
 }

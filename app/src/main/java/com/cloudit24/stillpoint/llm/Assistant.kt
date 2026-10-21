@@ -161,7 +161,8 @@ class Assistant(private val scope: CoroutineScope, private val prefs: com.cloudi
     private var loadedKey = ""   // path + threads + context: a change means a reload
 
     private suspend fun ensure(path: String, s: LauncherSettings): Long {
-        val threads = s.assistantThreads.takeIf { it > 0 } ?: Runtime.getRuntime().availableProcessors().coerceIn(2, 6)
+        // Four threads by default: the phone's big cores. More pulls in the slow cores and gets slower, not faster.
+        val threads = s.assistantThreads.takeIf { it > 0 } ?: Runtime.getRuntime().availableProcessors().coerceIn(2, 4)
         val key = "$path|$threads|${s.assistantCtx}"
         if (handle != 0L && loadedKey == key) { LlmNative.sampling(handle, s.assistantTemp / 10f); return 0L }
         if (handle != 0L) { LlmNative.free(handle); handle = 0L }
@@ -205,20 +206,32 @@ class Assistant(private val scope: CoroutineScope, private val prefs: com.cloudi
 
     private suspend fun run(path: String, s: LauncherSettings, facts: List<String>, apps: List<String>): String {
         if (ensure(path, s) < 0) return ""
-        val roles = ArrayList<String>(); val texts = ArrayList<String>()
-        roles += "system"; texts += system(s, facts, apps)
-        turns.takeLast(8).forEach { roles += it.role; texts += it.text }
-        val prompt = LlmNative.prompt(handle, roles.toTypedArray(), texts.toTypedArray())
         val bytes = ByteArrayOutputStream()
-        val code = LlmNative.generate(handle, prompt, s.assistantMaxTokens, object : LlmNative.Sink {
+        var shown = 0L
+        val sink = object : LlmNative.Sink {
             override fun onToken(b: ByteArray): Boolean {
                 bytes.write(b)
-                val soFar = String(bytes.toByteArray(), Charsets.UTF_8)
-                scope.launch(Dispatchers.Main) { draft = soFar.substringBefore("\nRULE:").substringBefore("\nFOCUS:") }
+                // The streaming draft is refreshed a few times a second, not on every token.
+                val now = System.currentTimeMillis()
+                if (now - shown > 80) {
+                    shown = now
+                    val soFar = String(bytes.toByteArray(), Charsets.UTF_8)
+                    scope.launch(Dispatchers.Main) { draft = soFar.substringBefore("\nRULE:").substringBefore("\nFOCUS:").substringBefore("\nMEMORY:").substringBefore("\nOPEN:") }
+                }
                 return !stop
             }
-        })
-        if (code == 1) withContext(Dispatchers.Main) { status = "That's too long for the model: raise Context in Advanced, or clear the chat." }
+        }
+        // The last turns go in; when they don't fit the context, fewer of them, down to the question alone.
+        var code = 1
+        for (take in listOf(8, 4, 2, 1)) {
+            val roles = ArrayList<String>(); val texts = ArrayList<String>()
+            roles += "system"; texts += system(s, facts, apps)
+            turns.takeLast(take).forEach { roles += it.role; texts += it.text }
+            val prompt = LlmNative.prompt(handle, roles.toTypedArray(), texts.toTypedArray())
+            code = LlmNative.generate(handle, prompt, s.assistantMaxTokens, sink)
+            if (code != 1) break
+        }
+        if (code == 1) withContext(Dispatchers.Main) { status = "That's too long for the model: raise Context in Advanced." }
         if (code == 2) withContext(Dispatchers.Main) { status = "The model stumbled. Try again." }
         return String(bytes.toByteArray(), Charsets.UTF_8).trim()
     }
@@ -227,7 +240,7 @@ class Assistant(private val scope: CoroutineScope, private val prefs: com.cloudi
         val name = s.assistantName.ifBlank { "Stillpoint" }
         append("You are $name, ")
         append(s.assistantSoul.ifBlank { "a calm, warm assistant living inside the user's phone launcher. You are brief and plain, never gushing, and you care about the user's peace of mind" + (if (s.prayerOn) " and their prayers" else "") }.trim().trimEnd('.'))
-        append(". Answer in the user's language. ")
+        append(". Answer in the user's language, in one to three short sentences unless asked for more. No headings, no bullet lists, no emoji. ")
         if (s.assistantNotes.isNotBlank()) append(s.assistantNotes.trim()).append(' ')
         if (s.assistantMemory.isNotEmpty()) {
             append("\nWhat you remember about the user:\n")
@@ -236,7 +249,7 @@ class Assistant(private val scope: CoroutineScope, private val prefs: com.cloudi
         if (apps.isNotEmpty()) append("Apps on the phone: ").append(apps.take(60).joinToString(", ")).append('\n')
         append("When the user tells you something worth keeping (a name, a preference, a plan, a habit), finish with one extra line: MEMORY: <the fact, short>.\n")
         append("If the user asks to open an app, finish with: OPEN: <app name exactly as listed>.\n")
-        append("Trust these facts over your own guesses; say so if something isn't in them.\n")
+        append("Trust these facts over your own guesses; if something isn't in them, say you don't know rather than inventing it.\n")
         append("Facts now:\n")
         facts.forEach { append("- ").append(it).append('\n') }
         if (s.focusProfiles.isNotEmpty()) append("Focus profiles: ").append(s.focusProfiles.joinToString { it.name }).append('\n')
