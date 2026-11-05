@@ -219,6 +219,7 @@
     <string name="s_recent">Recent</string>
     <string name="s_recent_2">RECENT</string>
     <string name="s_recently_used_24_h">Recently used (24 h)</string>
+    <string name="s_recently_installed">Recently installed</string>
     <string name="s_remind_again_while_unread">Remind again while unread</string>
     <string name="s_remove">Remove</string>
     <string name="s_remove_from_favorites">Remove from Favorites</string>

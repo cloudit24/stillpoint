@@ -217,6 +217,7 @@
     <string name="s_recent">हाल के</string>
     <string name="s_recent_2">हाल के</string>
     <string name="s_recently_used_24_h">हाल में इस्तेमाल (24 घं)</string>
+    <string name="s_recently_installed">हाल में इंस्टॉल किए गए</string>
     <string name="s_remind_again_while_unread">बिना पढ़े रहने तक फिर याद दिलाएँ</string>
     <string name="s_remove">निकालें</string>
     <string name="s_remove_from_favorites">पसंदीदा से हटाएँ</string>

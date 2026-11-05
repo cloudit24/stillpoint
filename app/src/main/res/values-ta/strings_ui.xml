@@ -217,6 +217,7 @@
     <string name="s_recent">சமீபத்தியவை</string>
     <string name="s_recent_2">சமீபத்தியவை</string>
     <string name="s_recently_used_24_h">சமீபத்தில் பயன்படுத்தியவை (24 ம)</string>
+    <string name="s_recently_installed">சமீபத்தில் நிறுவியவை</string>
     <string name="s_remind_again_while_unread">படிக்காத வரை மீண்டும் நினைவூட்டு</string>
     <string name="s_remove">நீக்கு</string>
     <string name="s_remove_from_favorites">பிடித்தவையிலிருந்து நீக்கு</string>

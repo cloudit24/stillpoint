@@ -748,9 +748,11 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         .distinctBy { it.packageName }
         .take(limit)
 
-    fun recentApps(): List<AppEntry> = visibleApps()
+    /** Most recently installed apps, newest first. */
+    fun recentApps(limit: Int = LIST_LIMIT): List<AppEntry> = visibleApps()
         .sortedByDescending { it.installedAt }
-        .take(LIST_LIMIT)
+        .distinctBy { it.packageName }
+        .take(limit)
 
     // ---- Favorites and folders ----
 
