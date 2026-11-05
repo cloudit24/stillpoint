@@ -3,6 +3,11 @@
 Every version of Stillpoint Launcher, newest first. Each links to its APK.
 The newest is always at **[Download the latest APK](https://github.com/cloudit24/stillpoint/releases/latest/download/Stillpoint-Launcher.apk)**.
 
+## v0.49.1 · 5 Nov 2026
+- App list, Recent: a Recently installed section under Recently used (24 h), newest first with how long ago each was installed; without usage access it is the whole tab.
+
+[stillpoint-v0.49.1.apk](https://github.com/cloudit24/stillpoint/releases/download/v0.49.1/stillpoint-v0.49.1.apk)
+
 ## v0.49.0 · 22 Oct 2026
 - A quiet home. The terminal display, its looks, colours, scanlines, typing, cursor, header, power bar and the drone are gone. Under the headline there is now a stack of up to four plain lines in your font, most pressing first, only the first with the accent dot, each with a small word for what it is about; or one line, if you prefer (Settings, Home, Under the headline). Nothing moves unless a fact changes. Tap a line to act; Ask Stillpoint sits under the stack when the assistant is on.
 - The home cards (calendar, day, week, weather, world clock) are gone from home; they live on the Shelf as cards, with a new Today card for what is left on your calendar.
