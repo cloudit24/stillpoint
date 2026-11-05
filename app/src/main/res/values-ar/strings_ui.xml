@@ -217,6 +217,7 @@
     <string name="s_recent">الأخيرة</string>
     <string name="s_recent_2">الأخيرة</string>
     <string name="s_recently_used_24_h">المستخدمة مؤخرًا (24 س)</string>
+    <string name="s_recently_installed">المثبتة مؤخرًا</string>
     <string name="s_remind_again_while_unread">ذكّر مجددًا ما دام غير مقروء</string>
     <string name="s_remove">إزالة</string>
     <string name="s_remove_from_favorites">إزالة من المفضلة</string>

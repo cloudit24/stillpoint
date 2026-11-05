@@ -1,0 +1,1 @@
+App list, Recent: a Recently installed section under Recently used.

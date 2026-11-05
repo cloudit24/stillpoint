@@ -205,10 +205,17 @@ fun DrawerScreen(vm: LauncherViewModel) {
                         when (tabs[page]) {
                             DrawerTab.MOST -> MostUsedTab(vm, row)
                             DrawerTab.RECENT -> LazyColumn(Modifier.fillMaxSize().padding(end = 16.dp), contentPadding = ListBottom) {
-                                // Used in the last 24 hours; newly installed apps when there's no usage access yet.
+                                // Used in the last 24 hours, then the most recently installed apps.
                                 val used = vm.recentlyUsed()
-                                if (used.isNotEmpty()) items(used, key = { it.key }) { row(it, usedAgo(vm.lastUsed[it.packageName] ?: 0L), "") }
-                                else items(vm.recentApps(), key = { it.key }) { row(it, formatAge(it.installedAt), "") }
+                                val installed = vm.recentApps(if (used.isEmpty()) RECENT_INSTALL_LIMIT_ALONE else RECENT_INSTALL_LIMIT)
+                                if (used.isNotEmpty()) {
+                                    item(key = "hdr_used") { RecentHeader(stringResource(R.string.s_recently_used_24_h)) }
+                                    items(used, key = { "u_" + it.key }) { row(it, usedAgo(vm.lastUsed[it.packageName] ?: 0L), "u_") }
+                                }
+                                if (installed.isNotEmpty()) {
+                                    item(key = "hdr_installed") { RecentHeader(stringResource(R.string.s_recently_installed)) }
+                                    items(installed, key = { "i_" + it.key }) { row(it, formatAge(it.installedAt), "i_") }
+                                }
                             }
                             DrawerTab.ALL -> AlphabetList(apps) { row(it, null, "") }
                             DrawerTab.FAVORITES -> FavoritesTiles(
@@ -622,4 +629,12 @@ private fun usedAgo(ms: Long): String {
         min < 60 -> "${min}m ago"
         else -> "${min / 60}h ago"
     }
+}
+
+private const val RECENT_INSTALL_LIMIT = 10
+private const val RECENT_INSTALL_LIMIT_ALONE = 30
+
+@Composable
+private fun RecentHeader(text: String) {
+    Text(text, color = Muted, fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp, bottom = 4.dp))
 }
